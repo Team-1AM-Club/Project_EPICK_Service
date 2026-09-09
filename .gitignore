@@ -64,3 +64,22 @@ Thumbs.db
 
 *.log
 logs/
+
+
+# ==============================
+# Agent instructions and local documentation
+# ==============================
+
+.agent/
+.agents/
+.specify/
+**/.agent/
+**/.agents/
+**/.specify/
+
+
+*AGENT*.md
+**/*AGENT*.md
+
+docs/
+**/docs/

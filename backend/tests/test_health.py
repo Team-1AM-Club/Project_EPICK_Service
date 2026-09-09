@@ -10,13 +10,11 @@ app = FastAPI(title="EPICK Service API")
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    """FastAPI 프로세스가 실행 중인지"""
     return {"status": "ok"}
 
 
 @app.get("/health/ready")
 def readiness() -> dict[str, str]:
-    """PostgreSQL에 연결할 수 있는지 체크"""
     try:
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
