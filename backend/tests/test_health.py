@@ -1,31 +1,53 @@
-from fastapi import FastAPI, HTTPException
-from sqlalchemy import text
+from fastapi.testclient import TestClient
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.db.session import engine
+from app import main
+
+client = TestClient(main.app)
 
 
-app = FastAPI(title="EPICK Service API")
+class SuccessfulConnection:
+    def execute(self, statement: object) -> None:
+        return None
 
 
-@app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+    def __enter__(self) -> "SuccessfulConnection":
+        return self
+
+    def __exit__(self, exc_type: object, exc_value: object, traceback: object) -> bool:
+        return False
 
 
-@app.get("/health/ready")
-def readiness() -> dict[str, str]:
-    try:
-        with engine.connect() as connection:
-            connection.execute(text("SELECT 1"))
+class SuccessfulEngine:
+    def connect(self) -> SuccessfulConnection:
+        return SuccessfulConnection()
 
-        return {
-            "status": "ready",
-            "database": "connected",
-        }
 
-    except SQLAlchemyError:
-        raise HTTPException(
-            status_code=503,
-            detail="database unavailable",
-        )
+class FailingEngine:
+    def connect(self) -> None:
+        raise SQLAlchemyError()
+
+
+def test_health_reports_running() -> None:
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+def test_readiness_reports_connected_database(monkeypatch) -> None:
+    monkeypatch.setattr(main, "engine", SuccessfulEngine())
+
+    response = client.get("/health/ready")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ready", "database": "connected"}
+
+
+def test_readiness_reports_unavailable_database(monkeypatch) -> None:
+    monkeypatch.setattr(main, "engine", FailingEngine())
+
+    response = client.get("/health/ready")
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "database unavailable"}

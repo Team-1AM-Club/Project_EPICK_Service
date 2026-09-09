@@ -4,7 +4,6 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.db.session import engine
 
-
 app = FastAPI(title="EPICK Service API")
 
 
@@ -26,8 +25,8 @@ def readiness() -> dict[str, str]:
             "database": "connected",
         }
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as error:
         raise HTTPException(
             status_code=503,
             detail="database unavailable",
-        )
+        ) from error
