@@ -73,6 +73,7 @@ logs/
 .agent/
 .agents/
 .specify/
+skills-lock.json
 **/.agent/
 **/.agents/
 **/.specify/
