@@ -1,0 +1,9 @@
+{
+  "description": "Synthetic only; no real employer source is represented here.",
+  "root": "condition-root",
+  "nodes": [
+    {"node_id": "condition-root", "operator": "OR", "text": "Python OR JavaScript", "children": ["condition-python", "condition-javascript"]},
+    {"node_id": "condition-python", "operator": "LEAF", "text": "Python", "children": []},
+    {"node_id": "condition-javascript", "operator": "LEAF", "text": "JavaScript", "children": []}
+  ]
+}

@@ -1,0 +1,37 @@
+[project]
+name = "w3-knowledge"
+version = "0.1.0"
+description = "W3 evidence validation and knowledge structuring module"
+readme = "specs/001-source-knowledge-validation/spec.md"
+requires-python = ">=3.12"
+dependencies = [
+  "pydantic>=2.12,<3",
+  "openai>=2.0,<3",
+]
+
+[project.scripts]
+w3-knowledge = "w3_knowledge.cli:main"
+
+[dependency-groups]
+dev = [
+  "pytest>=9.0,<10",
+  "ruff>=0.14,<1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --basetemp=.pytest-tmp"
+markers = [
+  "live: requires explicit external-provider execution permission",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "UP", "B"]
+
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"

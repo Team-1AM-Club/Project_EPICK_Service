@@ -1,0 +1,30 @@
+# Python build and test output
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.pytest-tmp/
+.ruff_cache/
+.uv-cache/
+.coverage
+coverage/
+
+# Secrets and local runtime configuration
+.env
+.env.*
+!.env.example
+
+# Local non-distributable sample inputs and review output
+/Data/
+/source-collection-sample-20260907/
+/tmp/
+tmp/w3-local-review/
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+*.swp
