@@ -279,7 +279,12 @@ class RecommendationService:
         if current is not None:
             current.is_current = False
             current.superseded_at = datetime.now(UTC)
+            # PostgreSQL's partial unique index requires the old current Set to be persisted
+            # before the replacement can become current. Both writes remain in the caller's
+            # surrounding transaction, so observers never see a committed gap.
+            self.session.flush()
         selection_set.is_current = True
+        self.session.flush()
         if self.repository.current_selection_count(
             project_id=project.id, owner_user_id=owner_user_id
         ) == self.repository.active_question_count(
