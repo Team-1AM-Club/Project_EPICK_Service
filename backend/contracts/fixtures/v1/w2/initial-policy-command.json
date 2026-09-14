@@ -1,0 +1,22 @@
+{
+  "schema_version": "w2.collection.v1",
+  "command_id": "00000000-0000-4000-8000-000000000201",
+  "job_id": "00000000-0000-4000-8000-000000000202",
+  "authenticated_owner_ref": "00000000-0000-4000-8000-000000000203",
+  "project_ref": null,
+  "company_id": "00000000-0000-4000-8000-000000000104",
+  "source_id": "00000000-0000-4000-8000-000000000101",
+  "input_version": 1,
+  "execution_fence": "w1-fence-0001",
+  "purpose_ref": "00000000-0000-4000-8000-000000000204",
+  "core_source_decision": {
+    "is_core": true,
+    "decided_by": "w3-knowledge-selection",
+    "rationale": "The source is needed for the current analysis input.",
+    "decision_revision": 3,
+    "analysis_input_version": 1
+  },
+  "resume_stage": "policy",
+  "policy_revision": null,
+  "owner_deletion_epoch": 0
+}

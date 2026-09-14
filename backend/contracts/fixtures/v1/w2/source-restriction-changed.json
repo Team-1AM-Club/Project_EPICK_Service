@@ -1,0 +1,19 @@
+{
+  "event_id": "00000000-0000-4000-8000-000000000110",
+  "event_type": "source.restriction.changed",
+  "schema_version": "w2.source.v1",
+  "aggregate_id": "00000000-0000-4000-8000-000000000101",
+  "aggregate_revision": 9,
+  "occurred_at": "2026-09-14T00:02:00Z",
+  "payload": {
+    "restriction_id": "00000000-0000-4000-8000-000000000111",
+    "source_id": "00000000-0000-4000-8000-000000000101",
+    "source_version_id": "00000000-0000-4000-8000-000000000102",
+    "restriction_revision": 1,
+    "restriction_status": "active",
+    "accuracy_status": "error_confirmed",
+    "reason_code": "WRONG_COMPANY",
+    "changed_at": "2026-09-14T00:02:00Z",
+    "replacement_ref": null
+  }
+}

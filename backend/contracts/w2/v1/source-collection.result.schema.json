@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w2/v1/source-collection.result.schema.json",
+  "title": "W2 CollectionResult from feat/crawler 0865ecd",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "command_id", "job_id", "input_version", "result_version", "successful_source_refs", "failures", "completion_kind", "resume_stage", "checkpoint_ref", "retry_not_before", "message_ko", "required_actions", "source_id", "policy_revision"],
+  "properties": {
+    "schema_version": {"const": "w2.collection.v1"},
+    "command_id": {"type": "string", "format": "uuid"},
+    "job_id": {"type": "string", "format": "uuid"},
+    "input_version": {"type": "integer", "minimum": 1},
+    "result_version": {"type": "integer", "minimum": 1},
+    "successful_source_refs": {"type": "array", "maxItems": 1, "items": {"$ref": "#/$defs/SourceReference"}},
+    "failures": {"type": "array", "items": {"$ref": "#/$defs/Failure"}},
+    "completion_kind": {"type": "string", "enum": ["none", "partial", "complete"]},
+    "resume_stage": {"anyOf": [{"$ref": "#/$defs/CollectionStage"}, {"type": "null"}]},
+    "checkpoint_ref": {"type": ["string", "null"]},
+    "retry_not_before": {"anyOf": [{"type": "string", "format": "date-time"}, {"type": "null"}]},
+    "message_ko": {"type": "string", "minLength": 1},
+    "required_actions": {"type": "array", "items": {"$ref": "#/$defs/RequiredAction"}},
+    "source_id": {"type": "string", "format": "uuid"},
+    "policy_revision": {"type": ["integer", "null"], "minimum": 1}
+  },
+  "$defs": {
+    "CollectionStage": {"type": "string", "enum": ["policy", "fetch", "parse", "persist", "deliver"]},
+    "SourceReference": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source_id", "source_version_id", "extraction_revision_id"],
+      "properties": {
+        "source_id": {"type": "string", "format": "uuid"},
+        "source_version_id": {"type": "string", "format": "uuid"},
+        "extraction_revision_id": {"type": "string", "format": "uuid"}
+      }
+    },
+    "Failure": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source_id", "stage", "code", "missing_sections", "impact", "core_decision_revision"],
+      "properties": {
+        "source_id": {"type": "string", "format": "uuid"},
+        "stage": {"$ref": "#/$defs/CollectionStage"},
+        "code": {"type": "string", "minLength": 1},
+        "missing_sections": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "impact": {"type": "string", "minLength": 1},
+        "core_decision_revision": {"type": "integer", "minimum": 1}
+      }
+    },
+    "RequiredAction": {
+      "oneOf": [
+        {"$ref": "#/$defs/CoreFailureDecisionAction"},
+        {"$ref": "#/$defs/UserRetryAction"},
+        {"$ref": "#/$defs/CorrectInputAction"},
+        {"$ref": "#/$defs/FindAlternativeSourceAction"}
+      ]
+    },
+    "CoreFailureDecisionAction": {
+      "type": "object", "additionalProperties": false,
+      "required": ["code", "label_ko", "context"],
+      "properties": {
+        "code": {"const": "core_failure_decision"},
+        "label_ko": {"type": "string", "minLength": 1},
+        "context": {
+          "type": "object", "additionalProperties": false,
+          "required": ["source_id", "core_decision_revision", "choices"],
+          "properties": {
+            "source_id": {"type": "string", "format": "uuid"},
+            "core_decision_revision": {"type": "integer", "minimum": 1},
+            "choices": {"type": "array", "prefixItems": [{"const": "continue_limited"}, {"const": "stop"}, {"const": "retry"}], "minItems": 3, "maxItems": 3}
+          }
+        }
+      }
+    },
+    "UserRetryAction": {
+      "type": "object", "additionalProperties": false,
+      "required": ["code", "label_ko", "context"],
+      "properties": {
+        "code": {"const": "user_retry"},
+        "label_ko": {"type": "string", "minLength": 1},
+        "context": {
+          "type": "object", "additionalProperties": false,
+          "required": ["source_id", "resume_stage", "retry_not_before"],
+          "properties": {
+            "source_id": {"type": "string", "format": "uuid"},
+            "resume_stage": {"$ref": "#/$defs/CollectionStage"},
+            "retry_not_before": {"anyOf": [{"type": "string", "format": "date-time"}, {"type": "null"}]}
+          }
+        }
+      }
+    },
+    "CorrectInputAction": {
+      "type": "object", "additionalProperties": false,
+      "required": ["code", "label_ko", "context"],
+      "properties": {
+        "code": {"const": "correct_input"},
+        "label_ko": {"type": "string", "minLength": 1},
+        "context": {
+          "type": "object", "additionalProperties": false,
+          "required": ["source_id", "reason_code", "candidates", "identity_evidence_refs"],
+          "properties": {
+            "source_id": {"type": "string", "format": "uuid"},
+            "reason_code": {"type": "string", "minLength": 1},
+            "candidates": {"type": "array", "items": {"$ref": "#/$defs/CompanyCandidate"}},
+            "identity_evidence_refs": {"type": "array", "items": {"type": "string", "minLength": 1}}
+          }
+        }
+      }
+    },
+    "CompanyCandidate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["company_id", "legal_name", "identity_evidence_refs"],
+      "properties": {
+        "company_id": {"type": "string", "format": "uuid"},
+        "legal_name": {"type": "string", "minLength": 1},
+        "identity_evidence_refs": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "FindAlternativeSourceAction": {
+      "type": "object", "additionalProperties": false,
+      "required": ["code", "label_ko", "context"],
+      "properties": {
+        "code": {"const": "find_alternative_source"},
+        "label_ko": {"type": "string", "minLength": 1},
+        "context": {
+          "type": "object", "additionalProperties": false,
+          "required": ["source_id", "reason_code"],
+          "properties": {
+            "source_id": {"type": "string", "format": "uuid"},
+            "reason_code": {"type": "string", "enum": ["UNSUPPORTED_FORMAT", "NOT_FOUND", "ACCESS_DENIED", "SOURCE_POLICY_BLOCKED"]}
+          }
+        }
+      }
+    }
+  }
+}

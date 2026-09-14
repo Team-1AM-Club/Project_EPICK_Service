@@ -1,0 +1,21 @@
+{
+  "schema_version": "w2.collection.v1",
+  "command_id": "00000000-0000-4000-8000-000000000201",
+  "job_id": "00000000-0000-4000-8000-000000000202",
+  "input_version": 1,
+  "result_version": 1,
+  "successful_source_refs": [{
+    "source_id": "00000000-0000-4000-8000-000000000101",
+    "source_version_id": "00000000-0000-4000-8000-000000000102",
+    "extraction_revision_id": "00000000-0000-4000-8000-000000000103"
+  }],
+  "failures": [],
+  "completion_kind": "complete",
+  "resume_stage": null,
+  "checkpoint_ref": null,
+  "retry_not_before": null,
+  "message_ko": "Source 수집을 완료했습니다.",
+  "required_actions": [],
+  "source_id": "00000000-0000-4000-8000-000000000101",
+  "policy_revision": 4
+}

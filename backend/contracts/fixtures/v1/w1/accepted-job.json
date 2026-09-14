@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "job_id": "33333333-3333-4333-8333-333333333333",
+  "owner_id": "44444444-4444-4444-8444-444444444444",
+  "job_type": "SOURCE_COLLECTION",
+  "status": "QUEUED",
+  "completeness": "none",
+  "dispatch_status": "OUTBOX_PENDING",
+  "execution_fence": 1,
+  "owner_deletion_epoch": 0,
+  "idempotency_key": "synthetic-job-key",
+  "required_action_codes": []
+}

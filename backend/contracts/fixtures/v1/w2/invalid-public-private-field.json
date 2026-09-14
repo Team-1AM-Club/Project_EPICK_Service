@@ -1,0 +1,22 @@
+{
+  "event_id": "00000000-0000-4000-8000-000000000108",
+  "event_type": "source.observation.changed",
+  "schema_version": "w2.source.v1",
+  "aggregate_id": "00000000-0000-4000-8000-000000000101",
+  "aggregate_revision": 8,
+  "occurred_at": "2026-09-14T00:01:00Z",
+  "job_id": "00000000-0000-4000-8000-000000000202",
+  "payload": {
+    "observation_id": "00000000-0000-4000-8000-000000000109",
+    "source_id": "00000000-0000-4000-8000-000000000101",
+    "source_version_id": null,
+    "policy_decision_id": "00000000-0000-4000-8000-000000000106",
+    "observed_at": "2026-09-14T00:01:00Z",
+    "access_class": "public",
+    "acquisition_status": "AVAILABLE",
+    "http_status": 200,
+    "checked_url": "https://jobs.example.test/opening/synthetic",
+    "error_code": null,
+    "representation": "static_html"
+  }
+}

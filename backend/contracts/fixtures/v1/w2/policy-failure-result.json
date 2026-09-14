@@ -1,0 +1,24 @@
+{
+  "schema_version": "w2.collection.v1",
+  "command_id": "00000000-0000-4000-8000-000000000201",
+  "job_id": "00000000-0000-4000-8000-000000000202",
+  "input_version": 1,
+  "result_version": 1,
+  "successful_source_refs": [],
+  "failures": [{
+    "source_id": "00000000-0000-4000-8000-000000000101",
+    "stage": "policy",
+    "code": "SOURCE_POLICY_BLOCKED",
+    "missing_sections": [],
+    "impact": "The policy check did not permit collection.",
+    "core_decision_revision": 3
+  }],
+  "completion_kind": "none",
+  "resume_stage": null,
+  "checkpoint_ref": null,
+  "retry_not_before": null,
+  "message_ko": "Source 정책 확인 단계에서 수집할 수 없습니다.",
+  "required_actions": [],
+  "source_id": "00000000-0000-4000-8000-000000000101",
+  "policy_revision": null
+}

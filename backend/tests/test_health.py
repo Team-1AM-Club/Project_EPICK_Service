@@ -10,7 +10,6 @@ class SuccessfulConnection:
     def execute(self, statement: object) -> None:
         return None
 
-
     def __enter__(self) -> "SuccessfulConnection":
         return self
 

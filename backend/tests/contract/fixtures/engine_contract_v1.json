@@ -1,0 +1,36 @@
+{
+  "service_requirement": {
+    "projection_event_contract_version": "v1.0",
+    "projection_dto_contract_version": "v1.0",
+    "candidate_ref_contract_version": "v1.0",
+    "graph_schema_version": "epick-graph-v1",
+    "required_routes": ["GRAPH", "SKILL_ALIAS"],
+    "vector_required": false
+  },
+  "compatible_engine": {
+    "projection_event_versions": ["v1.0"],
+    "projection_dto_versions": ["v1.0"],
+    "candidate_ref_versions": ["v1.0"],
+    "graph_schema_versions": ["epick-graph-v1"],
+    "routes": ["GRAPH", "SKILL_ALIAS"],
+    "vector_enabled": false
+  },
+  "incompatible_engines": [
+    {
+      "projection_event_versions": ["v2.0"],
+      "projection_dto_versions": ["v1.0"],
+      "candidate_ref_versions": ["v1.0"],
+      "graph_schema_versions": ["epick-graph-v1"],
+      "routes": ["GRAPH", "SKILL_ALIAS"],
+      "vector_enabled": false
+    },
+    {
+      "projection_event_versions": ["v1.0"],
+      "projection_dto_versions": ["v1.0"],
+      "candidate_ref_versions": ["v1.0"],
+      "graph_schema_versions": ["epick-graph-v2"],
+      "routes": ["GRAPH"],
+      "vector_enabled": false
+    }
+  ]
+}
