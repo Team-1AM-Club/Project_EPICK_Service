@@ -22,13 +22,8 @@ RUNTIME_ROLE = "epick_runtime"
 @pytest.fixture(autouse=True)
 def clean_identity_tables(migrated_engine: Engine) -> None:
     with migrated_engine.begin() as connection:
-        connection.execute(
-            text(
-                "TRUNCATE experience_field_provenance, episode_version_skills, "
-                "episode_versions, episodes, activity_versions, activities, "
-                "idempotency_records, auth_sessions, auth_identities, users"
-            )
-        )
+        connection.execute(text("TRUNCATE users CASCADE"))
+        connection.execute(text("TRUNCATE companies CASCADE"))
     yield
 
 

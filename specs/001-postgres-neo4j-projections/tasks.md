@@ -73,15 +73,15 @@ then verify that the other user cannot link or read any of those records.
 
 ### P0-A: Application Workspace and Job acceptance
 
-- [ ] T016 [P] [US1] Write failing owner/project/question Version and cross-owner foreign-key tests in backend/tests/integration/db/test_application_workspace.py
-- [ ] T017 [P] [US1] Write failing atomic Job acceptance, idempotency replay/conflict, dispatch separation, slot claim, cancel-ack, and late fence/epoch result tests in backend/tests/integration/db/test_job_execution.py
-- [ ] T018 [P] [US1] Add Company, ApplicationProject, ProjectVersion, Question, and QuestionVersion ORM models with composite ownership keys in backend/app/models/application_workspace.py
-- [ ] T019 [P] [US1] Add Job, JobInputRef, JobRequiredAction, JobCommand, OutboxMessage, InboxReceipt, OwnerExecutionSlot, and JobExecutionLease ORM models in backend/app/models/jobs.py
-- [ ] T020 [US1] Create the workspace-and-Jobs forward migration with typed inputs, status checks, deferred current-pointer FKs, Outbox/Inbox, and slot/lease constraints in backend/migrations/versions/004_application_workspace_and_jobs.py
-- [ ] T021 [P] [US1] Implement owner-scoped Project/Question persistence and append-only Version creation in backend/app/repo/application_workspace.py
-- [ ] T022 [P] [US1] Implement Job/Command/Outbox and slot/lease locked persistence primitives in backend/app/repo/jobs.py
-- [ ] T023 [US1] Implement one-transaction acceptance, row-locked claim, fence invalidation, cancellation acknowledgement, and safe result-commit orchestration in backend/app/services/jobs.py
-- [ ] T024 [US1] Run the workspace/Job integration suite against real PostgreSQL and map CT-04 through CT-08 and CT-14 through CT-16 evidence in backend/tests/integration/db/test_job_execution.py
+- [X] T016 [P] [US1] Write failing owner/project/question Version and cross-owner foreign-key tests in backend/tests/integration/db/test_application_workspace.py
+- [X] T017 [P] [US1] Write failing atomic Job acceptance, idempotency replay/conflict, dispatch separation, slot claim, cancel-ack, and late fence/epoch result tests in backend/tests/integration/db/test_job_execution.py
+- [X] T018 [P] [US1] Add Company, ApplicationProject, ProjectVersion, Question, and QuestionVersion ORM models with composite ownership keys in backend/app/models/application_workspace.py
+- [X] T019 [P] [US1] Add Job, JobInputRef, JobRequiredAction, JobCommand, OutboxMessage, InboxReceipt, OwnerExecutionSlot, and JobExecutionLease ORM models in backend/app/models/jobs.py
+- [X] T020 [US1] Create the workspace-and-Jobs forward migration with typed inputs, status checks, deferred current-pointer FKs, Outbox/Inbox, and slot/lease constraints in backend/migrations/versions/004_application_workspace_and_jobs.py
+- [X] T021 [P] [US1] Implement owner-scoped Project/Question persistence and append-only Version creation in backend/app/repo/application_workspace.py
+- [X] T022 [P] [US1] Implement Job/Command/Outbox and slot/lease locked persistence primitives in backend/app/repo/jobs.py
+- [X] T023 [US1] Implement one-transaction acceptance, row-locked claim, fence invalidation, cancellation acknowledgement, and safe result-commit orchestration in backend/app/services/jobs.py
+- [X] T024 [US1] Run the workspace/Job integration suite against real PostgreSQL and map CT-04 through CT-08 and CT-14 through CT-16 evidence in backend/tests/integration/db/test_job_execution.py
 
 ### P0-B: Snapshot, recommendation record, and material selection
 

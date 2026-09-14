@@ -28,7 +28,7 @@ def clean_experience_tables(migrated_engine: Engine) -> None:
         connection.execute(
             text(
                 "TRUNCATE experience_field_provenance, episode_version_skills, "
-                "episode_versions, episodes, activity_versions, activities"
+                "episode_versions, episodes, activity_versions, activities CASCADE"
             )
         )
     yield

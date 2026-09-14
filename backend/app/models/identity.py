@@ -116,6 +116,7 @@ class AuthSession(Base):
 class IdempotencyRecord(Base):
     __tablename__ = "idempotency_records"
     __table_args__ = (
+        UniqueConstraint("id", "owner_user_id", name="id_owner_user_id"),
         UniqueConstraint(
             "owner_user_id", "method", "path_scope", "idempotency_key", name="owner_method_path_key"
         ),
