@@ -419,7 +419,7 @@ class ExperienceService:
     def _validate_activity_values(self, values: dict[str, object]) -> None:
         self._validate_title(values)
         self._validate_pair(values, "organization")
-        self._validate_pair(values, "activity_type")
+        self._validate_single_value(values, "activity_type")
         self._validate_pair(values, "role")
         self._validate_multi_value(
             values,
@@ -455,6 +455,14 @@ class ExperienceService:
         availability = self._normalize_availability(values[availability_name])
         values[availability_name] = availability
         is_provided = values.get(value_name) is not None
+        if (availability == FieldAvailability.PROVIDED.value) != is_provided:
+            raise AvailabilityValidationError(f"{field_name} value must match its availability")
+
+    def _validate_single_value(self, values: dict[str, object], field_name: str) -> None:
+        availability_name = f"{field_name}_availability"
+        availability = self._normalize_availability(values[availability_name])
+        values[availability_name] = availability
+        is_provided = values.get(field_name) is not None
         if (availability == FieldAvailability.PROVIDED.value) != is_provided:
             raise AvailabilityValidationError(f"{field_name} value must match its availability")
 

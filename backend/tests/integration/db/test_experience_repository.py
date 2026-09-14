@@ -15,7 +15,11 @@ from app.models.experience import (
     FieldAvailability,
 )
 from app.models.identity import User
-from app.services.experience import ExperienceService, VersionConflictError
+from app.services.experience import (
+    AvailabilityValidationError,
+    ExperienceService,
+    VersionConflictError,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -50,6 +54,26 @@ def _activity_version(*, activity: Activity, owner_user_id, version_no: int) -> 
         outcome_availability=FieldAvailability.NOT_PROVIDED,
         created_by="USER",
     )
+
+
+def test_activity_type_single_value_rejects_mismatched_availability(db_session: Session) -> None:
+    service = ExperienceService(db_session)
+    owner_user_id = _create_owner(db_session, "Activity type availability owner").id
+
+    with pytest.raises(AvailabilityValidationError):
+        service.create_activity(
+            owner_user_id=owner_user_id,
+            title="Invalid activity type availability",
+            activity_type_availability=FieldAvailability.PROVIDED,
+        )
+
+    with pytest.raises(AvailabilityValidationError):
+        service.create_activity(
+            owner_user_id=owner_user_id,
+            title="Invalid activity type value",
+            activity_type="PROJECT",
+            activity_type_availability=FieldAvailability.SKIPPED,
+        )
 
 
 def test_activity_update_appends_an_immutable_version_and_advances_own_pointer(
