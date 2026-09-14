@@ -49,6 +49,18 @@ class ApplicationProject(Base):
     __tablename__ = "application_projects"
     __table_args__ = (
         UniqueConstraint("id", "owner_user_id", name="id_owner_user_id"),
+        ForeignKeyConstraint(
+            ["active_snapshot_id", "id", "owner_user_id"],
+            [
+                "project_snapshots.id",
+                "project_snapshots.project_id",
+                "project_snapshots.owner_user_id",
+            ],
+            name="active_snapshot_scope",
+            ondelete="RESTRICT",
+            deferrable=True,
+            initially="DEFERRED",
+        ),
         CheckConstraint(f"status IN ({PROJECT_STATUS_VALUES})", name="status_allowed"),
         CheckConstraint("lock_version >= 1", name="lock_version_positive"),
     )
@@ -58,6 +70,9 @@ class ApplicationProject(Base):
         PostgreSQLUUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT")
     )
     current_version_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=True
+    )
+    active_snapshot_id: Mapped[UUID | None] = mapped_column(
         PostgreSQLUUID(as_uuid=True), nullable=True
     )
     status: Mapped[str] = mapped_column(String(32), server_default="DRAFT")

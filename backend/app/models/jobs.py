@@ -125,10 +125,17 @@ class JobInputRef(Base):
             name="episode_version_owner_scope",
             ondelete="RESTRICT",
         ),
+        ForeignKeyConstraint(
+            ["snapshot_id", "owner_user_id"],
+            ["project_snapshots.id", "project_snapshots.owner_user_id"],
+            name="snapshot_owner_scope",
+            ondelete="RESTRICT",
+        ),
         CheckConstraint(
             "(project_version_id IS NOT NULL)::integer + "
             "(question_version_id IS NOT NULL)::integer + "
             "(episode_version_id IS NOT NULL)::integer + "
+            "(snapshot_id IS NOT NULL)::integer + "
             "((policy_name IS NOT NULL AND policy_version IS NOT NULL)::integer) = 1 "
             "AND (policy_name IS NULL) = (policy_version IS NULL)",
             name="exactly_one_input",
@@ -147,6 +154,7 @@ class JobInputRef(Base):
     episode_version_id: Mapped[UUID | None] = mapped_column(
         PostgreSQLUUID(as_uuid=True), nullable=True
     )
+    snapshot_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=True)
     policy_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
     policy_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
+from uuid import uuid4
 
 import pytest
 from alembic import command
@@ -67,3 +68,44 @@ def test_existing_pre_completion_database_upgrades_forward_to_the_current_head(
         engine.dispose()
 
     assert "deletion_epoch" in columns
+
+
+@pytest.mark.postgres
+def test_existing_pg1_database_upgrades_forward_to_snapshot_head(alembic_config: Config) -> None:
+    command.downgrade(alembic_config, "base")
+    command.upgrade(alembic_config, "004_app_workspace_jobs")
+    existing_owner_id = uuid4()
+    pre_upgrade_engine = create_engine(settings.test_database_url)
+    try:
+        with pre_upgrade_engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO users (id, display_name, locale, timezone) "
+                    "VALUES (:id, :display_name, :locale, :timezone)"
+                ),
+                {
+                    "id": existing_owner_id,
+                    "display_name": "Existing PG-1 owner",
+                    "locale": "ko-KR",
+                    "timezone": "Asia/Seoul",
+                },
+            )
+    finally:
+        pre_upgrade_engine.dispose()
+    command.upgrade(alembic_config, "head")
+
+    engine = create_engine(settings.test_database_url)
+    try:
+        inspector = inspect(engine)
+        snapshot_columns = {column["name"] for column in inspector.get_columns("project_snapshots")}
+        input_columns = {column["name"] for column in inspector.get_columns("job_input_refs")}
+        with engine.connect() as connection:
+            retained_owner_id = connection.execute(
+                text("SELECT id FROM users WHERE id = :id"), {"id": existing_owner_id}
+            ).scalar_one_or_none()
+    finally:
+        engine.dispose()
+
+    assert {"project_version_id", "snapshot_no", "status"} <= snapshot_columns
+    assert "snapshot_id" in input_columns
+    assert retained_owner_id == existing_owner_id

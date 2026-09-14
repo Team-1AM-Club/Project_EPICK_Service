@@ -44,6 +44,7 @@ class JobInputReference:
     project_version_id: UUID | None = None
     question_version_id: UUID | None = None
     episode_version_id: UUID | None = None
+    snapshot_id: UUID | None = None
     policy_name: str | None = None
     policy_version: str | None = None
 
@@ -542,6 +543,7 @@ class JobService:
             project_version_id=reference.project_version_id,
             question_version_id=reference.question_version_id,
             episode_version_id=reference.episode_version_id,
+            snapshot_id=reference.snapshot_id,
             policy_name=reference.policy_name,
             policy_version=reference.policy_version,
         )
@@ -554,6 +556,7 @@ class JobService:
                 reference.project_version_id,
                 reference.question_version_id,
                 reference.episode_version_id,
+                reference.snapshot_id,
             )
         )
         has_complete_policy = (
