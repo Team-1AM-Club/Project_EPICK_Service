@@ -51,6 +51,7 @@ jobs:
     env:
       APP_ENV: test
       DATABASE_URL: postgresql+psycopg://epick:epick@localhost:5432/epick_test
+      TEST_DATABASE_URL: postgresql+psycopg://epick:epick@localhost:5432/epick_test
 
     steps:
       - name: Checkout repository
