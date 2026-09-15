@@ -134,25 +134,18 @@ class ClaimVersion(Base):
 
 
 class ClaimEvidenceLink(Base):
-    """Surrogate `id` PK added by migration 018; the original composite key is
-    preserved as a unique constraint."""
-
     __tablename__ = "claim_evidence_links"
     __table_args__ = (
         ForeignKeyConstraint(["claim_version_id"], ["claim_versions.id"], ondelete="RESTRICT"),
         ForeignKeyConstraint(["evidence_span_id"], ["evidence_spans.id"], ondelete="RESTRICT"),
-        UniqueConstraint(
-            "claim_version_id", "evidence_span_id", name="claim_version_id_evidence_span_id"
-        ),
         CheckConstraint(
             f"relation_type IN ({EVIDENCE_STANCE_VALUES})", name="relation_type_allowed"
         ),
     )
 
-    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
-    claim_version_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
-    evidence_span_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
-    relation_type: Mapped[str] = mapped_column(String(16))
+    claim_version_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)
+    evidence_span_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)
+    relation_type: Mapped[str] = mapped_column(String(16), primary_key=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -179,7 +172,9 @@ class ClaimRelation(Base):
         CheckConstraint(
             "from_claim_version_id <> to_claim_version_id", name="different_claim_versions"
         ),
-        CheckConstraint(f"relation_type IN ({CLAIM_RELATION_VALUES})", name="relation_type_allowed"),
+        CheckConstraint(
+            f"relation_type IN ({CLAIM_RELATION_VALUES})", name="relation_type_allowed"
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -218,9 +213,7 @@ class InterpretationVersion(Base):
             ["interpretations.id", "interpretations.company_id"],
             ondelete="RESTRICT",
         ),
-        UniqueConstraint(
-            "interpretation_id", "version_no", name="interpretation_id_version_no"
-        ),
+        UniqueConstraint("interpretation_id", "version_no", name="interpretation_id_version_no"),
         UniqueConstraint(
             "id", "interpretation_id", "company_id", name="id_interpretation_id_company_id"
         ),
@@ -261,8 +254,7 @@ class InterpretationEvidenceLink(Base):
         ),
         CheckConstraint(f"stance IN ({EVIDENCE_STANCE_VALUES})", name="stance_allowed"),
         CheckConstraint(
-            "(evidence_span_id IS NOT NULL)::integer + "
-            "(claim_version_id IS NOT NULL)::integer = 1",
+            "(evidence_span_id IS NOT NULL)::integer + (claim_version_id IS NOT NULL)::integer = 1",
             name="exactly_one_reference",
         ),
     )
@@ -437,9 +429,7 @@ class ProjectInterpretationEvidenceLink(Base):
     project_interpretation_version_id: Mapped[UUID] = mapped_column(
         PostgreSQLUUID(as_uuid=True), primary_key=True
     )
-    evidence_span_id: Mapped[UUID] = mapped_column(
-        PostgreSQLUUID(as_uuid=True), primary_key=True
-    )
+    evidence_span_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)
     owner_user_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
     relation_type: Mapped[str] = mapped_column(String(16))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

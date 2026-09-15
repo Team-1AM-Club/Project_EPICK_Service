@@ -8,11 +8,13 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKeyConstraint,
+    Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -21,6 +23,8 @@ from app.db.base import Base
 
 ANALYSIS_STATUS_VALUES = "'SUCCEEDED', 'PARTIAL', 'FAILED', 'BLOCKED'"
 MODEL_EXECUTION_STATUS_VALUES = "'SUCCEEDED', 'PARTIAL', 'FAILED', 'BLOCKED'"
+INTENT_PRIORITY_VALUES = "'PRIMARY', 'SECONDARY'"
+REQUIREMENT_GROUP_OPERATOR_VALUES = "'AND', 'OR'"
 
 
 class QuestionIntentType(Base):
@@ -102,7 +106,9 @@ class QuestionAnalysis(Base):
             name="id_project_version_owner",
         ),
         CheckConstraint("analysis_revision >= 1", name="analysis_revision_positive"),
-        CheckConstraint(f"result_status IN ({ANALYSIS_STATUS_VALUES})", name="result_status_allowed"),
+        CheckConstraint(
+            f"result_status IN ({ANALYSIS_STATUS_VALUES})", name="result_status_allowed"
+        ),
         CheckConstraint(
             "safe_failure_message IS NULL OR octet_length(safe_failure_message) <= 1024",
             name="safe_failure_message_bounded",
@@ -129,10 +135,6 @@ class QuestionAnalysis(Base):
 
 
 class QuestionAnalysisIntent(Base):
-    """``intent_code``/``intent_taxonomy_version`` replaced the surrogate
-    ``question_intent_type_id`` FK in migration 018, matching the versioned
-    taxonomy key on :class:`QuestionIntentType`."""
-
     __tablename__ = "question_analysis_intents"
     __table_args__ = (
         ForeignKeyConstraint(
@@ -145,17 +147,46 @@ class QuestionAnalysisIntent(Base):
             ["question_intent_types.code", "question_intent_types.taxonomy_version"],
             ondelete="RESTRICT",
         ),
-        CheckConstraint("rank >= 1", name="rank_positive"),
+        UniqueConstraint(
+            "id",
+            "question_analysis_id",
+            name="uq_question_analysis_intents_id_question_analysis",
+        ),
+        UniqueConstraint(
+            "question_analysis_id",
+            "intent_code",
+            "intent_taxonomy_version",
+            name="uq_question_analysis_intents_analysis_taxonomy",
+        ),
+        CheckConstraint(f"priority IN ({INTENT_PRIORITY_VALUES})", name="priority_allowed"),
+        CheckConstraint(
+            "source_span_start IS NULL OR source_span_start >= 0",
+            name="source_span_ordered",
+        ),
+        CheckConstraint(
+            "source_span_end IS NULL OR "
+            "(source_span_end >= 0 AND source_span_start IS NOT NULL "
+            "AND source_span_end >= source_span_start)",
+            name="source_span_end_ordered",
+        ),
+        Index(
+            "uq_question_analysis_intents_primary",
+            "question_analysis_id",
+            unique=True,
+            postgresql_where=text("priority = 'PRIMARY'"),
+        ),
     )
 
-    question_analysis_id: Mapped[UUID] = mapped_column(
-        PostgreSQLUUID(as_uuid=True), primary_key=True
-    )
-    intent_code: Mapped[str] = mapped_column(String(64), primary_key=True)
-    intent_taxonomy_version: Mapped[str] = mapped_column(String(32), primary_key=True)
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    question_analysis_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
+    intent_code: Mapped[str] = mapped_column(String(64))
+    intent_taxonomy_version: Mapped[str] = mapped_column(String(32))
     owner_user_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
-    rank: Mapped[int] = mapped_column(Integer)
-    is_primary: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    priority: Mapped[str] = mapped_column(String(16))
+    source_span_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source_span_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class QuestionAnalysisRequirementGroup(Base):
@@ -167,35 +198,67 @@ class QuestionAnalysisRequirementGroup(Base):
             ondelete="RESTRICT",
         ),
         ForeignKeyConstraint(
-            ["requirement_group_id"], ["requirement_groups.id"], ondelete="RESTRICT"
+            ["intent_id", "question_analysis_id"],
+            [
+                "question_analysis_intents.id",
+                "question_analysis_intents.question_analysis_id",
+            ],
+            ondelete="RESTRICT",
+        ),
+        UniqueConstraint("id", "owner_user_id", name="id_owner_user_id"),
+        UniqueConstraint("question_analysis_id", "group_order", name="analysis_group_order"),
+        CheckConstraint("group_order >= 0", name="group_order_not_negative"),
+        CheckConstraint(
+            f"operator IN ({REQUIREMENT_GROUP_OPERATOR_VALUES})", name="operator_allowed"
         ),
     )
 
-    question_analysis_id: Mapped[UUID] = mapped_column(
-        PostgreSQLUUID(as_uuid=True), primary_key=True
-    )
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    question_analysis_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
     owner_user_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
-    requirement_group_id: Mapped[UUID] = mapped_column(
-        PostgreSQLUUID(as_uuid=True), primary_key=True
-    )
+    intent_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
+    group_order: Mapped[int] = mapped_column(Integer)
+    operator: Mapped[str] = mapped_column(String(8))
+    same_experience_required: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class QuestionAnalysisRequirement(Base):
     __tablename__ = "question_analysis_requirements"
     __table_args__ = (
         ForeignKeyConstraint(
-            ["question_analysis_id", "owner_user_id"],
-            ["question_analyses.id", "question_analyses.owner_user_id"],
+            ["group_id", "owner_user_id"],
+            [
+                "question_analysis_requirement_groups.id",
+                "question_analysis_requirement_groups.owner_user_id",
+            ],
             ondelete="RESTRICT",
         ),
-        ForeignKeyConstraint(["requirement_id"], ["requirements.id"], ondelete="RESTRICT"),
+        UniqueConstraint("group_id", "order_no", name="group_order_no"),
+        CheckConstraint("order_no >= 0", name="order_no_not_negative"),
+        CheckConstraint(
+            "source_span_start IS NULL OR source_span_start >= 0",
+            name="source_span_ordered",
+        ),
+        CheckConstraint(
+            "source_span_end IS NULL OR "
+            "(source_span_end >= 0 AND source_span_start IS NOT NULL "
+            "AND source_span_end >= source_span_start)",
+            name="source_span_end_ordered",
+        ),
     )
 
-    question_analysis_id: Mapped[UUID] = mapped_column(
-        PostgreSQLUUID(as_uuid=True), primary_key=True
-    )
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    group_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
     owner_user_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
-    requirement_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)
+    source_span_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source_span_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    requirement_type: Mapped[str] = mapped_column(String(64))
+    normalized_text: Mapped[str] = mapped_column(Text)
+    importance: Mapped[str] = mapped_column(String(32))
+    uncertainty: Mapped[str | None] = mapped_column(Text, nullable=True)
+    order_no: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class SnapshotActivityVersion(Base):
@@ -242,9 +305,7 @@ class SnapshotSourceVersion(Base):
     snapshot_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)
     owner_user_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
     source_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
-    source_version_id: Mapped[UUID] = mapped_column(
-        PostgreSQLUUID(as_uuid=True), primary_key=True
-    )
+    source_version_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)
     company_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
 
 

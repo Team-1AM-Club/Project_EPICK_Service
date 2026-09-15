@@ -131,10 +131,17 @@ def test_claim_evidence_is_company_scoped_and_source_history_is_append_only(
         )
         connection.execute(
             text(
-                "INSERT INTO claim_evidence_links (id, claim_version_id, evidence_span_id, relation_type) "
-                "VALUES (:id, :claim_version_id, :evidence_span_id, 'SUPPORTS')"
+                "INSERT INTO claim_evidence_links (claim_version_id, evidence_span_id, relation_type) "
+                "VALUES (:claim_version_id, :evidence_span_id, 'SUPPORTS')"
             ),
-            {"id": uuid4(), "claim_version_id": claim_version_id, "evidence_span_id": evidence_a_id},
+            {"claim_version_id": claim_version_id, "evidence_span_id": evidence_a_id},
+        )
+        connection.execute(
+            text(
+                "INSERT INTO claim_evidence_links (claim_version_id, evidence_span_id, relation_type) "
+                "VALUES (:claim_version_id, :evidence_span_id, 'CONTEXT')"
+            ),
+            {"claim_version_id": claim_version_id, "evidence_span_id": evidence_a_id},
         )
 
     with migrated_engine.connect() as connection:
@@ -143,11 +150,10 @@ def test_claim_evidence_is_company_scoped_and_source_history_is_append_only(
             with pytest.raises(IntegrityError):
                 connection.execute(
                     text(
-                        "INSERT INTO claim_evidence_links (id, claim_version_id, evidence_span_id, relation_type) "
-                        "VALUES (:id, :claim_version_id, :evidence_span_id, 'SUPPORTS')"
+                        "INSERT INTO claim_evidence_links (claim_version_id, evidence_span_id, relation_type) "
+                        "VALUES (:claim_version_id, :evidence_span_id, 'SUPPORTS')"
                     ),
                     {
-                        "id": uuid4(),
                         "claim_version_id": claim_version_id,
                         "evidence_span_id": evidence_b_id,
                     },
@@ -318,6 +324,205 @@ def test_question_analysis_and_snapshot_links_freeze_the_same_owner_project_and_
                         "source_version_id": source_version_b_id,
                         "company_id": company_b_id,
                     },
+                )
+        finally:
+            transaction.rollback()
+
+
+def test_question_analysis_requirements_are_private_and_trace_back_to_one_intent(
+    db_session: Session, migrated_engine: Engine
+) -> None:
+    owner = User(display_name="Question analysis owner", locale="ko-KR", timezone="Asia/Seoul")
+    db_session.add(owner)
+    db_session.flush()
+    workspace_service = ApplicationWorkspaceService(db_session)
+    company = workspace_service.create_company(legal_name="Company", display_name="Company")
+    project = workspace_service.create_project(
+        owner_user_id=owner.id,
+        company_id=company.id,
+        title="Question analysis project",
+        role_name="Backend engineer",
+    )
+    question = workspace_service.create_question(
+        owner_user_id=owner.id,
+        project_id=project.id,
+        display_order=0,
+        prompt="Describe a difficult problem you solved.",
+        source="USER",
+    )
+    db_session.commit()
+
+    analysis_id = uuid4()
+    other_analysis_id = uuid4()
+    primary_intent_id = uuid4()
+    other_analysis_intent_id = uuid4()
+    group_id = uuid4()
+    requirement_id = uuid4()
+    with migrated_engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO question_intent_types ("
+                "code, taxonomy_version, display_name, is_active"
+                ") VALUES "
+                "('PROBLEM_SOLVING', 'v1', 'Problem solving', true), "
+                "('COLLABORATION', 'v1', 'Collaboration', true)"
+            )
+        )
+        for current_analysis_id, revision in ((analysis_id, 1), (other_analysis_id, 2)):
+            connection.execute(
+                text(
+                    "INSERT INTO question_analyses ("
+                    "id, owner_user_id, project_id, project_version_id, company_id, "
+                    "question_id, question_version_id, analysis_input_version, "
+                    "analysis_revision, result_status"
+                    ") VALUES ("
+                    ":id, :owner_user_id, :project_id, :project_version_id, :company_id, "
+                    ":question_id, :question_version_id, 'policy-v1', :revision, 'BLOCKED'"
+                    ")"
+                ),
+                {
+                    "id": current_analysis_id,
+                    "owner_user_id": owner.id,
+                    "project_id": project.id,
+                    "project_version_id": project.current_version_id,
+                    "company_id": company.id,
+                    "question_id": question.id,
+                    "question_version_id": question.current_version_id,
+                    "revision": revision,
+                },
+            )
+        for intent_id, current_analysis_id, code, priority in (
+            (primary_intent_id, analysis_id, "PROBLEM_SOLVING", "PRIMARY"),
+            (other_analysis_intent_id, other_analysis_id, "PROBLEM_SOLVING", "PRIMARY"),
+        ):
+            connection.execute(
+                text(
+                    "INSERT INTO question_analysis_intents ("
+                    "id, question_analysis_id, owner_user_id, intent_code, "
+                    "intent_taxonomy_version, priority, source_span_start, source_span_end, rationale"
+                    ") VALUES ("
+                    ":id, :analysis_id, :owner_user_id, :intent_code, 'v1', :priority, "
+                    "0, 20, 'Question text supports this intent'"
+                    ")"
+                ),
+                {
+                    "id": intent_id,
+                    "analysis_id": current_analysis_id,
+                    "owner_user_id": owner.id,
+                    "intent_code": code,
+                    "priority": priority,
+                },
+            )
+        connection.execute(
+            text(
+                "INSERT INTO question_analysis_requirement_groups ("
+                "id, question_analysis_id, owner_user_id, intent_id, group_order, operator, "
+                "same_experience_required"
+                ") VALUES ("
+                ":id, :analysis_id, :owner_user_id, :intent_id, 0, 'AND', true"
+                ")"
+            ),
+            {
+                "id": group_id,
+                "analysis_id": analysis_id,
+                "owner_user_id": owner.id,
+                "intent_id": primary_intent_id,
+            },
+        )
+        connection.execute(
+            text(
+                "INSERT INTO question_analysis_requirements ("
+                "id, group_id, owner_user_id, source_span_start, source_span_end, "
+                "requirement_type, normalized_text, importance, order_no"
+                ") VALUES ("
+                ":id, :group_id, :owner_user_id, 4, 16, 'EXPERIENCE', "
+                "'Describe a concrete technical decision.', 'HIGH', 0"
+                ")"
+            ),
+            {"id": requirement_id, "group_id": group_id, "owner_user_id": owner.id},
+        )
+
+        trace = (
+            connection.execute(
+                text(
+                    "SELECT intent.rationale, requirement.normalized_text "
+                    "FROM question_analysis_requirements AS requirement "
+                    "JOIN question_analysis_requirement_groups AS requirement_group "
+                    "  ON requirement_group.id = requirement.group_id "
+                    "JOIN question_analysis_intents AS intent "
+                    "  ON intent.id = requirement_group.intent_id "
+                    " AND intent.question_analysis_id = requirement_group.question_analysis_id "
+                    "WHERE requirement.id = :requirement_id"
+                ),
+                {"requirement_id": requirement_id},
+            )
+            .mappings()
+            .one()
+        )
+
+    assert trace["rationale"] == "Question text supports this intent"
+    assert trace["normalized_text"] == "Describe a concrete technical decision."
+
+    with migrated_engine.connect() as connection:
+        transaction = connection.begin()
+        try:
+            with pytest.raises(IntegrityError):
+                connection.execute(
+                    text(
+                        "INSERT INTO question_analysis_requirement_groups ("
+                        "id, question_analysis_id, owner_user_id, intent_id, group_order, operator, "
+                        "same_experience_required"
+                        ") VALUES ("
+                        ":id, :analysis_id, :owner_user_id, :intent_id, 1, 'AND', false"
+                        ")"
+                    ),
+                    {
+                        "id": uuid4(),
+                        "analysis_id": analysis_id,
+                        "owner_user_id": owner.id,
+                        "intent_id": other_analysis_intent_id,
+                    },
+                )
+        finally:
+            transaction.rollback()
+
+    with migrated_engine.connect() as connection:
+        transaction = connection.begin()
+        try:
+            with pytest.raises(IntegrityError):
+                connection.execute(
+                    text(
+                        "INSERT INTO question_analysis_intents ("
+                        "id, question_analysis_id, owner_user_id, intent_code, "
+                        "intent_taxonomy_version, priority"
+                        ") VALUES ("
+                        ":id, :analysis_id, :owner_user_id, 'COLLABORATION', 'v1', 'PRIMARY'"
+                        ")"
+                    ),
+                    {
+                        "id": uuid4(),
+                        "analysis_id": analysis_id,
+                        "owner_user_id": owner.id,
+                    },
+                )
+        finally:
+            transaction.rollback()
+
+    with migrated_engine.connect() as connection:
+        transaction = connection.begin()
+        try:
+            with pytest.raises(IntegrityError):
+                connection.execute(
+                    text(
+                        "INSERT INTO question_analysis_requirements ("
+                        "id, group_id, owner_user_id, source_span_start, source_span_end, "
+                        "requirement_type, normalized_text, importance, order_no"
+                        ") VALUES ("
+                        ":id, :group_id, :owner_user_id, 8, 4, 'EXPERIENCE', "
+                        "'Invalid span', 'HIGH', 1"
+                        ")"
+                    ),
+                    {"id": uuid4(), "group_id": group_id, "owner_user_id": owner.id},
                 )
         finally:
             transaction.rollback()

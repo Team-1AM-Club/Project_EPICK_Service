@@ -20,6 +20,8 @@ depends_on = None
 
 CLAIM_VERIFICATION_STATUS_VALUES = "'UNVERIFIED', 'SUPPORTED', 'CONFLICTING', 'RETRACTED'"
 EVIDENCE_STANCE_VALUES = "'SUPPORTS', 'CONTRADICTS', 'CONTEXT'"
+LEGACY_PREDICATE = "__LEGACY_UNSPECIFIED__"
+LEGACY_EXTRACTOR_VERSION = "legacy-pre-018"
 
 # Actual pre-existing constraint name, confirmed against a real PostgreSQL 16
 # instance running migrations 000..017 (naming_convention-derived, not guessed).
@@ -45,7 +47,19 @@ def upgrade() -> None:
         "claim_versions",
         f"verification_status IN ({CLAIM_VERIFICATION_STATUS_VALUES})",
     )
-    op.add_column("claim_versions", sa.Column("predicate", sa.Text(), nullable=False))
+    # Claim versions were already append-only at revision 017.  Do not update
+    # existing rows to invent provenance: add one-time defaults so a non-empty
+    # 017 database can cross this boundary without bypassing that trigger.
+    op.add_column(
+        "claim_versions",
+        sa.Column(
+            "predicate",
+            sa.Text(),
+            nullable=False,
+            server_default=sa.text(f"'{LEGACY_PREDICATE}'"),
+        ),
+    )
+    op.alter_column("claim_versions", "predicate", server_default=None)
     op.add_column(
         "claim_versions",
         sa.Column("org_unit_version_id", postgresql.UUID(as_uuid=True), nullable=True),
@@ -67,12 +81,25 @@ def upgrade() -> None:
     )
     op.add_column("claim_versions", sa.Column("comparison_basis", sa.Text(), nullable=True))
     op.add_column(
-        "claim_versions", sa.Column("extractor_version", sa.String(length=64), nullable=False)
+        "claim_versions",
+        sa.Column(
+            "extractor_version",
+            sa.String(length=64),
+            nullable=False,
+            server_default=sa.text(f"'{LEGACY_EXTRACTOR_VERSION}'"),
+        ),
     )
+    op.alter_column("claim_versions", "extractor_version", server_default=None)
     op.add_column(
         "claim_versions",
-        sa.Column("extracted_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column(
+            "extracted_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
     )
+    op.alter_column("claim_versions", "extracted_at", server_default=None)
     op.create_check_constraint(
         "period_ordered",
         "claim_versions",
@@ -110,23 +137,12 @@ def upgrade() -> None:
         ondelete="RESTRICT",
     )
 
-    # --- claim_evidence_links: surrogate id, natural key preserved as unique --------
-    op.add_column(
-        "claim_evidence_links",
-        sa.Column(
-            "id",
-            postgresql.UUID(as_uuid=True),
-            nullable=False,
-            server_default=sa.text("gen_random_uuid()"),
-        ),
-    )
-    op.alter_column("claim_evidence_links", "id", server_default=None)
+    # --- claim_evidence_links: relation type is part of its natural key -------------
     op.drop_constraint("pk_claim_evidence_links", "claim_evidence_links", type_="primary")
-    op.create_primary_key("pk_claim_evidence_links", "claim_evidence_links", ["id"])
-    op.create_unique_constraint(
-        "uq_claim_evidence_links_claim_version_evidence_span",
+    op.create_primary_key(
+        "pk_claim_evidence_links",
         "claim_evidence_links",
-        ["claim_version_id", "evidence_span_id"],
+        ["claim_version_id", "evidence_span_id", "relation_type"],
     )
 
     # --- interpretation_evidence_links: surrogate id, ClaimVersion OR EvidenceSpan,
@@ -238,9 +254,7 @@ def upgrade() -> None:
         """
     )
     op.drop_constraint(_FK_QAI_INTENT_TYPE, "question_analysis_intents", type_="foreignkey")
-    op.drop_constraint(
-        "pk_question_analysis_intents", "question_analysis_intents", type_="primary"
-    )
+    op.drop_constraint("pk_question_analysis_intents", "question_analysis_intents", type_="primary")
     op.drop_column("question_analysis_intents", "question_intent_type_id")
 
     op.add_column(
@@ -252,9 +266,7 @@ def upgrade() -> None:
         "question_intent_types",
         sa.Column("is_active", sa.Boolean(), server_default=sa.text("true"), nullable=False),
     )
-    op.drop_constraint(
-        "uq_question_intent_types_code", "question_intent_types", type_="unique"
-    )
+    op.drop_constraint("uq_question_intent_types_code", "question_intent_types", type_="unique")
     op.drop_constraint("pk_question_intent_types", "question_intent_types", type_="primary")
     op.drop_column("question_intent_types", "id")
     op.create_primary_key(
@@ -285,9 +297,7 @@ def downgrade() -> None:
         "question_analysis_intents",
         type_="foreignkey",
     )
-    op.drop_constraint(
-        "pk_question_analysis_intents", "question_analysis_intents", type_="primary"
-    )
+    op.drop_constraint("pk_question_analysis_intents", "question_analysis_intents", type_="primary")
 
     op.add_column(
         "question_intent_types",
@@ -300,9 +310,7 @@ def downgrade() -> None:
     )
     op.alter_column("question_intent_types", "id", server_default=None)
     op.drop_constraint("pk_question_intent_types", "question_intent_types", type_="primary")
-    op.create_unique_constraint(
-        "uq_question_intent_types_code", "question_intent_types", ["code"]
-    )
+    op.create_unique_constraint("uq_question_intent_types_code", "question_intent_types", ["code"])
     op.drop_column("question_intent_types", "is_active")
     op.drop_column("question_intent_types", "taxonomy_version")
     op.create_primary_key("pk_question_intent_types", "question_intent_types", ["id"])
@@ -398,14 +406,8 @@ def downgrade() -> None:
         ["interpretation_version_id", "evidence_span_id"],
     )
 
-    # --- claim_evidence_links: back to composite PK -----------------------------------
-    op.drop_constraint(
-        "uq_claim_evidence_links_claim_version_evidence_span",
-        "claim_evidence_links",
-        type_="unique",
-    )
+    # --- claim_evidence_links: back to the revision-017 natural key -----------------
     op.drop_constraint("pk_claim_evidence_links", "claim_evidence_links", type_="primary")
-    op.drop_column("claim_evidence_links", "id")
     op.create_primary_key(
         "pk_claim_evidence_links",
         "claim_evidence_links",

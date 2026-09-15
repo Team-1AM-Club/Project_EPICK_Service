@@ -18,6 +18,7 @@ from app.models import (  # noqa: F401
     lifecycle_operations,
     organizations,
     privacy_controls,
+    projection,
     question_analysis,
     recommendations,
     sources,
@@ -29,6 +30,35 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
+
+LEGACY_AUTOGENERATE_TABLES = frozenset(
+    {
+        "question_analysis_job_requirement_group_links",
+        "question_analysis_job_requirement_links",
+    }
+)
+
+
+def include_object(
+    object_: object,
+    name: str | None,
+    type_: str,
+    reflected: bool,
+    compare_to: object | None,
+) -> bool:
+    """Limit autogenerate to the ORM-owned table/column/type inventory.
+
+    This service keeps FK, unique, partial-index, RLS, trigger, and policy
+    contracts in hand-authored PostgreSQL migrations and verifies them through
+    integration tests.  Comparing their generated physical names to the
+    intentionally slimmer ORM metadata produces false upgrade operations.
+    """
+
+    if type_ == "table" and reflected and name in LEGACY_AUTOGENERATE_TABLES:
+        return False
+    if type_ in {"foreign_key_constraint", "index", "unique_constraint"}:
+        return False
+    return True
 
 
 def run_migrations_offline() -> None:
@@ -43,6 +73,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
+        include_object=include_object,
     )
 
     with context.begin_transaction():
@@ -61,7 +92,12 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            compare_type=True,
+            include_object=include_object,
+        )
 
         with context.begin_transaction():
             context.run_migrations()

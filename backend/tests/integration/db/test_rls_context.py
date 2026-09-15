@@ -5,23 +5,23 @@ from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import text
+from sqlalchemy.engine import Engine
 from sqlalchemy.exc import DBAPIError
+from sqlalchemy.orm import Session, sessionmaker
 
-from app.db.session import SessionLocal, engine, set_local_owner_context
+from app.db.session import set_local_owner_context
 
 RUNTIME_ROLE_SQL = Path(__file__).parent / "sql" / "runtime_roles.sql"
-RUNTIME_ROLE_TEMPLATE_SQL = (
-    Path(__file__).parents[3] / "infra" / "postgres" / "runtime_roles.sql"
-)
+RUNTIME_ROLE_TEMPLATE_SQL = Path(__file__).parents[3] / "infra" / "postgres" / "runtime_roles.sql"
 TEST_TABLE = "stage0_private_rows"
 RUNTIME_ROLE = "epick_runtime"
 OWNER_CONTEXT_EXPRESSION = "NULLIF(current_setting('app.current_user_id', true), '')::uuid"
 
 
 @pytest.fixture(autouse=True)
-def private_test_table() -> None:
+def private_test_table(migrated_engine: Engine) -> None:
     role_sql = RUNTIME_ROLE_SQL.read_text(encoding="utf-8")
-    with engine.begin() as connection:
+    with migrated_engine.begin() as connection:
         connection.execute(text(role_sql))
         connection.execute(text(f"DROP TABLE IF EXISTS {TEST_TABLE}"))
         connection.execute(
@@ -47,12 +47,19 @@ def private_test_table() -> None:
 
     yield
 
-    with engine.begin() as connection:
+    with migrated_engine.begin() as connection:
         connection.execute(text(f"DROP TABLE IF EXISTS {TEST_TABLE}"))
 
 
-def _runtime_transaction(owner_user_id: UUID):
-    session = SessionLocal()
+@pytest.fixture
+def rls_session_factory(migrated_engine: Engine) -> sessionmaker[Session]:
+    return sessionmaker(bind=migrated_engine, expire_on_commit=False)
+
+
+def _runtime_transaction(
+    rls_session_factory: sessionmaker[Session], owner_user_id: UUID
+) -> tuple[Session, object]:
+    session = rls_session_factory()
     transaction = session.begin()
     transaction.__enter__()
     session.execute(text(f"SET LOCAL ROLE {RUNTIME_ROLE}"))
@@ -60,11 +67,13 @@ def _runtime_transaction(owner_user_id: UUID):
     return session, transaction
 
 
-def test_owner_context_is_limited_to_one_transaction_and_cannot_leak_from_pool() -> None:
+def test_owner_context_is_limited_to_one_transaction_and_cannot_leak_from_pool(
+    rls_session_factory: sessionmaker[Session],
+) -> None:
     owner_a = uuid4()
     owner_b = uuid4()
 
-    session_a, transaction_a = _runtime_transaction(owner_a)
+    session_a, transaction_a = _runtime_transaction(rls_session_factory, owner_a)
     try:
         session_a.execute(
             text(
@@ -77,7 +86,7 @@ def test_owner_context_is_limited_to_one_transaction_and_cannot_leak_from_pool()
     finally:
         session_a.close()
 
-    session_b, transaction_b = _runtime_transaction(owner_b)
+    session_b, transaction_b = _runtime_transaction(rls_session_factory, owner_b)
     try:
         selected_rows = session_b.execute(text(f"SELECT owner_user_id FROM {TEST_TABLE}"))
         visible_to_b = selected_rows.scalars().all()
@@ -86,7 +95,7 @@ def test_owner_context_is_limited_to_one_transaction_and_cannot_leak_from_pool()
     finally:
         session_b.close()
 
-    session_without_context = SessionLocal()
+    session_without_context = rls_session_factory()
     transaction_without_context = session_without_context.begin()
     transaction_without_context.__enter__()
     try:
@@ -102,8 +111,10 @@ def test_owner_context_is_limited_to_one_transaction_and_cannot_leak_from_pool()
         session_without_context.close()
 
 
-def test_malformed_owner_context_is_rejected_before_querying_private_rows() -> None:
-    with SessionLocal.begin() as session:
+def test_malformed_owner_context_is_rejected_before_querying_private_rows(
+    rls_session_factory: sessionmaker[Session],
+) -> None:
+    with rls_session_factory.begin() as session:
         session.execute(text(f"SET LOCAL ROLE {RUNTIME_ROLE}"))
 
         with pytest.raises(ValueError, match="valid UUID"):
