@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/common/v1/event-envelope.schema.json",
+  "title": "EPICK immutable public event envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_id",
+    "event_type",
+    "producer",
+    "occurred_at",
+    "aggregate_type",
+    "aggregate_id",
+    "revision",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "event_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "event_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregate_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "aggregate_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "payload": {
+      "type": "object",
+      "propertyNames": {
+        "not": {
+          "enum": [
+            "owner_id",
+            "owner_user_id",
+            "job_id",
+            "command_id",
+            "authenticated_owner_ref",
+            "project_id",
+            "auth_subject",
+            "email",
+            "checkpoint",
+            "prompt",
+            "response",
+            "secret",
+            "token"
+          ]
+        }
+      }
+    }
+  }
+}
