@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import Engine, text
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 
 from app.models.identity import User
@@ -97,6 +97,8 @@ def _insert_job_posting(
     company_id: UUID,
     source_id: UUID,
     source_version_id: UUID,
+    org_unit_version_id: UUID | None = None,
+    role_version_id: UUID | None = None,
 ) -> tuple[UUID, UUID]:
     posting_id = uuid4()
     posting_version_id = uuid4()
@@ -110,10 +112,11 @@ def _insert_job_posting(
     connection.execute(
         text(
             "INSERT INTO job_posting_versions ("
-            "id, posting_id, company_id, source_id, version_no, source_version_id, title"
+            "id, posting_id, company_id, source_id, version_no, source_version_id, title, "
+            "org_unit_version_id, role_version_id"
             ") VALUES ("
             ":id, :posting_id, :company_id, :source_id, 1, :source_version_id, "
-            "'Backend Engineer'"
+            "'Backend Engineer', :org_unit_version_id, :role_version_id"
             ")"
         ),
         {
@@ -122,6 +125,8 @@ def _insert_job_posting(
             "company_id": company_id,
             "source_id": source_id,
             "source_version_id": source_version_id,
+            "org_unit_version_id": org_unit_version_id,
+            "role_version_id": role_version_id,
         },
     )
     connection.execute(
@@ -302,12 +307,6 @@ def test_organization_references_are_limited_to_the_posting_company(
         _, _, evidence_span_b_id = _insert_source_with_evidence(
             connection, company_id=company_b_id, suffix="org-b"
         )
-        _, posting_version_id = _insert_job_posting(
-            connection,
-            company_id=company_a_id,
-            source_id=source_a_id,
-            source_version_id=source_version_a_id,
-        )
         _, org_version_a_id, _, role_version_a_id = _insert_org_and_role(
             connection,
             company_id=company_a_id,
@@ -320,18 +319,13 @@ def test_organization_references_are_limited_to_the_posting_company(
             evidence_span_id=evidence_span_b_id,
             suffix="b",
         )
-        connection.execute(
-            text(
-                "UPDATE job_posting_versions "
-                "SET org_unit_version_id = :org_unit_version_id, "
-                "role_version_id = :role_version_id "
-                "WHERE id = :posting_version_id"
-            ),
-            {
-                "org_unit_version_id": org_version_a_id,
-                "role_version_id": role_version_a_id,
-                "posting_version_id": posting_version_id,
-            },
+        posting_id, posting_version_id = _insert_job_posting(
+            connection,
+            company_id=company_a_id,
+            source_id=source_a_id,
+            source_version_id=source_version_a_id,
+            org_unit_version_id=org_version_a_id,
+            role_version_id=role_version_a_id,
         )
         group_id = uuid4()
         connection.execute(
@@ -367,13 +361,21 @@ def test_organization_references_are_limited_to_the_posting_company(
             with pytest.raises(IntegrityError):
                 connection.execute(
                     text(
-                        "UPDATE job_posting_versions "
-                        "SET org_unit_version_id = :org_unit_version_id "
-                        "WHERE id = :posting_version_id"
+                        "INSERT INTO job_posting_versions ("
+                        "id, posting_id, company_id, source_id, version_no, source_version_id, "
+                        "title, org_unit_version_id"
+                        ") VALUES ("
+                        ":id, :posting_id, :company_id, :source_id, 2, :source_version_id, "
+                        "'Backend Engineer v2', :org_unit_version_id"
+                        ")"
                     ),
                     {
+                        "id": uuid4(),
+                        "posting_id": posting_id,
+                        "company_id": company_a_id,
+                        "source_id": source_a_id,
+                        "source_version_id": source_version_a_id,
                         "org_unit_version_id": org_version_b_id,
-                        "posting_version_id": posting_version_id,
                     },
                 )
         finally:
@@ -385,13 +387,208 @@ def test_organization_references_are_limited_to_the_posting_company(
             with pytest.raises(IntegrityError):
                 connection.execute(
                     text(
-                        "UPDATE requirements SET org_unit_version_id = :org_unit_version_id "
-                        "WHERE id = :requirement_id"
+                        "INSERT INTO requirements ("
+                        "id, group_id, evidence_span_id, category, necessity, source_text, "
+                        "org_unit_version_id"
+                        ") VALUES ("
+                        ":id, :group_id, :evidence_span_id, 'ROLE', 'REQUIRED', "
+                        "'Foreign organization experience', :org_unit_version_id"
+                        ")"
                     ),
-                    {"org_unit_version_id": org_version_b_id, "requirement_id": requirement_id},
+                    {
+                        "id": uuid4(),
+                        "group_id": group_id,
+                        "evidence_span_id": evidence_span_a_id,
+                        "org_unit_version_id": org_version_b_id,
+                    },
                 )
         finally:
             transaction.rollback()
+
+    with migrated_engine.connect() as connection:
+        transaction = connection.begin()
+        try:
+            with pytest.raises(OperationalError):
+                connection.execute(
+                    text("UPDATE job_posting_versions SET title = title WHERE id = :id"),
+                    {"id": posting_version_id},
+                )
+        finally:
+            transaction.rollback()
+
+    with migrated_engine.connect() as connection:
+        transaction = connection.begin()
+        try:
+            with pytest.raises(OperationalError):
+                connection.execute(
+                    text("UPDATE requirements SET source_text = source_text WHERE id = :id"),
+                    {"id": requirement_id},
+                )
+        finally:
+            transaction.rollback()
+
+
+def test_public_history_records_reject_updates_and_deletes(migrated_engine: Engine) -> None:
+    company_a_id = uuid4()
+    company_b_id = uuid4()
+    with migrated_engine.begin() as connection:
+        _insert_company(connection, company_id=company_a_id, name="Company A")
+        _insert_company(connection, company_id=company_b_id, name="Company B")
+        source_a_id, source_version_a_id, evidence_a_id = _insert_source_with_evidence(
+            connection, company_id=company_a_id, suffix="immutability-a"
+        )
+        _, source_version_b_id, _ = _insert_source_with_evidence(
+            connection, company_id=company_b_id, suffix="immutability-b"
+        )
+        collection_attempt_id = uuid4()
+        source_relation_id = uuid4()
+        company_relation_id = uuid4()
+        connection.execute(
+            text(
+                "INSERT INTO source_collection_attempts ("
+                "id, source_id, idempotency_key, attempt_no, access_result, storage_result, "
+                "parse_result, policy_version, started_at, source_version_id, "
+                "command_schema_version, result_completeness"
+                ") VALUES ("
+                ":id, :source_id, 'immutable-attempt', 1, 'ALLOWED', 'STORED_FULL', "
+                "'SUCCEEDED', 'policy-v1', now(), :source_version_id, '1.0', 'complete'"
+                ")"
+            ),
+            {
+                "id": collection_attempt_id,
+                "source_id": source_a_id,
+                "source_version_id": source_version_a_id,
+            },
+        )
+        connection.execute(
+            text(
+                "INSERT INTO source_relations ("
+                "id, from_source_version_id, to_source_version_id, relation_type"
+                ") VALUES ("
+                ":id, :from_source_version_id, :to_source_version_id, 'RELATED'"
+                ")"
+            ),
+            {
+                "id": source_relation_id,
+                "from_source_version_id": source_version_a_id,
+                "to_source_version_id": source_version_b_id,
+            },
+        )
+        connection.execute(
+            text(
+                "INSERT INTO company_relations ("
+                "id, from_company_id, to_company_id, relation_type, evidence_span_id"
+                ") VALUES ("
+                ":id, :from_company_id, :to_company_id, 'RELATED_TO', :evidence_span_id"
+                ")"
+            ),
+            {
+                "id": company_relation_id,
+                "from_company_id": company_a_id,
+                "to_company_id": company_b_id,
+                "evidence_span_id": evidence_a_id,
+            },
+        )
+        _, org_version_id, _, role_version_id = _insert_org_and_role(
+            connection,
+            company_id=company_a_id,
+            evidence_span_id=evidence_a_id,
+            suffix="immutability",
+        )
+        _, posting_version_id = _insert_job_posting(
+            connection,
+            company_id=company_a_id,
+            source_id=source_a_id,
+            source_version_id=source_version_a_id,
+            org_unit_version_id=org_version_id,
+            role_version_id=role_version_id,
+        )
+        requirement_group_id = uuid4()
+        requirement_id = uuid4()
+        canonical_skill_id = uuid4()
+        connection.execute(
+            text(
+                "INSERT INTO requirement_groups ("
+                "id, job_posting_version_id, group_order, operator"
+                ") VALUES (:id, :job_posting_version_id, 0, 'AND')"
+            ),
+            {"id": requirement_group_id, "job_posting_version_id": posting_version_id},
+        )
+        connection.execute(
+            text(
+                "INSERT INTO requirements ("
+                "id, group_id, evidence_span_id, category, necessity, source_text"
+                ") VALUES ("
+                ":id, :group_id, :evidence_span_id, 'SKILL', 'REQUIRED', 'Python'"
+                ")"
+            ),
+            {
+                "id": requirement_id,
+                "group_id": requirement_group_id,
+                "evidence_span_id": evidence_a_id,
+            },
+        )
+        connection.execute(
+            text("INSERT INTO canonical_skills (id, canonical_name) VALUES (:id, 'Python')"),
+            {"id": canonical_skill_id},
+        )
+        connection.execute(
+            text(
+                "INSERT INTO requirement_skills ("
+                "requirement_id, canonical_skill_id, raw_term, relation_type"
+                ") VALUES ("
+                ":requirement_id, :canonical_skill_id, 'Python', 'REQUIRES'"
+                ")"
+            ),
+            {"requirement_id": requirement_id, "canonical_skill_id": canonical_skill_id},
+        )
+
+    immutable_rows = (
+        ("source_versions", "id = :id", {"id": source_version_a_id}, "content_hash = content_hash"),
+        ("evidence_spans", "id = :id", {"id": evidence_a_id}, "excerpt = excerpt"),
+        (
+            "source_collection_attempts",
+            "id = :id",
+            {"id": collection_attempt_id},
+            "parse_result = parse_result",
+        ),
+        (
+            "source_relations",
+            "id = :id",
+            {"id": source_relation_id},
+            "relation_type = relation_type",
+        ),
+        (
+            "company_relations",
+            "id = :id",
+            {"id": company_relation_id},
+            "relation_type = relation_type",
+        ),
+        ("org_unit_versions", "id = :id", {"id": org_version_id}, "name = name"),
+        ("role_versions", "id = :id", {"id": role_version_id}, "name = name"),
+        ("job_posting_versions", "id = :id", {"id": posting_version_id}, "title = title"),
+        ("requirement_groups", "id = :id", {"id": requirement_group_id}, "operator = operator"),
+        ("requirements", "id = :id", {"id": requirement_id}, "source_text = source_text"),
+        (
+            "requirement_skills",
+            "requirement_id = :requirement_id AND canonical_skill_id = :canonical_skill_id",
+            {"requirement_id": requirement_id, "canonical_skill_id": canonical_skill_id},
+            "relation_type = relation_type",
+        ),
+    )
+
+    for table_name, predicate, parameters, assignment in immutable_rows:
+        for statement in (
+            f"UPDATE {table_name} SET {assignment} WHERE {predicate}",
+            f"DELETE FROM {table_name} WHERE {predicate}",
+        ):
+            with migrated_engine.connect() as connection:
+                transaction = connection.begin()
+                try:
+                    with pytest.raises(OperationalError):
+                        connection.execute(text(statement), parameters)
+                finally:
+                    transaction.rollback()
 
 
 def test_external_source_provenance_requires_a_source_version(
