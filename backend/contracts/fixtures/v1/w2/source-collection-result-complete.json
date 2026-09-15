@@ -1,0 +1,23 @@
+{
+  "schema_version": "w2.collection.v1",
+  "command_id": "10000000-0000-4000-8000-000000000001",
+  "job_id": "10000000-0000-4000-8000-000000000002",
+  "input_version": 1,
+  "result_version": 1,
+  "successful_source_refs": [
+    {
+      "source_id": "10000000-0000-4000-8000-000000000005",
+      "source_version_id": "10000000-0000-4000-8000-000000000007",
+      "extraction_revision_id": "10000000-0000-4000-8000-000000000008"
+    }
+  ],
+  "failures": [],
+  "completion_kind": "complete",
+  "resume_stage": null,
+  "checkpoint_ref": null,
+  "retry_not_before": null,
+  "message_ko": "공식 채용공고 수집을 완료했습니다.",
+  "source_id": "10000000-0000-4000-8000-000000000005",
+  "policy_revision": 1,
+  "required_actions": []
+}

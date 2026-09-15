@@ -1,0 +1,22 @@
+{
+  "schema_version": "w2.collection.v1",
+  "command_id": "10000000-0000-4000-8000-000000000001",
+  "job_id": "10000000-0000-4000-8000-000000000002",
+  "authenticated_owner_ref": "10000000-0000-4000-8000-000000000003",
+  "project_ref": null,
+  "company_id": "10000000-0000-4000-8000-000000000004",
+  "source_id": "10000000-0000-4000-8000-000000000005",
+  "input_version": 1,
+  "execution_fence": "synthetic-fence-1",
+  "purpose_ref": "10000000-0000-4000-8000-000000000006",
+  "core_source_decision": {
+    "is_core": true,
+    "decided_by": "analysis-request-owner",
+    "rationale": "Required job-posting section verification",
+    "decision_revision": 1,
+    "analysis_input_version": 1
+  },
+  "resume_stage": "policy",
+  "policy_revision": null,
+  "owner_deletion_epoch": 0
+}

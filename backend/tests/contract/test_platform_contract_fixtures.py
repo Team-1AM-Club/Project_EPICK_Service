@@ -43,29 +43,19 @@ def _validator(contract_root: Path, relative_schema_path: str) -> Draft202012Val
         ("w1/v1/deletion-command.schema.json", "fixtures/v1/w1/deletion-command.json"),
         (
             "w2/v1/source-collection.command.schema.json",
-            "fixtures/v1/w2/initial-policy-command.json",
-        ),
-        (
-            "w2/v1/source-collection.command.schema.json",
-            "fixtures/v1/w2/resumed-command.json",
+            "fixtures/v1/w2/source-collection-command.json",
         ),
         (
             "w2/v1/source-collection.result.schema.json",
-            "fixtures/v1/w2/complete-result.json",
+            "fixtures/v1/w2/source-collection-result-complete.json",
         ),
         (
             "w2/v1/source-collection.result.schema.json",
-            "fixtures/v1/w2/partial-result.json",
+            "fixtures/v1/w2/source-collection-result-partial.json",
         ),
         (
             "w2/v1/source-collection.result.schema.json",
-            "fixtures/v1/w2/policy-failure-result.json",
-        ),
-        ("w2/v1/source-event.schema.json", "fixtures/v1/w2/source-version-available.json"),
-        ("w2/v1/source-event.schema.json", "fixtures/v1/w2/source-observation-changed.json"),
-        (
-            "w2/v1/source-event.schema.json",
-            "fixtures/v1/w2/source-restriction-changed.json",
+            "fixtures/v1/w2/source-collection-result-failure.json",
         ),
     ],
 )
@@ -78,6 +68,26 @@ def test_versioned_contract_fixtures_match_their_schema(
 
 
 @pytest.mark.parametrize(
+    "fixture_path",
+    [
+        "fixtures/v1/w2/source-event-version-available.json",
+        "fixtures/v1/w2/source-event-version-partial.json",
+        "fixtures/v1/w2/source-event-observation-changed.json",
+        "fixtures/v1/w2/source-event-restriction-changed.json",
+    ],
+)
+def test_w2_public_source_events_match_the_common_envelope_and_w2_payload(
+    contract_root: Path, fixture_path: str
+) -> None:
+    event = _load(contract_root / fixture_path)
+    envelope_validator = _validator(contract_root, "common/v1/event-envelope.schema.json")
+    payload_validator = _validator(contract_root, "w2/v1/source-event-payload.schema.json")
+
+    assert list(envelope_validator.iter_errors(event)) == []
+    assert list(payload_validator.iter_errors(event["payload"])) == []
+
+
+@pytest.mark.parametrize(
     ("schema_path", "fixture_path"),
     [
         (
@@ -85,8 +95,6 @@ def test_versioned_contract_fixtures_match_their_schema(
             "fixtures/v1/common/invalid-public-private-field.json",
         ),
         ("w1/v1/job.schema.json", "fixtures/v1/w1/invalid-job-status.json"),
-        ("w2/v1/source-event.schema.json", "fixtures/v1/w2/invalid-public-private-field.json"),
-        ("w2/v1/source-event.schema.json", "fixtures/v1/w2/invalid-event-payload-kind.json"),
     ],
 )
 def test_prohibited_or_unknown_contract_values_are_rejected(
@@ -97,6 +105,25 @@ def test_prohibited_or_unknown_contract_values_are_rejected(
     assert list(validator.iter_errors(_load(contract_root / fixture_path)))
 
 
+@pytest.mark.parametrize(
+    "fixture_path",
+    [
+        "fixtures/v1/w2/invalid-source-event-private-field.json",
+        "fixtures/v1/w2/invalid-source-event-transport-fields.json",
+    ],
+)
+def test_w2_public_source_events_reject_private_or_transport_fields(
+    contract_root: Path, fixture_path: str
+) -> None:
+    event = _load(contract_root / fixture_path)
+    envelope_validator = _validator(contract_root, "common/v1/event-envelope.schema.json")
+    payload_validator = _validator(contract_root, "w2/v1/source-event-payload.schema.json")
+
+    assert list(envelope_validator.iter_errors(event)) or list(
+        payload_validator.iter_errors(event["payload"])
+    )
+
+
 def test_w2_import_is_pinned_to_the_observed_runtime_contract(contract_root: Path) -> None:
     manifest = _load(contract_root / "w2/v1/import-manifest.json")
 
@@ -104,11 +131,13 @@ def test_w2_import_is_pinned_to_the_observed_runtime_contract(contract_root: Pat
         "PRIVATE_CONTRACT_ADOPTED_PUBLIC_SOURCE_EVENT_COMPATIBILITY_PENDING"
     )
     assert manifest["declared_runtime_schema_versions"] == ["w2.collection.v1", "w2.source.v1"]
-    assert manifest["source_commit"] == "0865ecdfe4748dad5679bc82b9f7386dc663675e"
+    assert manifest["artifact_authority"] == "W2"
+    assert manifest["source_commit"] is None
+    assert manifest["source_commit_status"] == "NOT_PROVIDED_WITH_W2_ARTIFACT_PACKAGE"
     assert set(manifest["artifacts"]) == {
         "source-collection.command.schema.json",
         "source-collection.result.schema.json",
-        "source-event.schema.json",
+        "source-event-payload.schema.json",
     }
     for name, artifact in manifest["artifacts"].items():
         actual_sha256 = hashlib.sha256((contract_root / "w2/v1" / name).read_bytes()).hexdigest()

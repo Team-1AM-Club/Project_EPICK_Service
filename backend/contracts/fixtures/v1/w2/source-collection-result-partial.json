@@ -1,0 +1,41 @@
+{
+  "schema_version": "w2.collection.v1",
+  "command_id": "10000000-0000-4000-8000-000000000001",
+  "job_id": "10000000-0000-4000-8000-000000000002",
+  "input_version": 1,
+  "result_version": 2,
+  "successful_source_refs": [
+    {
+      "source_id": "10000000-0000-4000-8000-000000000005",
+      "source_version_id": "10000000-0000-4000-8000-000000000009",
+      "extraction_revision_id": "10000000-0000-4000-8000-000000000010"
+    }
+  ],
+  "failures": [
+    {
+      "source_id": "10000000-0000-4000-8000-000000000005",
+      "stage": "parse",
+      "code": "PARTIAL_REQUIRED_SECTION",
+      "missing_sections": ["preferred"],
+      "impact": "Preferred qualifications could not be fully extracted.",
+      "core_decision_revision": 1
+    }
+  ],
+  "completion_kind": "partial",
+  "resume_stage": null,
+  "checkpoint_ref": null,
+  "retry_not_before": null,
+  "message_ko": "일부 구역만 추출했습니다.",
+  "source_id": "10000000-0000-4000-8000-000000000005",
+  "policy_revision": 1,
+  "required_actions": [
+    {
+      "code": "continue_limited",
+      "label_ko": "부분 결과로 계속 진행",
+      "context": {
+        "source_id": "10000000-0000-4000-8000-000000000005",
+        "missing_sections": ["preferred"]
+      }
+    }
+  ]
+}

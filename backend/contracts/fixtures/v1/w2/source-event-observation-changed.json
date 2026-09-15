@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "event_id": "20000000-0000-4000-8000-000000000003",
+  "event_type": "source.observation.changed",
+  "producer": "w2",
+  "occurred_at": "2026-09-15T00:10:00Z",
+  "aggregate_type": "source",
+  "aggregate_id": "10000000-0000-4000-8000-000000000005",
+  "revision": 3,
+  "payload": {
+    "schema_version": "w2.source.v1",
+    "observation_id": "10000000-0000-4000-8000-000000000014",
+    "source_id": "10000000-0000-4000-8000-000000000005",
+    "source_version_id": null,
+    "policy_decision_id": "10000000-0000-4000-8000-000000000011",
+    "observed_at": "2026-09-15T00:10:00Z",
+    "access_class": "unavailable",
+    "acquisition_status": "NOT_FOUND",
+    "http_status": 404,
+    "checked_url": "https://synthetic.example/jobs/1",
+    "error_code": "NOT_FOUND",
+    "representation": null
+  }
+}

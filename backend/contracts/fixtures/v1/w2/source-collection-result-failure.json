@@ -1,0 +1,36 @@
+{
+  "schema_version": "w2.collection.v1",
+  "command_id": "10000000-0000-4000-8000-000000000001",
+  "job_id": "10000000-0000-4000-8000-000000000002",
+  "input_version": 1,
+  "result_version": 3,
+  "successful_source_refs": [],
+  "failures": [
+    {
+      "source_id": "10000000-0000-4000-8000-000000000005",
+      "stage": "fetch",
+      "code": "RATE_LIMITED",
+      "missing_sections": ["required"],
+      "impact": "The required section could not be fetched before the retry window.",
+      "core_decision_revision": 1
+    }
+  ],
+  "completion_kind": "none",
+  "resume_stage": "fetch",
+  "checkpoint_ref": "synthetic-checkpoint-1",
+  "retry_not_before": "2026-09-15T01:00:00Z",
+  "message_ko": "요청 제한으로 수집을 중단했습니다.",
+  "source_id": "10000000-0000-4000-8000-000000000005",
+  "policy_revision": 1,
+  "required_actions": [
+    {
+      "code": "user_retry",
+      "label_ko": "재시도",
+      "context": {
+        "source_id": "10000000-0000-4000-8000-000000000005",
+        "resume_stage": "fetch",
+        "retry_not_before": "2026-09-15T01:00:00Z"
+      }
+    }
+  ]
+}

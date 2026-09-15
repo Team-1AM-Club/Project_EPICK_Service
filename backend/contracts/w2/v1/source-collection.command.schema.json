@@ -1,41 +1,61 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.epick.local/w2/v1/source-collection.command.schema.json",
-  "title": "W2 CollectionCommand from feat/crawler 0865ecd",
+  "title": "W2 Source Collection private command v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "command_id", "job_id", "authenticated_owner_ref", "project_ref", "company_id", "source_id", "input_version", "execution_fence", "purpose_ref", "core_source_decision", "resume_stage", "policy_revision", "owner_deletion_epoch"],
+  "required": [
+    "schema_version",
+    "command_id",
+    "job_id",
+    "authenticated_owner_ref",
+    "project_ref",
+    "company_id",
+    "source_id",
+    "input_version",
+    "execution_fence",
+    "purpose_ref",
+    "core_source_decision",
+    "resume_stage",
+    "policy_revision",
+    "owner_deletion_epoch"
+  ],
   "properties": {
-    "schema_version": {"const": "w2.collection.v1"},
-    "command_id": {"type": "string", "format": "uuid"},
-    "job_id": {"type": "string", "format": "uuid"},
-    "authenticated_owner_ref": {"type": "string", "format": "uuid"},
-    "project_ref": {"type": ["string", "null"]},
-    "company_id": {"type": "string", "format": "uuid"},
-    "source_id": {"type": "string", "format": "uuid"},
-    "input_version": {"type": "integer", "minimum": 1},
-    "execution_fence": {"type": "string", "minLength": 1},
-    "purpose_ref": {"type": "string", "format": "uuid"},
-    "core_source_decision": {"$ref": "#/$defs/CoreSourceDecision"},
-    "resume_stage": {"$ref": "#/$defs/CollectionStage"},
-    "policy_revision": {"type": ["integer", "null"], "minimum": 1},
-    "owner_deletion_epoch": {"type": "integer", "minimum": 0}
-  },
-  "$defs": {
-    "CollectionStage": {
+    "schema_version": { "const": "w2.collection.v1" },
+    "command_id": { "type": "string", "format": "uuid" },
+    "job_id": { "type": "string", "format": "uuid" },
+    "authenticated_owner_ref": { "type": "string", "format": "uuid" },
+    "project_ref": { "type": ["string", "null"] },
+    "company_id": { "type": "string", "format": "uuid" },
+    "source_id": { "type": "string", "format": "uuid" },
+    "input_version": { "type": "integer", "minimum": 1 },
+    "execution_fence": { "type": "string", "minLength": 1 },
+    "purpose_ref": { "type": "string", "format": "uuid" },
+    "core_source_decision": { "$ref": "#/$defs/CoreSourceDecision" },
+    "resume_stage": {
       "type": "string",
       "enum": ["policy", "fetch", "parse", "persist", "deliver"]
     },
+    "policy_revision": { "type": ["integer", "null"], "minimum": 1 },
+    "owner_deletion_epoch": { "type": "integer", "minimum": 0 }
+  },
+  "$defs": {
     "CoreSourceDecision": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["is_core", "decided_by", "rationale", "decision_revision", "analysis_input_version"],
+      "required": [
+        "is_core",
+        "decided_by",
+        "rationale",
+        "decision_revision",
+        "analysis_input_version"
+      ],
       "properties": {
-        "is_core": {"type": "boolean"},
-        "decided_by": {"type": "string", "minLength": 1},
-        "rationale": {"type": "string", "minLength": 1},
-        "decision_revision": {"type": "integer", "minimum": 1},
-        "analysis_input_version": {"type": "integer", "minimum": 1}
+        "is_core": { "type": "boolean" },
+        "decided_by": { "type": "string", "minLength": 1 },
+        "rationale": { "type": "string", "minLength": 1 },
+        "decision_revision": { "type": "integer", "minimum": 1 },
+        "analysis_input_version": { "type": "integer", "minimum": 1 }
       }
     }
   }

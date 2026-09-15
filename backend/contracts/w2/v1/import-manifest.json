@@ -1,43 +1,44 @@
 {
   "contract_status": "PRIVATE_CONTRACT_ADOPTED_PUBLIC_SOURCE_EVENT_COMPATIBILITY_PENDING",
-  "source_repository": "C:\\dev\\EPICK_Engine\\crawler",
-  "source_commit": "0865ecdfe4748dad5679bc82b9f7386dc663675e",
-  "source_module": "src/epick_engine/source_collection/contracts.py",
-  "derivation": "Static artifacts are pinned to the W2 Pydantic runtime contract at source_commit; they do not introduce a backend-owned DTO.",
+  "artifact_authority": "W2",
+  "source_commit": null,
+  "source_commit_status": "NOT_PROVIDED_WITH_W2_ARTIFACT_PACKAGE",
+  "derivation": "Static artifacts and fixtures were supplied by W2. SHA-256 pins preserve their exact bytes; they do not introduce a backend-owned DTO.",
   "declared_runtime_schema_versions": [
     "w2.collection.v1",
     "w2.source.v1"
   ],
   "artifacts": {
     "source-collection.command.schema.json": {
-      "sha256": "e0861eab85a2af118f2baec8529d21560d4c8741ac11c2f1f1f86bde1ed76152",
+      "sha256": "615b7810ff0a3c20a8013c7549ef7f5bb5439715e8a47b480ceae1a92d5f32e1",
       "scope": "private W1-W2 command"
     },
     "source-collection.result.schema.json": {
-      "sha256": "ab1d0b834d0f7e2bf710fd6009b267e51c44e2e685a07e742a3a65a1b8c395b6",
+      "sha256": "007ed86658b627d9a81e0c6539a50272350c9e184e1322eafa5c60b27e840429",
       "scope": "private W2-W1 result"
     },
-    "source-event.schema.json": {
-      "sha256": "46b15520bbecfda5b4cc0acfeb179be9446c909afd1e7324618e6ca50224447d",
-      "scope": "public W2 Source Event; W1/W3 consumer compatibility pending"
+    "source-event-payload.schema.json": {
+      "sha256": "418207ecdcffaa3ce5fd66a2d5f5dc0e479561b7e786a54ccd3c1218632ebf1e",
+      "scope": "public W2 Source Event payload; it is carried by the common W1 envelope"
     }
   },
   "fixtures": {
-    "initial-policy-command.json": "522c7db169e3a905603ba34a33bbd912c3d10e0c5b7b79a2dd12e0693cf5562b",
-    "resumed-command.json": "16d0b33daa07ea97ecf3979d8ba08ab81dc169bbcecaeaf9c2359c15e09e1473",
-    "complete-result.json": "955366719a53260f71a5cbbdac8f0dd6e07adf9dc16c576122d018bcc42b5f08",
-    "partial-result.json": "4c5928d20ad7496e672d460862cdd0c80ea3c9e0c6dfaa368af35adc698ac644",
-    "policy-failure-result.json": "2538dabdaad9d6ac532a4d02b69992c2740ceac838010e48587187b007dc06ea",
-    "source-version-available.json": "4f195560a25a5b62b8f795430a0fc8b14de2bfa79beaa63aad0dbc88714c94ee",
-    "source-observation-changed.json": "0a05f8f9970ff8ecf2238bc063ded04cea9460f64d73ebc099052c605bfaa176",
-    "source-restriction-changed.json": "c62fcdca538bf2d2c77d2b6d9f853d64c847e631d32bb83df51e829127b56ab9",
-    "invalid-public-private-field.json": "6a3f45d505b090daf76deaf0fb70384830e58bfd4393a45382c15ce8c1d316c1",
-    "invalid-event-payload-kind.json": "76f6ad6d88a23d017887c076c578199894e7ef36109c8d3e78b13cd4a0dae50c"
+    "source-collection-command.json": "351100a6e07cebeb2fc9b23ab1ccb7303652b08b1c9de2cdd4c46f4713f2d154",
+    "source-collection-result-complete.json": "2c91e4d66410bf50c6bb3dcc2661779f4846f1934fa9fe02ba8274b9a51eadbd",
+    "source-collection-result-failure.json": "124a19ea95ecae16b1944e6fceefc4531a941d3c1119908b0ba6d46c051f3c16",
+    "source-collection-result-partial.json": "fa82e140dcff7af159eafd56cbfe7de7581934cf32ba0e70dbe182874262953c",
+    "source-event-observation-changed.json": "030f39005f7bcf6ae96fc5a0d3a4eabad32d9fd88053d54d94af7e1cddd6b141",
+    "source-event-restriction-changed.json": "79f59482a3ab8b89bdd4eff4c862eab90ab7de1514dbe25d047231d32bbe910c",
+    "source-event-version-available.json": "85d9fcde994011d1e5481509c8fc0146d5b7ffbbb02a15f22a222b769ae7a51d",
+    "source-event-version-partial.json": "60183562d13bd5f6be5a9c46739216af9e4bd72aa2c14a783f7e3c104ba04ece",
+    "invalid-source-event-private-field.json": "0bc12dd561b8c70f2b3137644c12b9ec327f80cb60c4819900611bb95c7cc4bb",
+    "invalid-source-event-transport-fields.json": "4aaab1a380658c7f5742c769d5718b6593c1791fad1f1b98d523c97eb71d93df"
   },
   "runtime_invariant_authority": "W2 Pydantic model validators and the W2 contract test suite remain authoritative for cross-field constraints not expressible in JSON Schema.",
   "public_source_event_compatibility": {
     "status": "PENDING_W1_W3_CONSUMER_COMPATIBILITY",
     "direct_consumers": ["W1", "W3"],
+    "static_validation_boundary": "common/v1/event-envelope.schema.json validates the envelope; source-event-payload.schema.json validates envelope.payload.",
     "excluded_from_this_contract": ["W3 ACK name/status/payload", "W4 usability input contract"]
   }
 }
