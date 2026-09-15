@@ -56,6 +56,13 @@ class ProjectSnapshot(Base):
         UniqueConstraint("project_id", "snapshot_no", name="project_id_snapshot_no"),
         UniqueConstraint("id", "owner_user_id", name="id_owner_user_id"),
         UniqueConstraint("id", "project_id", "owner_user_id", name="id_project_id_owner_user_id"),
+        UniqueConstraint(
+            "id",
+            "project_id",
+            "project_version_id",
+            "owner_user_id",
+            name="id_project_id_project_version_id_owner_user_id",
+        ),
         CheckConstraint("snapshot_no >= 1", name="snapshot_no_positive"),
         CheckConstraint(f"status IN ({SNAPSHOT_STATUS_VALUES})", name="status_allowed"),
     )
@@ -68,6 +75,12 @@ class ProjectSnapshot(Base):
     project_version_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
     snapshot_no: Mapped[int] = mapped_column(Integer)
     recommendation_policy_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Added by migration 010. The relationship is deliberately not declared here
+    # because job_posting_versions is SQL-owned in the job-postings persistence
+    # slice (see Source.current_version_id for the same convention).
+    job_posting_version_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=True
+    )
     status: Mapped[str] = mapped_column(String(32), server_default="CREATING")
     limitations: Mapped[list[str]] = mapped_column(JSONB, server_default=text("'[]'::jsonb"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -154,6 +167,7 @@ class RecommendationRun(Base):
             name="id_question_id_snapshot_id_owner_user_id",
         ),
         UniqueConstraint("id", "question_id", "owner_user_id", name="id_question_id_owner_user_id"),
+        UniqueConstraint("id", "owner_user_id", name="id_owner_user_id"),
         CheckConstraint(
             f"result_status IN ({RECOMMENDATION_RESULT_STATUS_VALUES})",
             name="result_status_allowed",
@@ -171,6 +185,12 @@ class RecommendationRun(Base):
     question_version_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
     snapshot_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
     job_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=True)
+    # Added by migration 010. The relationship is deliberately not declared here
+    # because question_analyses is SQL-owned in the question-analysis
+    # persistence slice (see Source.current_version_id for the same convention).
+    question_analysis_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=True
+    )
     analysis_policy_version: Mapped[str] = mapped_column(String(64))
     analysis_input_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
     result_status: Mapped[str] = mapped_column(String(32), server_default="PENDING")

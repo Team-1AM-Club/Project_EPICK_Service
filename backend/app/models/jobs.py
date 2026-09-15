@@ -140,6 +140,8 @@ class JobInputRef(Base):
             "(question_version_id IS NOT NULL)::integer + "
             "(episode_version_id IS NOT NULL)::integer + "
             "(snapshot_id IS NOT NULL)::integer + "
+            "(source_version_id IS NOT NULL)::integer + "
+            "(job_posting_version_id IS NOT NULL)::integer + "
             "((policy_name IS NOT NULL AND policy_version IS NOT NULL)::integer) = 1 "
             "AND (policy_name IS NULL) = (policy_version IS NULL)",
             name="exactly_one_input",
@@ -159,6 +161,14 @@ class JobInputRef(Base):
         PostgreSQLUUID(as_uuid=True), nullable=True
     )
     snapshot_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=True)
+    # Added by migration 007. Relationships deliberately not declared here (see
+    # JobCommand.analysis_source_decision_id for the same convention).
+    source_version_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=True
+    )
+    job_posting_version_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=True
+    )
     policy_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
     policy_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -215,6 +225,12 @@ class JobCommand(Base):
     execution_fence: Mapped[int] = mapped_column(BigInteger)
     owner_deletion_epoch: Mapped[int] = mapped_column(BigInteger)
     analysis_input_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Added by migration 006. The relationship is deliberately not declared here
+    # because analysis_source_decisions is SQL-owned in the sources persistence
+    # slice (see Source.current_version_id for the same convention).
+    analysis_source_decision_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=True
+    )
     payload: Mapped[dict[str, object]] = mapped_column(JSONB)
     status: Mapped[str] = mapped_column(String(32), server_default="PENDING")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

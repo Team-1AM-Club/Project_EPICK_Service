@@ -12,10 +12,15 @@ from app.models import (  # noqa: F401
     deletion,
     experience,
     identity,
+    job_postings,
     jobs,
+    knowledge,
     lifecycle_operations,
+    organizations,
     privacy_controls,
+    question_analysis,
     recommendations,
+    sources,
 )
 
 config = context.config

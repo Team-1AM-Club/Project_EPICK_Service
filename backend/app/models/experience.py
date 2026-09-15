@@ -273,6 +273,11 @@ class EpisodeVersionSkill(_SafeExperienceRepr, Base):
     owner_user_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
     raw_name: Mapped[str] = mapped_column(Text)
     origin: Mapped[str] = mapped_column(String(32))
+    # Added by migration 007. The relationship is deliberately not declared here
+    # because canonical_skills is SQL-owned in the job-postings persistence slice.
+    canonical_skill_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

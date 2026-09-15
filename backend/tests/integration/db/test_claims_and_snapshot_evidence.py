@@ -116,10 +116,11 @@ def test_claim_evidence_is_company_scoped_and_source_history_is_append_only(
         connection.execute(
             text(
                 "INSERT INTO claim_versions ("
-                "id, claim_id, company_id, version_no, claim_type, subject_key, statement"
+                "id, claim_id, company_id, version_no, claim_type, subject_text, predicate, "
+                "object_text, extractor_version, extracted_at"
                 ") VALUES ("
-                ":id, :claim_id, :company_id, 1, 'CULTURE', 'engineering', "
-                "'Engineering quality is emphasized.'"
+                ":id, :claim_id, :company_id, 1, 'CULTURE', 'engineering', 'emphasizes', "
+                "'Engineering quality is emphasized.', 'test-extractor-v1', now()"
                 ")"
             ),
             {"id": claim_version_id, "claim_id": claim_id, "company_id": company_a_id},
@@ -130,10 +131,10 @@ def test_claim_evidence_is_company_scoped_and_source_history_is_append_only(
         )
         connection.execute(
             text(
-                "INSERT INTO claim_evidence_links (claim_version_id, evidence_span_id, relation_type) "
-                "VALUES (:claim_version_id, :evidence_span_id, 'SUPPORTS')"
+                "INSERT INTO claim_evidence_links (id, claim_version_id, evidence_span_id, relation_type) "
+                "VALUES (:id, :claim_version_id, :evidence_span_id, 'SUPPORTS')"
             ),
-            {"claim_version_id": claim_version_id, "evidence_span_id": evidence_a_id},
+            {"id": uuid4(), "claim_version_id": claim_version_id, "evidence_span_id": evidence_a_id},
         )
 
     with migrated_engine.connect() as connection:
@@ -142,10 +143,14 @@ def test_claim_evidence_is_company_scoped_and_source_history_is_append_only(
             with pytest.raises(IntegrityError):
                 connection.execute(
                     text(
-                        "INSERT INTO claim_evidence_links (claim_version_id, evidence_span_id, relation_type) "
-                        "VALUES (:claim_version_id, :evidence_span_id, 'SUPPORTS')"
+                        "INSERT INTO claim_evidence_links (id, claim_version_id, evidence_span_id, relation_type) "
+                        "VALUES (:id, :claim_version_id, :evidence_span_id, 'SUPPORTS')"
                     ),
-                    {"claim_version_id": claim_version_id, "evidence_span_id": evidence_b_id},
+                    {
+                        "id": uuid4(),
+                        "claim_version_id": claim_version_id,
+                        "evidence_span_id": evidence_b_id,
+                    },
                 )
         finally:
             transaction.rollback()

@@ -110,9 +110,16 @@ class ApplicationProjectVersion(Base):
     season: Mapped[str | None] = mapped_column(String(64), nullable=True)
     organization_name: Mapped[str | None] = mapped_column(Text, nullable=True)
     role_name: Mapped[str] = mapped_column(Text)
-    # Added by the public knowledge migration.  The relationship is deliberately
-    # not declared here because the public role tables are SQL-owned in this
-    # persistence slice; Snapshot exclusion selection only needs this stable link.
+    # Added by the public knowledge migrations (007/008).  The relationship is
+    # deliberately not declared here because the public job posting/org/role
+    # tables are SQL-owned in this persistence slice; these columns only need
+    # the stable link for Snapshot/exclusion selection.
+    job_posting_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=True
+    )
+    org_unit_version_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=True
+    )
     role_version_id: Mapped[UUID | None] = mapped_column(
         PostgreSQLUUID(as_uuid=True), nullable=True
     )
