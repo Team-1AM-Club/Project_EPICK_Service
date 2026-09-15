@@ -236,6 +236,18 @@ class OutboxMessage(Base):
             name="job_owner_scope",
             ondelete="RESTRICT",
         ),
+        ForeignKeyConstraint(
+            ["deletion_request_id"],
+            ["deletion_requests.id"],
+            name="deletion_request_id",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["deletion_target_id"],
+            ["deletion_targets.id"],
+            name="deletion_target_id",
+            ondelete="RESTRICT",
+        ),
         CheckConstraint(
             f"visibility_scope IN ({VISIBILITY_SCOPE_VALUES})", name="visibility_scope_allowed"
         ),
@@ -244,10 +256,16 @@ class OutboxMessage(Base):
         CheckConstraint("attempts >= 0", name="attempts_not_negative"),
         CheckConstraint(
             "(visibility_scope = 'PUBLIC' AND owner_user_id IS NULL AND job_id IS NULL "
-            "AND command_id IS NULL AND execution_fence IS NULL AND owner_deletion_epoch IS NULL) "
+            "AND command_id IS NULL AND execution_fence IS NULL AND owner_deletion_epoch IS NULL "
+            "AND deletion_request_id IS NULL AND deletion_target_id IS NULL) "
             "OR (visibility_scope = 'PRIVATE' AND owner_user_id IS NOT NULL AND job_id IS NOT NULL "
             "AND command_id IS NOT NULL AND execution_fence IS NOT NULL "
-            "AND owner_deletion_epoch IS NOT NULL)",
+            "AND owner_deletion_epoch IS NOT NULL AND deletion_request_id IS NULL "
+            "AND deletion_target_id IS NULL) "
+            "OR (visibility_scope = 'PRIVATE' AND owner_user_id IS NOT NULL AND job_id IS NULL "
+            "AND command_id IS NULL AND execution_fence IS NULL "
+            "AND owner_deletion_epoch IS NOT NULL "
+            "AND deletion_request_id IS NOT NULL AND deletion_target_id IS NOT NULL)",
             name="visibility_reference_scope",
         ),
     )
@@ -261,6 +279,12 @@ class OutboxMessage(Base):
     aggregate_revision: Mapped[int] = mapped_column(BigInteger)
     command_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=True)
     job_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=True)
+    deletion_request_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=True
+    )
+    deletion_target_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=True
+    )
     owner_user_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=True)
     execution_fence: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     owner_deletion_epoch: Mapped[int | None] = mapped_column(BigInteger, nullable=True)

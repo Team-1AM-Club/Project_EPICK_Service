@@ -221,6 +221,7 @@ class JobService:
         request_hash: str,
         method: str = "POST",
         path_scope: str | None = None,
+        checkpoint_id: UUID | None = None,
     ) -> JobAcceptance:
         """Accept one explicit retry without treating it as immediate worker execution."""
         self._require_nonempty(idempotency_key, "idempotency key")
@@ -261,6 +262,7 @@ class JobService:
             job=job,
             command_type="EXECUTE_JOB",
             command_sequence=self._next_command_sequence(job_id=job.id),
+            checkpoint_id=checkpoint_id,
         )
         action.action_status = "RESOLVED"
         action.resolved_at = datetime.now(UTC)
@@ -465,8 +467,23 @@ class JobService:
         return self.repository.get_job_by_idempotency_record(idempotency_record_id=record.id)
 
     def _create_private_command_and_outbox(
-        self, *, job: Job, command_type: str, command_sequence: int
+        self,
+        *,
+        job: Job,
+        command_type: str,
+        command_sequence: int,
+        checkpoint_id: UUID | None = None,
     ) -> tuple[JobCommand, OutboxMessage]:
+        command_payload: dict[str, object] = {"command_type": command_type}
+        outbox_payload: dict[str, object] = {
+            "command_id": None,
+            "job_id": str(job.id),
+            "execution_fence": job.execution_fence,
+            "owner_deletion_epoch": job.owner_deletion_epoch,
+        }
+        if checkpoint_id is not None:
+            command_payload["checkpoint_id"] = str(checkpoint_id)
+            outbox_payload["checkpoint_id"] = str(checkpoint_id)
         command = JobCommand(
             job_id=job.id,
             owner_user_id=job.owner_user_id,
@@ -476,7 +493,7 @@ class JobService:
             execution_fence=job.execution_fence,
             owner_deletion_epoch=job.owner_deletion_epoch,
             analysis_input_version=job.analysis_input_version,
-            payload={"command_type": command_type},
+            payload=command_payload,
         )
         self.repository.add_command(command)
         self.session.flush()
@@ -492,12 +509,7 @@ class JobService:
             owner_user_id=job.owner_user_id,
             execution_fence=job.execution_fence,
             owner_deletion_epoch=job.owner_deletion_epoch,
-            payload={
-                "command_id": str(command.id),
-                "job_id": str(job.id),
-                "execution_fence": job.execution_fence,
-                "owner_deletion_epoch": job.owner_deletion_epoch,
-            },
+            payload={**outbox_payload, "command_id": str(command.id)},
         )
         self.repository.add_outbox_message(outbox_message)
         return command, outbox_message

@@ -296,7 +296,15 @@ class ExperienceFieldProvenance(_SafeExperienceRepr, Base):
             "+ (episode_version_id IS NOT NULL)::integer = 1",
             name="exactly_one_version",
         ),
-        CheckConstraint("origin = 'USER_INPUT'", name="origin_user_input_only"),
+        CheckConstraint(
+            "(origin = 'USER_INPUT' AND source_version_id IS NULL "
+            "AND inference_decision_id IS NULL) OR "
+            "(origin = 'EXTERNAL_SOURCE' AND source_version_id IS NOT NULL "
+            "AND inference_decision_id IS NULL) OR "
+            "(origin = 'INFERENCE_DECISION' AND source_version_id IS NULL "
+            "AND inference_decision_id IS NOT NULL)",
+            name="origin_scope",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -309,4 +317,10 @@ class ExperienceFieldProvenance(_SafeExperienceRepr, Base):
     )
     field_name: Mapped[str] = mapped_column(String(128))
     origin: Mapped[str] = mapped_column(String(32), server_default="USER_INPUT")
+    source_version_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=True
+    )
+    inference_decision_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

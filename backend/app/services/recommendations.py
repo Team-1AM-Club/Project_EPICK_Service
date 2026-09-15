@@ -114,6 +114,15 @@ class RecommendationService:
                 )
             )
         self.session.flush()
+        # Preferences are resolved once here and remain immutable beneath this
+        # Snapshot. Later user/project preference edits must not reinterpret an
+        # existing recommendation input.
+        from app.services.privacy_controls import PrivacyControlsService
+
+        PrivacyControlsService(self.session).freeze_snapshot_recommendation_preferences(
+            owner_user_id=owner_user_id,
+            snapshot_id=snapshot.id,
+        )
         snapshot.status = "READY"
         project.active_snapshot_id = snapshot.id
         self.session.flush()

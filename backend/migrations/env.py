@@ -9,9 +9,12 @@ from app.core.config import settings
 from app.db.base import Base
 from app.models import (  # noqa: F401
     application_workspace,
+    deletion,
     experience,
     identity,
     jobs,
+    lifecycle_operations,
+    privacy_controls,
     recommendations,
 )
 
