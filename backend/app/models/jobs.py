@@ -29,7 +29,11 @@ JOB_COMPLETENESS_VALUES = "'none', 'partial', 'complete'"
 DISPATCH_STATUS_VALUES = "'OUTBOX_PENDING', 'ENQUEUED', 'CLAIMED', 'BLOCKED', 'INVALIDATED'"
 COMMAND_STATUS_VALUES = "'PENDING', 'ENQUEUED', 'CLAIMED', 'CONSUMED', 'INVALIDATED', 'FAILED'"
 REQUIRED_ACTION_STATUS_VALUES = "'OPEN', 'RESOLVED', 'DISMISSED'"
-OUTBOX_STATUS_VALUES = "'PENDING', 'PUBLISHED', 'FAILED'"
+# ``FAILED`` remains readable for rows written before PG-4.  New relay code uses the
+# explicit retry/final states and never needs to infer whether a failure is retryable.
+OUTBOX_STATUS_VALUES = (
+    "'PENDING', 'PUBLISHING', 'PUBLISHED', 'FAILED_RETRYABLE', 'FAILED_FINAL', 'FAILED'"
+)
 VISIBILITY_SCOPE_VALUES = "'PUBLIC', 'PRIVATE'"
 
 

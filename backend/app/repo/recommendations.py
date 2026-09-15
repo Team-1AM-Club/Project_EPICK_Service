@@ -3,11 +3,18 @@ from __future__ import annotations
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, column, func, or_, select, table
+from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
 from sqlalchemy.orm import Session
 
-from app.models.application_workspace import ApplicationProject, ProjectQuestion, QuestionVersion
+from app.models.application_workspace import (
+    ApplicationProject,
+    ApplicationProjectVersion,
+    ProjectQuestion,
+    QuestionVersion,
+)
 from app.models.experience import EpisodeVersion
+from app.models.projection import ExperienceExclusion, SnapshotExclusion
 from app.models.recommendations import (
     MaterialSelectionItem,
     MaterialSelectionSet,
@@ -28,6 +35,9 @@ class RecommendationRepository:
         self.session.add(snapshot)
 
     def add_snapshot_episode_version(self, item: SnapshotEpisodeVersion) -> None:
+        self.session.add(item)
+
+    def add_snapshot_exclusion(self, item: SnapshotExclusion) -> None:
         self.session.add(item)
 
     def add_run(self, run: RecommendationRun) -> None:
@@ -74,6 +84,29 @@ class RecommendationRepository:
                 QuestionVersion.id == question_version_id,
                 QuestionVersion.owner_user_id == owner_user_id,
             )
+        )
+
+    def get_project_version(
+        self, *, project_version_id: UUID, project_id: UUID, owner_user_id: UUID
+    ) -> ApplicationProjectVersion | None:
+        return self.session.scalar(
+            select(ApplicationProjectVersion).where(
+                ApplicationProjectVersion.id == project_version_id,
+                ApplicationProjectVersion.project_id == project_id,
+                ApplicationProjectVersion.owner_user_id == owner_user_id,
+            )
+        )
+
+    def get_role_id_for_role_version(self, *, role_version_id: UUID | None) -> UUID | None:
+        if role_version_id is None:
+            return None
+        role_versions = table(
+            "role_versions",
+            column("id", PostgreSQLUUID(as_uuid=True)),
+            column("role_id", PostgreSQLUUID(as_uuid=True)),
+        )
+        return self.session.scalar(
+            select(role_versions.c.role_id).where(role_versions.c.id == role_version_id)
         )
 
     def get_snapshot(self, *, snapshot_id: UUID, owner_user_id: UUID) -> ProjectSnapshot | None:
@@ -134,6 +167,55 @@ class RecommendationRepository:
             )
             is not None
         )
+
+    def get_active_exclusions_for_episode_versions(
+        self,
+        *,
+        owner_user_id: UUID,
+        episode_version_ids: Sequence[UUID],
+        project_id: UUID,
+        company_id: UUID,
+        role_id: UUID | None,
+    ) -> list[ExperienceExclusion]:
+        if not episode_version_ids:
+            return []
+        scope_matches = [
+            ExperienceExclusion.scope == "GLOBAL",
+            and_(
+                ExperienceExclusion.scope == "COMPANY",
+                ExperienceExclusion.company_id == company_id,
+            ),
+            and_(
+                ExperienceExclusion.scope == "PROJECT",
+                ExperienceExclusion.project_id == project_id,
+            ),
+        ]
+        if role_id is not None:
+            scope_matches.append(
+                and_(
+                    ExperienceExclusion.scope == "ROLE",
+                    ExperienceExclusion.role_id == role_id,
+                )
+            )
+        statement = (
+            select(ExperienceExclusion)
+            .join(
+                EpisodeVersion,
+                or_(
+                    ExperienceExclusion.episode_id == EpisodeVersion.episode_id,
+                    ExperienceExclusion.activity_id == EpisodeVersion.activity_id,
+                ),
+            )
+            .where(
+                ExperienceExclusion.owner_user_id == owner_user_id,
+                ExperienceExclusion.revoked_at.is_(None),
+                EpisodeVersion.owner_user_id == owner_user_id,
+                EpisodeVersion.id.in_(episode_version_ids),
+                or_(*scope_matches),
+            )
+            .distinct()
+        )
+        return list(self.session.scalars(statement))
 
     def get_candidates(
         self,

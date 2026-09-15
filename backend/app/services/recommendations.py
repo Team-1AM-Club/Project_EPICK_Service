@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.models.projection import SnapshotExclusion
 from app.models.recommendations import (
     MaterialSelectionItem,
     MaterialSelectionSet,
@@ -62,6 +63,13 @@ class RecommendationService:
         )
         if project is None or project.current_version_id is None:
             raise RecommendationNotFoundError("project does not exist for this owner")
+        project_version = self.repository.get_project_version(
+            project_version_id=project.current_version_id,
+            project_id=project.id,
+            owner_user_id=owner_user_id,
+        )
+        if project_version is None:
+            raise RecommendationNotFoundError("project version does not exist for this owner")
         episode_ids = tuple(episode_version_ids)
         self._require_unique_ids(episode_ids, "episode version")
         episode_versions = self.repository.get_episode_versions(
@@ -85,6 +93,23 @@ class RecommendationService:
                 SnapshotEpisodeVersion(
                     snapshot_id=snapshot.id,
                     episode_version_id=episode_version.id,
+                    owner_user_id=owner_user_id,
+                )
+            )
+        self.session.flush()
+        for exclusion in self.repository.get_active_exclusions_for_episode_versions(
+            owner_user_id=owner_user_id,
+            episode_version_ids=episode_ids,
+            project_id=project.id,
+            company_id=project_version.company_id,
+            role_id=self.repository.get_role_id_for_role_version(
+                role_version_id=project_version.role_version_id
+            ),
+        ):
+            self.repository.add_snapshot_exclusion(
+                SnapshotExclusion(
+                    snapshot_id=snapshot.id,
+                    exclusion_id=exclusion.id,
                     owner_user_id=owner_user_id,
                 )
             )

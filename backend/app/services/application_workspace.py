@@ -22,6 +22,7 @@ _PROJECT_COPY_FIELDS: Final = (
     "season",
     "organization_name",
     "role_name",
+    "role_version_id",
 )
 _QUESTION_COPY_FIELDS: Final = ("prompt", "character_limit", "source")
 
