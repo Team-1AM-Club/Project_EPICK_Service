@@ -23,8 +23,21 @@ processes never run Alembic during startup.
    python -m alembic upgrade head
    ```
 
-6. Run the preflight again with `--require-head`, then start runtime processes
-   with only `DATABASE_URL` configured.
+6. As the same migration principal, apply the explicit runtime DML manifest:
+
+   ```powershell
+   python scripts/apply_postgres_runtime_privileges.py
+   python scripts/postgres_runtime_privilege_preflight.py
+   ```
+
+   The manifest is deny-by-default for future tables. Extend and re-apply it
+   whenever a later migration introduces a table consumed by the API, worker,
+   or deletion process.
+
+7. Run the migration preflight again with `--require-head`, then start runtime
+   processes with only `DATABASE_URL` configured. The API, worker, and deletion
+   logins must be separate LOGIN principals inheriting `epick_runtime`,
+   `epick_worker`, and `epick_deleter`, respectively.
 
 The preflight confirms revision, PostgreSQL version, and group-role privileges.
 RDS backup/restore verification remains an operator-owned AWS control; its

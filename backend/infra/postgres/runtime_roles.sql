@@ -27,5 +27,5 @@ GRANT USAGE, CREATE ON SCHEMA public TO epick_migrator;
 GRANT USAGE ON SCHEMA public TO epick_runtime, epick_worker, epick_deleter;
 
 -- Table, sequence, and default-privilege grants are applied after each migration by the
--- migration principal or deployment role. Runtime group roles never receive schema CREATE,
--- database CREATE, SUPERUSER, or BYPASSRLS privileges.
+-- migration principal through runtime_privileges.sql. Runtime group roles never receive
+-- schema CREATE, database CREATE, SUPERUSER, or BYPASSRLS privileges.
