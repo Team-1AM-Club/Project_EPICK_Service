@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "command_id": "55555555-5555-4555-8555-555555555555",
+  "job_id": "33333333-3333-4333-8333-333333333333",
+  "owner_id": "44444444-4444-4444-8444-444444444444",
+  "command_type": "SOURCE_COLLECTION",
+  "command_sequence": 1,
+  "execution_fence": 1,
+  "owner_deletion_epoch": 0,
+  "visibility_scope": "PRIVATE",
+  "payload_ref": "66666666-6666-4666-8666-666666666666"
+}

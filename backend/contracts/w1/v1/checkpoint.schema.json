@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w1/v1/checkpoint.schema.json",
+  "title": "EPICK W1 Job Checkpoint v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "checkpoint_id",
+    "job_id",
+    "owner_id",
+    "input_version",
+    "execution_fence",
+    "owner_deletion_epoch",
+    "checkpoint_ref"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "checkpoint_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "job_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "owner_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "input_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "execution_fence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "owner_deletion_epoch": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "checkpoint_ref": {
+      "type": "string",
+      "format": "uuid"
+    }
+  }
+}

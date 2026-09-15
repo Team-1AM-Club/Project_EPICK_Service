@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w1/v1/job-command.schema.json",
+  "title": "EPICK W1 private Job Command v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "command_id",
+    "job_id",
+    "owner_id",
+    "command_type",
+    "command_sequence",
+    "execution_fence",
+    "owner_deletion_epoch",
+    "visibility_scope",
+    "payload_ref"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "command_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "job_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "owner_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "command_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "command_sequence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "execution_fence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "owner_deletion_epoch": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "visibility_scope": {
+      "const": "PRIVATE"
+    },
+    "payload_ref": {
+      "type": "string",
+      "format": "uuid"
+    }
+  }
+}

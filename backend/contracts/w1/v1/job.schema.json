@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w1/v1/job.schema.json",
+  "title": "EPICK W1 Job v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "job_id",
+    "owner_id",
+    "job_type",
+    "status",
+    "completeness",
+    "dispatch_status",
+    "execution_fence",
+    "owner_deletion_epoch",
+    "idempotency_key"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "job_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "owner_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "job_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "QUEUED",
+        "RUNNING",
+        "WAITING_USER",
+        "PAUSED_RATE_LIMIT",
+        "SUCCEEDED",
+        "FAILED_RETRYABLE",
+        "FAILED_FINAL",
+        "CANCEL_REQUESTED",
+        "CANCELLED"
+      ]
+    },
+    "completeness": {
+      "enum": [
+        "none",
+        "partial",
+        "complete"
+      ]
+    },
+    "dispatch_status": {
+      "enum": [
+        "OUTBOX_PENDING",
+        "ENQUEUED",
+        "CLAIMED",
+        "BLOCKED",
+        "INVALIDATED"
+      ]
+    },
+    "execution_fence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "owner_deletion_epoch": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "required_action_codes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    }
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w2/v1/source-collection.result.schema.json",
+  "title": "W2 Source Collection private result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "command_id",
+    "job_id",
+    "input_version",
+    "result_version",
+    "successful_source_refs",
+    "failures",
+    "completion_kind",
+    "resume_stage",
+    "checkpoint_ref",
+    "retry_not_before",
+    "message_ko",
+    "source_id",
+    "policy_revision",
+    "required_actions"
+  ],
+  "properties": {
+    "schema_version": { "const": "w2.collection.v1" },
+    "command_id": { "type": "string", "format": "uuid" },
+    "job_id": { "type": "string", "format": "uuid" },
+    "input_version": { "type": "integer", "minimum": 1 },
+    "result_version": { "type": "integer", "minimum": 1 },
+    "successful_source_refs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/SourceReference" }
+    },
+    "failures": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Failure" }
+    },
+    "completion_kind": { "enum": ["none", "partial", "complete"] },
+    "resume_stage": {
+      "type": ["string", "null"],
+      "enum": ["policy", "fetch", "parse", "persist", "deliver", null]
+    },
+    "checkpoint_ref": { "type": ["string", "null"] },
+    "retry_not_before": { "type": ["string", "null"], "format": "date-time" },
+    "message_ko": { "type": "string", "minLength": 1 },
+    "source_id": { "type": "string", "format": "uuid" },
+    "policy_revision": { "type": "integer", "minimum": 1 },
+    "required_actions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/RequiredAction" }
+    }
+  },
+  "$defs": {
+    "SourceReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "source_version_id", "extraction_revision_id"],
+      "properties": {
+        "source_id": { "type": "string", "format": "uuid" },
+        "source_version_id": { "type": "string", "format": "uuid" },
+        "extraction_revision_id": { "type": "string", "format": "uuid" }
+      }
+    },
+    "Failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "stage",
+        "code",
+        "missing_sections",
+        "impact",
+        "core_decision_revision"
+      ],
+      "properties": {
+        "source_id": { "type": "string", "format": "uuid" },
+        "stage": { "enum": ["policy", "fetch", "parse", "persist", "deliver"] },
+        "code": { "type": "string", "minLength": 1 },
+        "missing_sections": { "type": "array", "items": { "type": "string" } },
+        "impact": { "type": "string", "minLength": 1 },
+        "core_decision_revision": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "RequiredAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "label_ko", "context"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "label_ko": { "type": "string", "minLength": 1 },
+        "context": { "type": "object" }
+      }
+    }
+  }
+}

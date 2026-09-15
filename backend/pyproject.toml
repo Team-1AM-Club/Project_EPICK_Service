@@ -31,6 +31,9 @@ packages = ["app"]
 [tool.pytest.ini_options]
 addopts = "-ra --strict-markers"
 testpaths = ["tests"]
+markers = [
+    "postgres: requires an isolated PostgreSQL test database",
+]
 
 [tool.coverage.run]
 branch = true
