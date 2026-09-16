@@ -108,6 +108,19 @@ class ActiveReferenceExistsError(ApiProblem):
         )
 
 
+class StaleInputError(ApiProblem):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=409,
+            code="STALE_INPUT",
+            message_ko=(
+                "추천 입력 또는 후보 결과가 변경되었습니다. "
+                "최신 내용을 확인한 후 다시 시도해 주세요."
+            ),
+            retryable=True,
+        )
+
+
 class ExecutionPolicyUnconfiguredError(ApiProblem):
     def __init__(self) -> None:
         super().__init__(

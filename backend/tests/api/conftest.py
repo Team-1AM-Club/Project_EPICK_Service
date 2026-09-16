@@ -13,6 +13,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 from sqlalchemy import Engine, create_engine, text
+from sqlalchemy.orm import sessionmaker
 
 from app.api.dependencies import CurrentPrincipal, CurrentPrincipalDep, get_current_principal
 from app.core.config import settings
@@ -100,3 +101,47 @@ def override_principal(app: FastAPI, owner_user_id: UUID, *, subject: str = "tes
         subject=subject,
         owner_user_id=owner_user_id,
     )
+
+
+@pytest.fixture
+def recommendation_api_client(
+    api_app: FastAPI,
+    api_migrated_engine: Engine,
+    monkeypatch: pytest.MonkeyPatch,
+    owner_one_id: UUID,
+    owner_two_id: UUID,
+) -> Iterator[tuple[TestClient, FastAPI, dict[str, UUID], sessionmaker]]:
+    test_session_factory = sessionmaker(bind=api_migrated_engine, expire_on_commit=False)
+    from app.api import dependencies
+
+    monkeypatch.setattr(dependencies, "SessionLocal", test_session_factory)
+    monkeypatch.setattr(settings, "api_cursor_signing_key", "api-recommendation-test-key")
+    company_id = uuid4()
+    with api_migrated_engine.begin() as connection:
+        for owner_id, display_name in (
+            (owner_one_id, "Recommendation API owner one"),
+            (owner_two_id, "Recommendation API owner two"),
+        ):
+            connection.execute(
+                text(
+                    "INSERT INTO users (id, display_name, locale, timezone) "
+                    "VALUES (:id, :display_name, 'ko-KR', 'Asia/Seoul')"
+                ),
+                {"id": owner_id, "display_name": display_name},
+            )
+        connection.execute(
+            text(
+                "INSERT INTO companies "
+                "(id, legal_name, display_name, official_domain, identification_status) "
+                "VALUES (:id, '합성추천 검증 주식회사', '합성추천 검증', "
+                "'synthetic-recommendation.example', 'VERIFIED')"
+            ),
+            {"id": company_id},
+        )
+    with TestClient(api_app) as client:
+        yield (
+            client,
+            api_app,
+            {"one": owner_one_id, "two": owner_two_id, "company": company_id},
+            test_session_factory,
+        )
