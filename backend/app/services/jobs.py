@@ -286,6 +286,8 @@ class JobService:
         owner_deletion_epoch: int,
         status: str,
         action_code: str,
+        expected_input_version: str | None = None,
+        expected_result_version: str | None = None,
     ) -> bool:
         """Release a current worker lease when user input or a rate limit blocks the Job."""
         if status not in {"WAITING_USER", "PAUSED_RATE_LIMIT"}:
@@ -315,6 +317,8 @@ class JobService:
                 owner_user_id=owner_user_id,
                 action_code=action_code,
                 action_status="OPEN",
+                expected_input_version=expected_input_version or job.analysis_input_version,
+                expected_result_version=expected_result_version,
             )
         )
         self.session.flush()
@@ -347,6 +351,8 @@ class JobService:
         owner_deletion_epoch: int,
         final_status: str = "SUCCEEDED",
         completeness: str = "complete",
+        expected_input_version: str | None = None,
+        expected_result_version: str | None = None,
     ) -> bool:
         """Commit a worker result only while its lease, fence, and owner epoch are current."""
         if final_status not in {"SUCCEEDED", "FAILED_RETRYABLE", "FAILED_FINAL"}:
@@ -386,6 +392,8 @@ class JobService:
                     owner_user_id=owner_user_id,
                     action_code="RETRY",
                     action_status="OPEN",
+                    expected_input_version=expected_input_version or job.analysis_input_version,
+                    expected_result_version=expected_result_version,
                 )
             )
         self.session.flush()

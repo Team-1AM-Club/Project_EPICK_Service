@@ -188,6 +188,7 @@ class RecommendationService:
             job_id=job_id,
             analysis_policy_version=analysis_policy_version,
             analysis_input_version=analysis_input_version,
+            result_origin="SYNTHETIC",
             requested_candidate_limit=requested_candidate_limit,
             limitations=self._normalize_limitations(limitations),
         )
