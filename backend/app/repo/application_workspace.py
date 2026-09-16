@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import exists, func, or_, select
@@ -12,12 +14,25 @@ from app.models.application_workspace import (
     ProjectQuestion,
     QuestionVersion,
 )
-from app.models.experience import Activity
+from app.models.experience import Activity, ActivityVersion
 from app.models.identity import User
 from app.models.job_postings import JobPosting, JobPostingVersion
 from app.models.jobs import Job
 from app.models.lifecycle_operations import Notification
 from app.models.recommendations import MaterialSelectionSet
+
+
+@dataclass(frozen=True)
+class ResumeItem:
+    """A safe, derived next-step record; no worker or checkpoint payload is exposed."""
+
+    resource_type: str
+    resource_id: UUID
+    title: str
+    current_step: str | None
+    updated_at: datetime
+    resume_url: str
+    blocking_reason: str | None
 
 
 class ApplicationWorkspaceRepository:
@@ -298,6 +313,84 @@ class ApplicationWorkspaceRepository:
 
     def get_user(self, *, owner_user_id: UUID) -> User | None:
         return self.session.get(User, owner_user_id)
+
+    def list_resume_items(
+        self,
+        *,
+        owner_user_id: UUID,
+        resume_type: str | None,
+        offset: int,
+        limit: int,
+    ) -> list[ResumeItem]:
+        items: list[ResumeItem] = []
+        if resume_type in {None, "ACTIVITY_DRAFT"}:
+            activity_rows = self.session.execute(
+                select(Activity, ActivityVersion)
+                .join(ActivityVersion, ActivityVersion.id == Activity.current_version_id)
+                .where(
+                    Activity.owner_user_id == owner_user_id,
+                    Activity.registration_status == "DRAFT",
+                )
+            ).all()
+            items.extend(
+                ResumeItem(
+                    resource_type="ACTIVITY_DRAFT",
+                    resource_id=activity.id,
+                    title=version.title,
+                    current_step="COMPLETE_ACTIVITY",
+                    updated_at=activity.updated_at,
+                    resume_url=f"/activities/{activity.id}",
+                    blocking_reason="DRAFT",
+                )
+                for activity, version in activity_rows
+            )
+        if resume_type in {None, "PROJECT"}:
+            project_rows = self.session.execute(
+                select(ApplicationProject, ApplicationProjectVersion)
+                .join(
+                    ApplicationProjectVersion,
+                    ApplicationProjectVersion.id == ApplicationProject.current_version_id,
+                )
+                .where(
+                    ApplicationProject.owner_user_id == owner_user_id,
+                    ApplicationProject.status.in_(
+                        ("DRAFT", "COLLECTING", "READY", "RECOMMENDING", "STALE")
+                    ),
+                )
+            ).all()
+            items.extend(
+                ResumeItem(
+                    resource_type="PROJECT",
+                    resource_id=project.id,
+                    title=version.title,
+                    current_step=project.current_step,
+                    updated_at=project.updated_at,
+                    resume_url=f"/application-projects/{project.id}",
+                    blocking_reason="STALE" if project.status == "STALE" else None,
+                )
+                for project, version in project_rows
+            )
+        if resume_type in {None, "WAITING_USER_JOB"}:
+            jobs = self.session.scalars(
+                select(Job).where(
+                    Job.owner_user_id == owner_user_id,
+                    Job.status.in_(("WAITING_USER", "PAUSED_RATE_LIMIT")),
+                )
+            )
+            items.extend(
+                ResumeItem(
+                    resource_type="WAITING_USER_JOB",
+                    resource_id=job.id,
+                    title=f"{job.job_type} 작업",
+                    current_step=job.stage,
+                    updated_at=job.updated_at,
+                    resume_url=f"/jobs/{job.id}",
+                    blocking_reason=job.status,
+                )
+                for job in jobs
+            )
+        items.sort(key=lambda item: (item.updated_at, item.resource_id), reverse=True)
+        return items[offset : offset + limit]
 
     def home_counts(self, *, owner_user_id: UUID) -> dict[str, int]:
         activity_count = int(

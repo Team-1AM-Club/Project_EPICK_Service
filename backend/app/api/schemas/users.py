@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -38,10 +39,25 @@ class HomeNotificationSummary(BaseModel):
     critical_count: int
 
 
+ResumeItemType = Literal["ACTIVITY_DRAFT", "PROJECT", "WAITING_USER_JOB"]
+
+
+class ResumeItemResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    resource_type: ResumeItemType
+    resource_id: UUID
+    title: str
+    current_step: str | None
+    updated_at: datetime
+    resume_url: str
+    blocking_reason: str | None
+
+
 class HomeResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    resume_items: list[object] = Field(default_factory=list)
+    resume_items: list[ResumeItemResponse] = Field(default_factory=list)
     projects: HomeProjectSummary
     experience_store: HomeExperienceStoreSummary
     notifications: HomeNotificationSummary

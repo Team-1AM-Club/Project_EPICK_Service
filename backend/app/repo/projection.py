@@ -115,6 +115,22 @@ class ProjectionRepository:
             .with_for_update()
         )
 
+    def list_exclusions(
+        self, *, owner_user_id: UUID, include_revoked: bool = False
+    ) -> list[ExperienceExclusion]:
+        statement = select(ExperienceExclusion).where(
+            ExperienceExclusion.owner_user_id == owner_user_id
+        )
+        if not include_revoked:
+            statement = statement.where(ExperienceExclusion.revoked_at.is_(None))
+        return list(
+            self.session.scalars(
+                statement.order_by(
+                    ExperienceExclusion.created_at.desc(), ExperienceExclusion.id.desc()
+                )
+            )
+        )
+
     def get_active_exclusions_for_episode_versions(
         self, *, owner_user_id: UUID, episode_version_ids: Sequence[UUID]
     ) -> list[ExperienceExclusion]:
