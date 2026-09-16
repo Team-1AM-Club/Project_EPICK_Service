@@ -150,8 +150,7 @@ class ProjectionOutboxService:
 
         if not isinstance(limit, int) or limit <= 0:
             raise ProjectionValidationError("claim limit must be positive")
-        now = datetime.now(UTC)
-        messages = self.repository.claim_pending_public_messages(limit=limit, now=now)
+        messages = self.repository.claim_pending_public_messages(limit=limit)
         for message in messages:
             message.status = "PUBLISHING"
             message.attempts += 1
