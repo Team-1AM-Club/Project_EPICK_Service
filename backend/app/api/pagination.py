@@ -9,6 +9,8 @@ from typing import Any
 
 from app.api.errors import ApiFieldError, InvalidInputError
 
+_HMAC_SHA256_SIZE = hashlib.sha256().digest_size
+
 
 class CursorCodec:
     """Signs opaque cursors so a client cannot alter a page boundary."""
@@ -28,7 +30,11 @@ class CursorCodec:
     def decode(self, cursor: str) -> dict[str, Any]:
         try:
             raw = _urlsafe_decode(cursor)
-            encoded_payload, signature = raw.rsplit(b".", maxsplit=1)
+            payload_and_separator = raw[:-_HMAC_SHA256_SIZE]
+            signature = raw[-_HMAC_SHA256_SIZE:]
+            if not payload_and_separator.endswith(b"."):
+                raise ValueError
+            encoded_payload = payload_and_separator[:-1]
         except (ValueError, UnicodeError):
             raise _invalid_cursor_error() from None
 

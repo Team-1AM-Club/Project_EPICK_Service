@@ -75,6 +75,16 @@ def test_cursor_is_opaque_signed_and_page_limit_is_bounded() -> None:
         validate_page_limit(101)
 
 
+def test_cursor_decode_handles_a_separator_byte_inside_the_binary_signature() -> None:
+    codec = CursorCodec("test-key")
+    payload = {
+        "resource": "recommendation-candidates:10000000-0000-4000-8000-000000000002",
+        "offset": 1,
+    }
+
+    assert codec.decode(codec.encode(payload)) == payload
+
+
 def test_idempotency_and_if_match_helpers_are_deterministic() -> None:
     assert require_idempotency_key(" key-1 ") == "key-1"
     assert canonical_request_hash({"a": 1, "b": ["x"]}) == canonical_request_hash(
