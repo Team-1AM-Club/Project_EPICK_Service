@@ -39,6 +39,22 @@ def test_runtime_privilege_manifest_is_role_scoped_and_deny_by_default(
 
     try:
         assert _has_table_privilege(migrated_engine, "epick_runtime", "users", "INSERT")
+        assert _has_table_privilege(migrated_engine, "epick_runtime", "project_snapshots", "INSERT")
+        assert _has_table_privilege(
+            migrated_engine, "epick_runtime", "snapshot_episode_versions", "INSERT"
+        )
+        assert _has_table_privilege(
+            migrated_engine, "epick_runtime", "recommendation_runs", "INSERT"
+        )
+        assert _has_table_privilege(
+            migrated_engine, "epick_runtime", "material_selection_sets", "INSERT"
+        )
+        assert _has_table_privilege(
+            migrated_engine, "epick_runtime", "material_selection_items", "INSERT"
+        )
+        assert _has_table_privilege(migrated_engine, "epick_runtime", "outbox_messages", "INSERT")
+        assert _has_table_privilege(migrated_engine, "epick_runtime", "deletion_targets", "INSERT")
+        assert _has_table_privilege(migrated_engine, "epick_runtime", "deletion_targets", "UPDATE")
         assert _has_table_privilege(migrated_engine, "epick_runtime", "sources", "SELECT")
         assert not _has_table_privilege(migrated_engine, "epick_runtime", "sources", "INSERT")
 

@@ -15,6 +15,14 @@ from app.core.config import settings  # noqa: E402
 
 PRIVILEGE_EXPECTATIONS = (
     ("epick_runtime", "users", "INSERT", True),
+    ("epick_runtime", "project_snapshots", "INSERT", True),
+    ("epick_runtime", "snapshot_episode_versions", "INSERT", True),
+    ("epick_runtime", "recommendation_runs", "INSERT", True),
+    ("epick_runtime", "material_selection_sets", "INSERT", True),
+    ("epick_runtime", "material_selection_items", "INSERT", True),
+    ("epick_runtime", "outbox_messages", "INSERT", True),
+    ("epick_runtime", "deletion_targets", "INSERT", True),
+    ("epick_runtime", "deletion_targets", "UPDATE", True),
     ("epick_runtime", "sources", "INSERT", False),
     ("epick_worker", "jobs", "UPDATE", True),
     ("epick_worker", "sources", "INSERT", True),
@@ -35,9 +43,7 @@ def main() -> None:
         with engine.connect() as connection:
             for role_name, table_name, privilege, expected in PRIVILEGE_EXPECTATIONS:
                 actual = connection.execute(
-                    text(
-                        "SELECT has_table_privilege(:role_name, :table_name, :privilege)"
-                    ),
+                    text("SELECT has_table_privilege(:role_name, :table_name, :privilege)"),
                     {
                         "role_name": role_name,
                         "table_name": f"public.{table_name}",
