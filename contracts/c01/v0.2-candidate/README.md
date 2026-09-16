@@ -1,6 +1,8 @@
 # C01 / W3 0.2 candidate
 
-정본 설명: `docs/w3-c01-handoff-2026-09-16.md`.
+유일한 현재 정본: `docs/w3-additional-reply-2026-09-16.md` (profile r2).
+같은 디렉터리의 문서 SHA256 sidecar와 배포 CANONICAL_RECEIPT.json의 full commit을 확인한다.
+`w3-c01-handoff-2026-09-16.md`는 r1 이력이다.
 
 - fixtures: 사용자에게 받은 원본 W2 공개 event 정상4/오류2. 수정하지 않는다.
 - examples: W3가 만든 합성 예제. producer가 확정한 release/recovery 자료가 아니다.

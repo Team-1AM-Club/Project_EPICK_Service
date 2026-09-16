@@ -1,5 +1,10 @@
 # Project EPICK Service — W3 Knowledge Validation
 
+Current C01 canonical: [W3 contract reply, profile r2](docs/w3-additional-reply-2026-09-16.md).
+The adjacent SHA256 sidecar identifies its exact bytes. This remains a candidate,
+not a jointly adopted contract. Earlier handoffs are historical reference only.
+The confirmed scope is version-specific, with null restrictions applying to the whole Source.
+
 The W3 service validates SourceVersion and Evidence lineage, structures Claims and
 Requirements, and projects only verified, usable knowledge to W4.
 

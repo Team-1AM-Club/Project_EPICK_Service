@@ -46,13 +46,13 @@ def projection(event):
 class Store(BaseStore):
     def __init__(self, path, *, restriction_scope, max_ttl_seconds, clock=utc_now):
         if (
-            restriction_scope not in {"source", "version"}
+            restriction_scope != "version"
             or type(max_ttl_seconds) is not int
             or max_ttl_seconds <= 0
         ):
             raise ValueError("EXPLICIT_SCOPE_AND_POSITIVE_TTL_REQUIRED")
         self.scope, self.max_ttl_seconds = restriction_scope, max_ttl_seconds
-        super().__init__(path, consumer_id="w3-c01/0.2-candidate", clock=clock)
+        super().__init__(path, consumer_id="w3-c01/0.2-candidate/r2", clock=clock)
         self.db.executescript("""
             CREATE TABLE IF NOT EXISTS c01_settings (id INTEGER PRIMARY KEY, scope TEXT, ttl INTEGER);
             CREATE TABLE IF NOT EXISTS c01_events (
@@ -60,6 +60,7 @@ class Store(BaseStore):
                 projection TEXT, UNIQUE(source,revision));
             CREATE TABLE IF NOT EXISTS c01_checkpoints (
                 source TEXT PRIMARY KEY, cursor INTEGER, hash TEXT);
+            CREATE TABLE IF NOT EXISTS c01_registered_sources (source TEXT PRIMARY KEY);
         """)
         try:
             with self.transaction():
@@ -118,8 +119,7 @@ class Store(BaseStore):
             or v["payload"]["accuracy_status"] in {"error_confirmed", "superseded"}
         ]
         restricted = any(
-            self.scope == "source"
-            or p["source_version_id"] is None
+            p["source_version_id"] is None
             or (key and p["source_version_id"] == key["source_version_id"])
             for p in active
         )
@@ -229,6 +229,7 @@ class Store(BaseStore):
     def _consume(self, event):
         # Revalidate nested mutable dicts even when caller hands us an existing model.
         event = Event.model_validate(event.model_dump(mode="json"))
+        self._validate_replacement(event)
         source = event.aggregate_id.lower()
         original_hash = digest(event.model_dump(mode="json"))
         same_id = self.db.execute(
@@ -260,6 +261,7 @@ class Store(BaseStore):
                 encode(projection(event)),
             ),
         )
+        self.db.execute("INSERT OR IGNORE INTO c01_registered_sources VALUES (?)", (source,))
         state["required"] = max(state["required"], event.revision)
         if event.event_type == "source.restriction.changed":
             state["required_restriction"] = max(
@@ -295,6 +297,16 @@ class Store(BaseStore):
                 event_id=event.event_id.lower(),
                 outcome=outcome,
             )
+
+    def _validate_replacement(self, event):
+        replacement = event.payload.get("replacement_ref")
+        if (
+            replacement is not None
+            and not self.db.execute(
+                "SELECT 1 FROM c01_registered_sources WHERE source=?", (replacement.lower(),)
+            ).fetchone()
+        ):
+            raise ValueError("REPLACEMENT_SOURCE_UNREGISTERED")
 
     def purge(self):
         with self.transaction():
@@ -343,6 +355,8 @@ class Store(BaseStore):
     def snapshot(self, snapshot):
         source = snapshot.source_id
         with self.transaction():
+            for event in snapshot.restrictions:
+                self._validate_replacement(event)
             old = self._state(source)
             if snapshot.event_cursor < max(
                 old["cursor"], old["required"]
@@ -469,6 +483,7 @@ class Store(BaseStore):
                 "INSERT OR REPLACE INTO c01_checkpoints VALUES (?,?,?)",
                 (source, snapshot.event_cursor, snapshot_hash),
             )
+            self.db.execute("INSERT OR IGNORE INTO c01_registered_sources VALUES (?)", (source,))
             self._clear_index(source)
             self._emit(source, state)
             return dict(self._status(source, state), outcome="SNAPSHOT_APPLIED")

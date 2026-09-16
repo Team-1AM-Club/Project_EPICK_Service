@@ -46,7 +46,7 @@ def main(argv=None):
             "--port",
             "0",
             "--restriction-scope",
-            "source",
+            "version",
             "--max-ttl-seconds",
             "3600",
         ],

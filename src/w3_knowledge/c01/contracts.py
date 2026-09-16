@@ -1,6 +1,7 @@
 """Strict envelope plus the unmodified W2 payload JSON Schema."""
 
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Literal
@@ -76,6 +77,12 @@ class Event(Strict):
     @model_validator(mode="after")
     def consistent(self):
         p = validate_payload(self.payload, self.event_type)
+        replacement = p.get("replacement_ref")
+        if replacement is not None and not re.fullmatch(
+            r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+            replacement,
+        ):
+            raise ValueError("REPLACEMENT_MUST_BE_SOURCE_UUID")
         if self.aggregate_id.lower() != p["source_id"].lower():
             raise ValueError("SOURCE_MISMATCH")
         if p.get("restriction_revision", 0) > 2**63 - 1:
@@ -106,6 +113,12 @@ class Event(Strict):
             }
             for event_type, name in TYPES.items()
         ]
+        restriction_schema = schema["allOf"][-1]["then"]["properties"]["payload"]
+        restriction_schema["properties"]["replacement_ref"] = {
+            "type": ["string", "null"],
+            "format": "uuid",
+            "pattern": r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+        }
         return schema
 
 

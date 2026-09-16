@@ -7,7 +7,7 @@
     "restriction_revision": 2,
     "required_restriction_revision": 2,
     "generation": 4,
-    "restriction_scope": "source",
+    "restriction_scope": "version",
     "reason": "READY",
     "index_ack": true,
     "index_key": {
@@ -29,7 +29,7 @@
     "restriction_revision": 2,
     "required_restriction_revision": 2,
     "generation": 4,
-    "restriction_scope": "source",
+    "restriction_scope": "version",
     "reason": "READY",
     "index_ack": true,
     "index_key": {
@@ -48,7 +48,7 @@
     "restriction_revision": 3,
     "required_restriction_revision": 3,
     "generation": 5,
-    "restriction_scope": "source",
+    "restriction_scope": "version",
     "reason": "RESTRICTED",
     "index_ack": false,
     "index_key": {
@@ -70,7 +70,7 @@
     "restriction_revision": 3,
     "required_restriction_revision": 3,
     "generation": 5,
-    "restriction_scope": "source",
+    "restriction_scope": "version",
     "reason": "RESTRICTED",
     "index_ack": false,
     "index_key": {

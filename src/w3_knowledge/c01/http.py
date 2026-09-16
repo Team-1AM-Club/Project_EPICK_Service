@@ -18,7 +18,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="W2 C01 / W3 integration candidate")
     parser.add_argument("--db", required=True)
     parser.add_argument("--port", type=int, default=8764)
-    parser.add_argument("--restriction-scope", required=True, choices=["source", "version"])
+    parser.add_argument("--restriction-scope", required=True, choices=["version"])
     parser.add_argument("--max-ttl-seconds", required=True, type=int)
     args = parser.parse_args(argv)
     tokens = {

@@ -1,3 +1,5 @@
 # Preserve the exact W2-delivered bytes and their recorded SHA256 on every OS.
 src/w3_knowledge/c01/source-event-payload.schema.json -text
 contracts/c01/v0.2-candidate/fixtures/*.json -text
+docs/w3-additional-reply-2026-09-16.md -text
+docs/w3-additional-reply-2026-09-16.md.sha256 -text

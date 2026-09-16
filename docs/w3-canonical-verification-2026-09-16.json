@@ -1,0 +1,15 @@
+{
+  "profile": "w3-c01/0.2-candidate/r2",
+  "canonical_path": "docs/w3-additional-reply-2026-09-16.md",
+  "adoption": "PENDING_JOINT_AGREEMENT",
+  "full_suite": {"passed": 197, "skipped": 1, "skip_reason": "External Solar API live test", "report": "verification/pytest.xml"},
+  "confirmed_contract_tests": {"passed": 21},
+  "http_smoke": {"passed": 18, "total": 18},
+  "ruff_check": "passed",
+  "ruff_format": {"files": 70, "result": "already formatted"},
+  "export_check": {"c01_files": 20, "legacy_files": 19, "drift": []},
+  "independent_review": "No actionable findings in current change scope; independently confirmed 21 contract tests.",
+  "revision_comparison": {"source": "implemented and tested", "restriction_id": "design fixture only, not implemented"},
+  "remaining_decisions": ["W2/product restriction revision unit", "PM/W2/W4 P4/P5 policy", "W2 authoritative Source registry integration", "W2 operational replay retention window"],
+  "distribution_verification": "See CANONICAL_RECEIPT.json in delivered ZIP for pushed commit, exact byte hashes, and extracted-source checks."
+}

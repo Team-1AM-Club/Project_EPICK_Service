@@ -94,7 +94,7 @@ def artifacts():
         restriction_revision=2,
         required_restriction_revision=2,
         generation=4,
-        restriction_scope="source",
+        restriction_scope="version",
         reason="READY",
         index_ack=True,
         index_key=result["examples/index-request.json"]["index_key"],
@@ -156,6 +156,80 @@ def artifacts():
         knowledge=knowledge,
         ack={"signal_id": ready["signal_id"]},
         ack_response={"delivered": True},
+    )
+    # Same Source with version-scoped A/C and source-wide B restrictions.
+    second_version = copy.deepcopy(version)
+    second_version.update(revision=5, event_id="40000000-0000-4000-8000-000000000005")
+    second_version["payload"].update(
+        source_version_id="50000000-0000-4000-8000-000000000002",
+        extraction_revision_id="50000000-0000-4000-8000-000000000003",
+    )
+    for evidence in second_version["payload"]["evidence_spans"]:
+        evidence["source_version_id"] = second_version["payload"]["source_version_id"]
+    version_ids = {
+        "v1": p["source_version_id"],
+        "v2": second_version["payload"]["source_version_id"],
+        "all": None,
+    }
+    sequences = {"source": [copy.deepcopy(version)], "restriction_id": [copy.deepcopy(version)]}
+    rows = [
+        (2, "A", "v1", "active", 1, 1, "RESTRICTED"),
+        (3, "B", "all", "active", 2, 1, "RESTRICTED"),
+        (4, "A", "v1", "cleared", 3, 2, "RESTRICTED"),
+        (6, "B", "all", "cleared", 4, 2, "INDEX_PENDING"),
+        (7, "A", "v1", "active", 5, 3, "INDEX_PENDING"),
+        (8, "C", "v2", "active", 6, 1, "RESTRICTED"),
+        (9, "A", "v1", "cleared", 7, 4, "RESTRICTED"),
+        (10, "C", "v2", "cleared", 8, 2, "INDEX_PENDING"),
+    ]
+    expected = [
+        {
+            "revision": 1,
+            "reason": "INDEX_PENDING",
+            "source_restriction_revision": 0,
+            "per_id_revisions": {},
+        }
+    ]
+    counters = {}
+    for revision, identifier, scope, status, global_r, id_r, reason in rows:
+        if revision == 6:
+            for sequence in sequences.values():
+                sequence.append(copy.deepcopy(second_version))
+            expected.append(
+                dict(
+                    revision=5,
+                    reason="RESTRICTED",
+                    source_restriction_revision=3,
+                    per_id_revisions={"A": 2, "B": 1},
+                )
+            )
+        counters[identifier] = id_r
+        expected.append(
+            dict(
+                revision=revision,
+                reason=reason,
+                source_restriction_revision=global_r,
+                per_id_revisions=copy.deepcopy(counters),
+            )
+        )
+        for unit, counter in [("source", global_r), ("restriction_id", id_r)]:
+            event = copy.deepcopy(active)
+            event.update(revision=revision, event_id=f"40000000-0000-4000-8000-{revision:012d}")
+            event["payload"].update(
+                restriction_id=f"60000000-0000-4000-8000-{ord(identifier):012d}",
+                source_version_id=version_ids[scope],
+                restriction_status=status,
+                restriction_revision=counter,
+                accuracy_status="verified_in_scope",
+                replacement_ref=None,
+            )
+            sequences[unit].append(event)
+    result["examples/revision-unit-comparison.json"] = dict(
+        status="SOURCE_IMPLEMENTED_ID_UNIT_DESIGN_ONLY",
+        technical_recommendation="source",
+        decision_owner="W2_PRODUCT_OWNER",
+        variants=sequences,
+        expected=expected,
     )
     inputs = sorted((DEST / "fixtures").glob("*.json")) + [
         ROOT / "src/w3_knowledge/c01/source-event-payload.schema.json"

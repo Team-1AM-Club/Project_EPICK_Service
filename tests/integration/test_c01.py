@@ -20,7 +20,7 @@ def parse(value):
     return Event.model_validate(value)
 
 
-def store_at(path, scope="source", clock=lambda: "2026-09-16T00:00:00Z"):
+def store_at(path, scope="version", clock=lambda: "2026-09-16T00:00:00Z"):
     from w3_knowledge.c01.store import Store
 
     return Store(path, restriction_scope=scope, max_ttl_seconds=3600, clock=clock)
@@ -112,7 +112,7 @@ def test_four_original_events_use_two_cursors_and_survive_restart(tmp_path):
             store.consume(parse(fixture(name)))
         status = store.status(SOURCE)
         assert (status["event_cursor"], status["restriction_revision"]) == (4, 1)
-        assert status["reason"] == "RESTRICTED"
+        assert status["reason"] == "OBSERVATION_BLOCKED"
         assert status["index_key"]["representation"] == "static_html"
         assert status["index_key"]["source_version_id"].endswith("0009")
         assert store.consume(parse(fixture(NAMES[3])))["outcome"] == "DUPLICATE"
@@ -139,7 +139,7 @@ def test_out_of_order_replay_closes_transport_gap_without_fabricated_restriction
         )
         assert reply["event_cursor"] == 4
         assert reply["restriction_revision"] == 1
-        assert reply["reason"] == "RESTRICTED"
+        assert reply["reason"] == "OBSERVATION_BLOCKED"
 
 
 def test_index_is_fenced_by_policy_key_evidence_cursor_and_ttl(tmp_path):
