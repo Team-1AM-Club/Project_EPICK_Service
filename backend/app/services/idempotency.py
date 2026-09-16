@@ -55,7 +55,7 @@ class IdempotencyService:
         *,
         response_status: int,
         response_ref: str,
-        response_body: dict[str, Any],
+        response_body: dict[str, Any] | None = None,
     ) -> None:
         record.response_status = response_status
         record.response_ref = response_ref
