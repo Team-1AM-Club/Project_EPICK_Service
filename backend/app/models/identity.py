@@ -4,6 +4,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Boolean,
     CheckConstraint,
@@ -132,5 +133,6 @@ class IdempotencyRecord(Base):
     request_hash: Mapped[str] = mapped_column(String(128))
     response_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
     response_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    response_body: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

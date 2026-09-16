@@ -62,3 +62,48 @@ class IdempotencyConflictError(ApiProblem):
             code="IDEMPOTENCY_CONFLICT",
             message_ko="같은 멱등성 키가 다른 요청에 이미 사용되었습니다.",
         )
+
+
+class VersionConflictApiError(ApiProblem):
+    def __init__(self, *, expected_version: int, actual_version: int) -> None:
+        super().__init__(
+            status_code=412,
+            code="VERSION_CONFLICT",
+            message_ko="리소스 버전이 변경되었습니다. 최신 내용을 확인한 후 다시 시도해 주세요.",
+            retryable=True,
+            fields=(
+                ApiFieldError(
+                    field="If-Match",
+                    reason=f"EXPECTED_{expected_version}_ACTUAL_{actual_version}",
+                ),
+            ),
+        )
+
+
+class CompletionRequirementsNotMetError(ApiProblem):
+    def __init__(self, *, fields: Sequence[ApiFieldError]) -> None:
+        super().__init__(
+            status_code=422,
+            code="COMPLETION_REQUIREMENTS_NOT_MET",
+            message_ko="완료에 필요한 입력 항목을 확인해 주세요.",
+            fields=fields,
+        )
+
+
+class ActionNotAllowedError(ApiProblem):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=409,
+            code="ACTION_NOT_ALLOWED",
+            message_ko="현재 상태에서는 요청한 작업을 수행할 수 없습니다.",
+        )
+
+
+class ExecutionPolicyUnconfiguredError(ApiProblem):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=503,
+            code="EXECUTION_POLICY_UNCONFIGURED",
+            message_ko="현재 실행 정책이 구성되지 않았습니다.",
+            retryable=True,
+        )

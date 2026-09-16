@@ -157,7 +157,12 @@ def test_same_idempotency_key_replays_first_result_and_hash_mismatch_conflicts(
         request_hash="b" * 64,
         expires_at=datetime.now(UTC) + timedelta(hours=1),
     )
-    service.complete(first_record, response_status=202, response_ref="job:synthetic")
+    service.complete(
+        first_record,
+        response_status=202,
+        response_ref="job:synthetic",
+        response_body={"id": "synthetic"},
+    )
     db_session.commit()
 
     replay_record, replayed = service.reserve(
@@ -173,6 +178,7 @@ def test_same_idempotency_key_replays_first_result_and_hash_mismatch_conflicts(
     assert replay_record.id == first_record.id
     assert replay_record.response_status == 202
     assert replay_record.response_ref == "job:synthetic"
+    assert replay_record.response_body == {"id": "synthetic"}
 
     with pytest.raises(IdempotencyConflictError):
         service.reserve(

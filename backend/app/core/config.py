@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     # Cursor signing is intentionally deployment-provided. API-0 has no list
     # endpoint yet, so local/test callers pass a key explicitly to CursorCodec.
     api_cursor_signing_key: str | None = None
+    # Retention is deployment-configurable rather than scattered over mutation routers.
+    api_idempotency_ttl_seconds: int = 86_400
 
     model_config = SettingsConfigDict(
         env_file=".env",
