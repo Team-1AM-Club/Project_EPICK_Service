@@ -12,11 +12,19 @@ from jsonschema import Draft202012Validator, FormatChecker
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from app.models.jobs import Job, JobCommand, OutboxMessage
+from app.models.jobs import (
+    Job,
+    JobCommand,
+    JobExecutionLease,
+    OutboxMessage,
+    OwnerExecutionSlot,
+)
 from app.runtime.sqs import SqsFinalDeliveryError, SqsPort, SqsRetryableError
 
 _PRIVATE_DISPATCH_MESSAGE_TYPE = "job.command.dispatch"
+_W2_COLLECTION_COMMAND_MESSAGE_TYPE = "w1.private.w2.collection-command.v1"
 _W1_EXECUTION_QUEUE = "w1_execution"
+_W2_COLLECTION_COMMAND_QUEUE = "w2_collection_command"
 _MAX_SQS_BODY_BYTES = 16 * 1024
 
 
@@ -51,11 +59,23 @@ class QueueUrlRegistry:
         _PRIVATE_DISPATCH_MESSAGE_TYPE: QueueRoute(
             logical_key=_W1_EXECUTION_QUEUE,
             message_type=_PRIVATE_DISPATCH_MESSAGE_TYPE,
-        )
+        ),
+        _W2_COLLECTION_COMMAND_MESSAGE_TYPE: QueueRoute(
+            logical_key=_W2_COLLECTION_COMMAND_QUEUE,
+            message_type=_W2_COLLECTION_COMMAND_MESSAGE_TYPE,
+        ),
     }
 
-    def __init__(self, *, w1_execution_queue_url: str | None) -> None:
-        self._urls = {_W1_EXECUTION_QUEUE: w1_execution_queue_url}
+    def __init__(
+        self,
+        *,
+        w1_execution_queue_url: str | None,
+        w2_collection_command_queue_url: str | None = None,
+    ) -> None:
+        self._urls = {
+            _W1_EXECUTION_QUEUE: w1_execution_queue_url,
+            _W2_COLLECTION_COMMAND_QUEUE: w2_collection_command_queue_url,
+        }
 
     @property
     def supported_message_types(self) -> tuple[str, ...]:
@@ -104,6 +124,36 @@ def _private_dispatch_validator() -> Draft202012Validator:
         / "w1"
         / "v1"
         / "private-job-dispatch.schema.json"
+    )
+    with schema_path.open(encoding="utf-8") as stream:
+        schema = json.load(stream)
+    Draft202012Validator.check_schema(schema)
+    return Draft202012Validator(schema, format_checker=FormatChecker())
+
+
+@lru_cache(maxsize=1)
+def _private_w2_command_dispatch_validator() -> Draft202012Validator:
+    schema_path = (
+        Path(__file__).resolve().parents[2]
+        / "contracts"
+        / "w1"
+        / "v1"
+        / "private-w2-command-dispatch.schema.json"
+    )
+    with schema_path.open(encoding="utf-8") as stream:
+        schema = json.load(stream)
+    Draft202012Validator.check_schema(schema)
+    return Draft202012Validator(schema, format_checker=FormatChecker())
+
+
+@lru_cache(maxsize=1)
+def _w2_collection_command_validator() -> Draft202012Validator:
+    schema_path = (
+        Path(__file__).resolve().parents[2]
+        / "contracts"
+        / "w2"
+        / "v1"
+        / "source-collection.command.schema.json"
     )
     with schema_path.open(encoding="utf-8") as stream:
         schema = json.load(stream)
@@ -227,6 +277,7 @@ class OutboxRelay:
                             session=session, message=message
                         )
                     self._mark_failed_final_in_transaction(
+                        session=session,
                         message=message,
                         command=command,
                         job=job,
@@ -318,27 +369,75 @@ class OutboxRelay:
             or any(payload.get(key) != value for key, value in expected_payload.items())
         ):
             raise OutboxPayloadError("OUTBOX_PRIVATE_PAYLOAD_INVALID")
-        command_payload = command.payload
-        if (
-            not isinstance(command_payload, dict)
-            or set(command_payload).difference({"command_type", "checkpoint_id"})
-            or command_payload.get("command_type") != command.command_type
-        ):
-            raise OutboxPayloadError("OUTBOX_COMMAND_PAYLOAD_INVALID")
-        outbox_checkpoint_id = payload.get("checkpoint_id")
-        command_checkpoint_id = command_payload.get("checkpoint_id")
-        if outbox_checkpoint_id != command_checkpoint_id:
-            raise OutboxPayloadError("OUTBOX_CHECKPOINT_REFERENCE_MISMATCH")
-        if outbox_checkpoint_id is not None:
-            if not isinstance(outbox_checkpoint_id, str):
-                raise OutboxPayloadError("OUTBOX_CHECKPOINT_REFERENCE_INVALID")
-            try:
-                UUID(outbox_checkpoint_id)
-            except ValueError as error:
-                raise OutboxPayloadError("OUTBOX_CHECKPOINT_REFERENCE_INVALID") from error
+        self._validate_command_payload(
+            message=message,
+            command=command,
+            outbox_payload=payload,
+        )
         if command.status != "PENDING":
             raise OutboxPayloadError("OUTBOX_COMMAND_NOT_PENDING")
         return command, job
+
+    @staticmethod
+    def _validate_command_payload(
+        *,
+        message: OutboxMessage,
+        command: JobCommand,
+        outbox_payload: object,
+    ) -> None:
+        if not isinstance(outbox_payload, dict):
+            raise OutboxPayloadError("OUTBOX_PRIVATE_PAYLOAD_INVALID")
+        command_payload = command.payload
+        if (
+            not isinstance(command_payload, dict)
+            or command_payload.get("command_type") != command.command_type
+        ):
+            raise OutboxPayloadError("OUTBOX_COMMAND_PAYLOAD_INVALID")
+        if message.message_type == _PRIVATE_DISPATCH_MESSAGE_TYPE:
+            if set(command_payload).difference(
+                {"command_type", "checkpoint_id", "core_decision_pin"}
+            ):
+                raise OutboxPayloadError("OUTBOX_COMMAND_PAYLOAD_INVALID")
+            outbox_checkpoint_id = outbox_payload.get("checkpoint_id")
+            command_checkpoint_id = command_payload.get("checkpoint_id")
+            if outbox_checkpoint_id != command_checkpoint_id:
+                raise OutboxPayloadError("OUTBOX_CHECKPOINT_REFERENCE_MISMATCH")
+            if outbox_checkpoint_id is not None:
+                if not isinstance(outbox_checkpoint_id, str):
+                    raise OutboxPayloadError("OUTBOX_CHECKPOINT_REFERENCE_INVALID")
+                try:
+                    UUID(outbox_checkpoint_id)
+                except ValueError as error:
+                    raise OutboxPayloadError("OUTBOX_CHECKPOINT_REFERENCE_INVALID") from error
+            return
+        if message.message_type == _W2_COLLECTION_COMMAND_MESSAGE_TYPE:
+            if command.command_type != "W2_SOURCE_COLLECTION":
+                raise OutboxPayloadError("OUTBOX_W2_COMMAND_TYPE_INVALID")
+            expected_keys = {"command_type", "w2_command", "core_decision_pin", "runtime"}
+            if set(command_payload) != expected_keys:
+                raise OutboxPayloadError("OUTBOX_W2_COMMAND_PAYLOAD_INVALID")
+            w2_command = command_payload["w2_command"]
+            dispatch_pin = command_payload["core_decision_pin"]
+            runtime = command_payload["runtime"]
+            if (
+                not isinstance(w2_command, dict)
+                or not isinstance(dispatch_pin, dict)
+                or not isinstance(runtime, dict)
+                or set(runtime) != {"lease_id", "input_version"}
+                or not isinstance(runtime.get("lease_id"), str)
+                or not isinstance(runtime.get("input_version"), int)
+            ):
+                raise OutboxPayloadError("OUTBOX_W2_COMMAND_PAYLOAD_INVALID")
+            try:
+                UUID(runtime["lease_id"])
+            except ValueError as error:
+                raise OutboxPayloadError("OUTBOX_W2_COMMAND_PAYLOAD_INVALID") from error
+            if runtime["input_version"] < 1:
+                raise OutboxPayloadError("OUTBOX_W2_COMMAND_PAYLOAD_INVALID")
+            if list(_w2_collection_command_validator().iter_errors(w2_command)):
+                raise OutboxPayloadError("OUTBOX_W2_COMMAND_SCHEMA_INVALID")
+            return
+        raise OutboxPayloadError("OUTBOX_ROUTE_UNKNOWN")
 
     @staticmethod
     def _serialize_private_dispatch(
@@ -348,6 +447,12 @@ class OutboxRelay:
         job: Job,
         issued_at: datetime,
     ) -> str:
+        if message.message_type == _W2_COLLECTION_COMMAND_MESSAGE_TYPE:
+            return OutboxRelay._serialize_private_w2_command_dispatch(
+                message=message,
+                command=command,
+                issued_at=issued_at,
+            )
         dispatch: dict[str, object] = {
             "schema_version": message.schema_version,
             # W1's replay-safe dispatch ID is deliberately the canonical command ID.
@@ -369,6 +474,46 @@ class OutboxRelay:
             raise OutboxPayloadError("OUTBOX_DISPATCH_TOO_LARGE")
         return body
 
+    @staticmethod
+    def _serialize_private_w2_command_dispatch(
+        *,
+        message: OutboxMessage,
+        command: JobCommand,
+        issued_at: datetime,
+    ) -> str:
+        command_payload = command.payload
+        if not isinstance(command_payload, dict):
+            raise OutboxPayloadError("OUTBOX_W2_COMMAND_PAYLOAD_INVALID")
+        w2_command = command_payload.get("w2_command")
+        core_decision_pin = command_payload.get("core_decision_pin")
+        if not isinstance(w2_command, dict) or not isinstance(core_decision_pin, dict):
+            raise OutboxPayloadError("OUTBOX_W2_COMMAND_PAYLOAD_INVALID")
+        dispatch: dict[str, object] = {
+            "schema_version": "w1.private.w2-command-dispatch.v1",
+            "message_id": str(command.id),
+            "message_type": _W2_COLLECTION_COMMAND_MESSAGE_TYPE,
+            "producer": "w1",
+            "occurred_at": issued_at.isoformat().replace("+00:00", "Z"),
+            "visibility_scope": "PRIVATE",
+            "payload_schema_version": "w2.collection.v1",
+            "payload": w2_command,
+            "lookup_request": {
+                "schema_version": "w1.private.command-lookup.v1",
+                "command_id": str(command.id),
+                "execution_fence": command.execution_fence,
+                "owner_deletion_epoch": command.owner_deletion_epoch,
+            },
+            "core_decision_pin": core_decision_pin,
+        }
+        if list(_private_w2_command_dispatch_validator().iter_errors(dispatch)):
+            raise OutboxPayloadError("OUTBOX_W2_DISPATCH_SCHEMA_INVALID")
+        if dispatch["message_id"] != w2_command.get("command_id"):
+            raise OutboxPayloadError("OUTBOX_W2_MESSAGE_COMMAND_MISMATCH")
+        body = json.dumps(dispatch, ensure_ascii=False, separators=(",", ":"))
+        if len(body.encode("utf-8")) > _MAX_SQS_BODY_BYTES:
+            raise OutboxPayloadError("OUTBOX_W2_DISPATCH_TOO_LARGE")
+        return body
+
     def _mark_published(self, *, claim: RelayClaim) -> bool:
         with self._session_factory.begin() as session:
             message = self._get_current_claim_for_update(session=session, claim=claim)
@@ -382,16 +527,22 @@ class OutboxRelay:
             message.last_error_at = None
 
             command, job = self._read_current_job_command(session=session, message=message)
-            if (
-                command is not None
-                and job is not None
-                and command.status == "PENDING"
-                and job.status == "QUEUED"
-                and job.dispatch_status == "OUTBOX_PENDING"
-            ):
-                command.status = "ENQUEUED"
-                job.dispatch_status = "ENQUEUED"
-                job.updated_at = now
+            if command is not None and job is not None and command.status == "PENDING":
+                if (
+                    message.message_type == _PRIVATE_DISPATCH_MESSAGE_TYPE
+                    and job.status == "QUEUED"
+                    and job.dispatch_status == "OUTBOX_PENDING"
+                ):
+                    command.status = "ENQUEUED"
+                    job.dispatch_status = "ENQUEUED"
+                    job.updated_at = now
+                elif (
+                    message.message_type == _W2_COLLECTION_COMMAND_MESSAGE_TYPE
+                    and job.status == "RUNNING"
+                    and job.dispatch_status == "CLAIMED"
+                    and job.active_lease_id is not None
+                ):
+                    command.status = "ENQUEUED"
             session.flush()
             return True
 
@@ -418,6 +569,7 @@ class OutboxRelay:
                 return False
             command, job = self._read_current_job_command(session=session, message=message)
             self._mark_failed_final_in_transaction(
+                session=session,
                 message=message,
                 command=command,
                 job=job,
@@ -480,6 +632,7 @@ class OutboxRelay:
     def _mark_failed_final_in_transaction(
         cls,
         *,
+        session: Session,
         message: OutboxMessage,
         command: JobCommand | None,
         job: Job | None,
@@ -492,6 +645,43 @@ class OutboxRelay:
         message.last_error_at = now
         if command is not None and command.status == "PENDING":
             command.status = "FAILED"
-        if job is not None and job.status == "QUEUED" and job.dispatch_status == "OUTBOX_PENDING":
+        if job is None:
+            return
+        if job.status == "QUEUED" and job.dispatch_status == "OUTBOX_PENDING":
             job.dispatch_status = "BLOCKED"
+            job.updated_at = now
+            return
+        if (
+            message.message_type == _W2_COLLECTION_COMMAND_MESSAGE_TYPE
+            and job.status == "RUNNING"
+            and job.active_lease_id is not None
+        ):
+            lease = session.scalar(
+                select(JobExecutionLease)
+                .where(JobExecutionLease.id == job.active_lease_id)
+                .with_for_update()
+            )
+            if lease is not None and lease.released_at is None:
+                slot = session.scalar(
+                    select(OwnerExecutionSlot)
+                    .where(
+                        OwnerExecutionSlot.owner_user_id == lease.owner_user_id,
+                        OwnerExecutionSlot.slot_no == lease.slot_no,
+                    )
+                    .with_for_update()
+                )
+                if slot is not None and slot.lease_id == lease.id and slot.job_id == job.id:
+                    slot.job_id = None
+                    slot.lease_id = None
+                    slot.claimed_at = None
+                    slot.updated_at = now
+                lease.released_at = now
+                lease.release_reason = "W2_DISPATCH_FAILED"
+            job.active_lease_id = None
+            job.status = "FAILED_FINAL"
+            job.dispatch_status = "BLOCKED"
+            job.completed_at = now
+            job.retryable = False
+            job.failure_code = cls._bounded_error_code(error_code)
+            job.safe_failure_message = "수집 작업을 시작할 수 없습니다."
             job.updated_at = now

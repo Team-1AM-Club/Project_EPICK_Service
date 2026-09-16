@@ -4,6 +4,7 @@ from collections import deque
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any, Protocol
+from uuid import uuid4
 
 
 class SqsDeliveryError(RuntimeError):
@@ -25,7 +26,7 @@ class SqsFinalDeliveryError(SqsDeliveryError):
 
 
 class SqsPort(Protocol):
-    """Narrow broker boundary used by the outbox relay and its isolated tests."""
+    """Narrow broker boundary shared by the relay and W1 queue workers."""
 
     def send_message(
         self,
@@ -36,6 +37,28 @@ class SqsPort(Protocol):
     ) -> str:
         """Send one Standard SQS message and return the broker-assigned message ID."""
 
+    def receive_messages(
+        self,
+        *,
+        queue_url: str,
+        max_messages: int,
+        visibility_timeout_seconds: int,
+        wait_time_seconds: int,
+    ) -> list[ReceivedSqsMessage]:
+        """Receive currently visible messages without acknowledging them."""
+
+    def delete_message(self, *, queue_url: str, receipt_handle: str) -> None:
+        """Acknowledge a successfully handled delivery."""
+
+    def change_message_visibility(
+        self,
+        *,
+        queue_url: str,
+        receipt_handle: str,
+        visibility_timeout_seconds: int,
+    ) -> None:
+        """Extend one in-flight delivery while the DB lease remains current."""
+
 
 @dataclass(frozen=True)
 class SentSqsMessage:
@@ -45,12 +68,37 @@ class SentSqsMessage:
     broker_message_id: str
 
 
+@dataclass(frozen=True)
+class ReceivedSqsMessage:
+    """The safe subset of an SQS delivery required by W1 consumers."""
+
+    message_id: str
+    receipt_handle: str
+    body: str
+    message_attributes: dict[str, str]
+    receive_count: int
+
+
+@dataclass
+class _InMemoryQueuedMessage:
+    queue_url: str
+    message_id: str
+    body: str
+    message_attributes: dict[str, str]
+    receipt_handle: str | None = None
+    receive_count: int = 0
+    visible: bool = True
+
+
 class InMemorySqsPort:
-    """Deterministic SQS fake.  It never implements queue-worker semantics."""
+    """Deterministic at-least-once SQS fake for relay and consumer integration tests."""
 
     def __init__(self, *, failures: Iterable[Exception] = ()) -> None:
         self._failures: deque[Exception] = deque(failures)
         self.sent_messages: list[SentSqsMessage] = []
+        self._queued_messages: list[_InMemoryQueuedMessage] = []
+        self.deleted_receipt_handles: list[str] = []
+        self.visibility_extensions: list[tuple[str, str, int]] = []
 
     def send_message(
         self,
@@ -71,6 +119,89 @@ class InMemorySqsPort:
             )
         )
         return broker_message_id
+
+    def inject_message(
+        self,
+        *,
+        queue_url: str,
+        body: str,
+        message_attributes: Mapping[str, str] | None = None,
+        message_id: str | None = None,
+    ) -> str:
+        """Insert a test delivery.  It becomes visible on the next receive call."""
+
+        assigned_message_id = message_id or str(uuid4())
+        self._queued_messages.append(
+            _InMemoryQueuedMessage(
+                queue_url=queue_url,
+                message_id=assigned_message_id,
+                body=body,
+                message_attributes=dict(message_attributes or {}),
+            )
+        )
+        return assigned_message_id
+
+    def receive_messages(
+        self,
+        *,
+        queue_url: str,
+        max_messages: int,
+        visibility_timeout_seconds: int,
+        wait_time_seconds: int,
+    ) -> list[ReceivedSqsMessage]:
+        del visibility_timeout_seconds, wait_time_seconds
+        if max_messages <= 0:
+            raise ValueError("max_messages must be positive")
+        deliveries: list[ReceivedSqsMessage] = []
+        for queued in self._queued_messages:
+            if queued.queue_url != queue_url or not queued.visible:
+                continue
+            queued.receive_count += 1
+            queued.receipt_handle = f"in-memory-receipt-{uuid4()}"
+            queued.visible = False
+            deliveries.append(
+                ReceivedSqsMessage(
+                    message_id=queued.message_id,
+                    receipt_handle=queued.receipt_handle,
+                    body=queued.body,
+                    message_attributes=dict(queued.message_attributes),
+                    receive_count=queued.receive_count,
+                )
+            )
+            if len(deliveries) == max_messages:
+                break
+        return deliveries
+
+    def delete_message(self, *, queue_url: str, receipt_handle: str) -> None:
+        for index, queued in enumerate(self._queued_messages):
+            if queued.queue_url == queue_url and queued.receipt_handle == receipt_handle:
+                self.deleted_receipt_handles.append(receipt_handle)
+                del self._queued_messages[index]
+                return
+        raise SqsFinalDeliveryError("SQS_RECEIPT_HANDLE_UNKNOWN")
+
+    def change_message_visibility(
+        self,
+        *,
+        queue_url: str,
+        receipt_handle: str,
+        visibility_timeout_seconds: int,
+    ) -> None:
+        if visibility_timeout_seconds <= 0:
+            raise ValueError("visibility_timeout_seconds must be positive")
+        for queued in self._queued_messages:
+            if queued.queue_url == queue_url and queued.receipt_handle == receipt_handle:
+                self.visibility_extensions.append(
+                    (queue_url, receipt_handle, visibility_timeout_seconds)
+                )
+                return
+        raise SqsFinalDeliveryError("SQS_RECEIPT_HANDLE_UNKNOWN")
+
+    def redeliver_all(self) -> None:
+        """Make unacknowledged deliveries visible again to model Standard-SQS retries."""
+
+        for queued in self._queued_messages:
+            queued.visible = True
 
 
 class Boto3SqsPort:
@@ -122,6 +253,88 @@ class Boto3SqsPort:
         if not isinstance(message_id, str) or not message_id:
             raise SqsRetryableError("SQS_MISSING_MESSAGE_ID")
         return message_id
+
+    def receive_messages(
+        self,
+        *,
+        queue_url: str,
+        max_messages: int,
+        visibility_timeout_seconds: int,
+        wait_time_seconds: int,
+    ) -> list[ReceivedSqsMessage]:
+        try:
+            response = self._client.receive_message(
+                QueueUrl=queue_url,
+                MaxNumberOfMessages=max_messages,
+                VisibilityTimeout=visibility_timeout_seconds,
+                WaitTimeSeconds=wait_time_seconds,
+                AttributeNames=["ApproximateReceiveCount"],
+                MessageAttributeNames=["All"],
+            )
+        except Exception as error:
+            raise self._classify_error(error) from error
+        raw_messages = response.get("Messages", [])
+        if not isinstance(raw_messages, list):
+            raise SqsRetryableError("SQS_INVALID_RECEIVE_RESPONSE")
+        deliveries: list[ReceivedSqsMessage] = []
+        for raw in raw_messages:
+            if not isinstance(raw, dict):
+                raise SqsRetryableError("SQS_INVALID_RECEIVE_MESSAGE")
+            message_id = raw.get("MessageId")
+            receipt_handle = raw.get("ReceiptHandle")
+            body = raw.get("Body")
+            if not all(
+                isinstance(value, str) and value
+                for value in (message_id, receipt_handle, body)
+            ):
+                raise SqsRetryableError("SQS_INVALID_RECEIVE_MESSAGE")
+            attributes = raw.get("MessageAttributes", {})
+            parsed_attributes: dict[str, str] = {}
+            if isinstance(attributes, dict):
+                for name, value in attributes.items():
+                    if not isinstance(name, str) or not isinstance(value, dict):
+                        continue
+                    string_value = value.get("StringValue")
+                    if isinstance(string_value, str):
+                        parsed_attributes[name] = string_value
+            system_attributes = raw.get("Attributes", {})
+            receive_count = 1
+            if isinstance(system_attributes, dict):
+                raw_count = system_attributes.get("ApproximateReceiveCount")
+                if isinstance(raw_count, str) and raw_count.isdigit():
+                    receive_count = max(1, int(raw_count))
+            deliveries.append(
+                ReceivedSqsMessage(
+                    message_id=message_id,
+                    receipt_handle=receipt_handle,
+                    body=body,
+                    message_attributes=parsed_attributes,
+                    receive_count=receive_count,
+                )
+            )
+        return deliveries
+
+    def delete_message(self, *, queue_url: str, receipt_handle: str) -> None:
+        try:
+            self._client.delete_message(QueueUrl=queue_url, ReceiptHandle=receipt_handle)
+        except Exception as error:
+            raise self._classify_error(error) from error
+
+    def change_message_visibility(
+        self,
+        *,
+        queue_url: str,
+        receipt_handle: str,
+        visibility_timeout_seconds: int,
+    ) -> None:
+        try:
+            self._client.change_message_visibility(
+                QueueUrl=queue_url,
+                ReceiptHandle=receipt_handle,
+                VisibilityTimeout=visibility_timeout_seconds,
+            )
+        except Exception as error:
+            raise self._classify_error(error) from error
 
     @classmethod
     def _classify_error(cls, error: Exception) -> SqsDeliveryError:

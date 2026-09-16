@@ -14,19 +14,22 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from app.core.config import settings  # noqa: E402
-from app.db.session import SessionLocal  # noqa: E402
 from app.runtime.outbox_relay import OutboxRelay, QueueUrlRegistry  # noqa: E402
+from app.runtime.session import create_worker_session_factory  # noqa: E402
 from app.runtime.sqs import Boto3SqsPort  # noqa: E402
 
 
 def _build_relay() -> OutboxRelay:
-    if not settings.w1_sqs_execution_queue_url:
-        raise SystemExit("W1_SQS_EXECUTION_QUEUE_URL must be set before starting the outbox relay")
+    if not settings.w1_execution_queue_url:
+        raise SystemExit("W1_JOB_EXECUTION_QUEUE_URL must be set before starting the outbox relay")
     relay_id = settings.w1_outbox_relay_instance_id or socket.gethostname()
     return OutboxRelay(
-        session_factory=SessionLocal,
+        session_factory=create_worker_session_factory(),
         sqs=Boto3SqsPort(),
-        queues=QueueUrlRegistry(w1_execution_queue_url=settings.w1_sqs_execution_queue_url),
+        queues=QueueUrlRegistry(
+            w1_execution_queue_url=settings.w1_execution_queue_url,
+            w2_collection_command_queue_url=settings.w2_collection_command_queue_url,
+        ),
         relay_id=relay_id[:128],
         lease_seconds=settings.w1_outbox_relay_lease_seconds,
         retry_base_seconds=settings.w1_outbox_relay_retry_base_seconds,

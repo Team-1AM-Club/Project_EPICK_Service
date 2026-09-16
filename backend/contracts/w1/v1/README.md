@@ -17,6 +17,10 @@ W1이 W2에 전달하는 단일 실행 단위는
 - W2는 실행 시작·재개 전마다 `POST /internal/v1/job-commands/lookup`으로
   `lookup_request`를 그대로 제출한다. `AVAILABLE`가 아닌 결과에서는 외부 fetch,
   저장, 재개를 해서는 안 된다.
+- SQS send 성공과 relay의 `PENDING → ENQUEUED` DB 표기는 원자적으로 묶일 수 없다.
+  따라서 W2가 방금 받은 동일 `command_id`를 lookup할 때에는, W1이 현재
+  Job/lease/fence/epoch를 모두 검증한 범위에서 `PENDING` command도 `AVAILABLE`로
+  응답할 수 있다. 이는 새 command를 임의로 조회할 수 있게 하는 예외가 아니다.
 
 lookup request와 W2 payload의 `execution_fence`는 표현만 다르다.
 
