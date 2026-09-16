@@ -121,6 +121,19 @@ class StaleInputError(ApiProblem):
         )
 
 
+class StaleJobActionError(ApiProblem):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=409,
+            code="STALE_INPUT",
+            message_ko=(
+                "Job의 입력 또는 결과 기준이 변경되었습니다. "
+                "최신 상태를 확인한 후 다시 시도해 주세요."
+            ),
+            retryable=True,
+        )
+
+
 class ExecutionPolicyUnconfiguredError(ApiProblem):
     def __init__(self) -> None:
         super().__init__(

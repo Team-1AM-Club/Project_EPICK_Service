@@ -33,6 +33,10 @@ class JobTransitionError(JobError):
     pass
 
 
+class JobActionStaleError(JobError):
+    """A stored required-action fence no longer matches the user's request."""
+
+
 class JobIdempotencyReplayIncompleteError(JobError):
     pass
 
@@ -190,12 +194,93 @@ class JobService:
 
     def request_cancellation(self, *, owner_user_id: UUID, job_id: UUID) -> Job:
         job = self._require_job_for_update(owner_user_id=owner_user_id, job_id=job_id)
+        self._request_cancellation_for_job(job)
+        self.session.flush()
+        return job
+
+    def apply_required_action(
+        self,
+        *,
+        owner_user_id: UUID,
+        job_id: UUID,
+        required_action_id: UUID,
+        action_code: str,
+        expected_input_version: str | None,
+        expected_result_version: str | None,
+        acknowledge_rate_limit: bool,
+        checkpoint_id: UUID | None = None,
+    ) -> JobAcceptance:
+        """Accept one fenced user action without claiming or dispatching work.
+
+        Idempotency is deliberately owned by the HTTP-facing action service.  This domain
+        operation keeps the action fence, Job transition, private Command, and Outbox row in
+        the caller's existing transaction.
+        """
+
+        owner = self.repository.get_owner_for_update(owner_user_id=owner_user_id)
+        if owner is None:
+            raise JobNotFoundError("job owner does not exist")
+        job = self._require_job_for_update(owner_user_id=owner_user_id, job_id=job_id)
+        action = self.repository.get_required_action_for_update(
+            action_id=required_action_id,
+            job_id=job_id,
+            owner_user_id=owner_user_id,
+        )
+        self._validate_required_action(
+            job=job,
+            action=action,
+            action_code=action_code,
+            expected_input_version=expected_input_version,
+            expected_result_version=expected_result_version,
+        )
+
+        command: JobCommand | None = None
+        outbox_message: OutboxMessage | None = None
+        if action_code == "RETRY":
+            if job.status not in {"FAILED_RETRYABLE", "PAUSED_RATE_LIMIT"}:
+                raise JobTransitionError("only a retryable or rate-limited Job can be retried")
+            if job.status == "PAUSED_RATE_LIMIT" and not acknowledge_rate_limit:
+                raise JobTransitionError("rate-limited Jobs require explicit acknowledgement")
+            if job.active_lease_id is not None or job.owner_deletion_epoch != owner.deletion_epoch:
+                raise JobTransitionError("Job is not safe to retry for the current owner epoch")
+            command, outbox_message = self._resume_job(
+                job=job,
+                checkpoint_id=checkpoint_id,
+            )
+        elif action_code == "CONTINUE_LIMITED":
+            if job.status != "WAITING_USER":
+                raise JobTransitionError("only a user-waiting Job can continue with limitations")
+            if job.active_lease_id is not None or job.owner_deletion_epoch != owner.deletion_epoch:
+                raise JobTransitionError("Job is not safe to continue for the current owner epoch")
+            command, outbox_message = self._resume_job(job=job, checkpoint_id=checkpoint_id)
+        elif action_code == "STOP":
+            if job.status in {"SUCCEEDED", "FAILED_FINAL", "CANCELLED"}:
+                raise JobTransitionError("terminal Jobs cannot be stopped")
+            command, outbox_message = self._request_cancellation_for_job(job)
+        else:
+            raise JobTransitionError("unsupported user action")
+
+        action.action_status = "RESOLVED"
+        action.resolved_at = datetime.now(UTC)
+        self.session.flush()
+        return JobAcceptance(
+            job=job,
+            command=command,
+            outbox_message=outbox_message,
+            replayed=False,
+        )
+
+    def _request_cancellation_for_job(
+        self, job: Job
+    ) -> tuple[JobCommand | None, OutboxMessage | None]:
+        command: JobCommand | None = None
+        outbox_message: OutboxMessage | None = None
         if job.status == "RUNNING":
             self._invalidate_current_command(job)
             job.status = "CANCEL_REQUESTED"
             job.execution_fence += 1
             job.dispatch_status = "OUTBOX_PENDING"
-            self._create_private_command_and_outbox(
+            command, outbox_message = self._create_private_command_and_outbox(
                 job=job,
                 command_type="CANCEL_JOB",
                 command_sequence=self._next_command_sequence(job_id=job.id),
@@ -209,8 +294,7 @@ class JobService:
         else:
             raise JobTransitionError("Job cannot be cancelled from its current status")
         job.updated_at = datetime.now(UTC)
-        self.session.flush()
-        return job
+        return command, outbox_message
 
     def retry_job(
         self,
@@ -441,6 +525,50 @@ class JobService:
         job.updated_at = datetime.now(UTC)
         self.session.flush()
         return job
+
+    def _resume_job(
+        self, *, job: Job, checkpoint_id: UUID | None
+    ) -> tuple[JobCommand, OutboxMessage]:
+        """Create a new fenced execution command for an already validated user action."""
+
+        job.execution_fence += 1
+        job.status = "QUEUED"
+        job.dispatch_status = "OUTBOX_PENDING"
+        job.retryable = False
+        job.retry_after = None
+        job.failure_code = None
+        job.safe_failure_message = None
+        job.completed_at = None
+        job.updated_at = datetime.now(UTC)
+        return self._create_private_command_and_outbox(
+            job=job,
+            command_type="EXECUTE_JOB",
+            command_sequence=self._next_command_sequence(job_id=job.id),
+            checkpoint_id=checkpoint_id,
+        )
+
+    @staticmethod
+    def _validate_required_action(
+        *,
+        job: Job,
+        action: JobRequiredAction | None,
+        action_code: str,
+        expected_input_version: str | None,
+        expected_result_version: str | None,
+    ) -> None:
+        if (
+            action is None
+            or action.action_status != "OPEN"
+            or action.resolved_at is not None
+            or action.action_code != action_code
+        ):
+            raise JobActionStaleError("the requested action is no longer open")
+        if (
+            action.expected_input_version != expected_input_version
+            or action.expected_result_version != expected_result_version
+            or job.analysis_input_version != expected_input_version
+        ):
+            raise JobActionStaleError("the requested action fence is stale")
 
     def _replayed_acceptance(self, record: IdempotencyRecord) -> JobAcceptance:
         job = self._job_from_idempotency_response(record)

@@ -145,3 +145,34 @@ def recommendation_api_client(
             {"one": owner_one_id, "two": owner_two_id, "company": company_id},
             test_session_factory,
         )
+
+
+@pytest.fixture
+def job_api_client(
+    api_app: FastAPI,
+    api_migrated_engine: Engine,
+    monkeypatch: pytest.MonkeyPatch,
+    owner_one_id: UUID,
+    owner_two_id: UUID,
+) -> Iterator[tuple[TestClient, FastAPI, dict[str, UUID], sessionmaker]]:
+    """An isolated owner pair for public Job API tests."""
+
+    test_session_factory = sessionmaker(bind=api_migrated_engine, expire_on_commit=False)
+    from app.api import dependencies
+
+    monkeypatch.setattr(dependencies, "SessionLocal", test_session_factory)
+    monkeypatch.setattr(settings, "api_cursor_signing_key", "api-job-test-key")
+    with api_migrated_engine.begin() as connection:
+        for owner_id, display_name in (
+            (owner_one_id, "Job API owner one"),
+            (owner_two_id, "Job API owner two"),
+        ):
+            connection.execute(
+                text(
+                    "INSERT INTO users (id, display_name, locale, timezone) "
+                    "VALUES (:id, :display_name, 'ko-KR', 'Asia/Seoul')"
+                ),
+                {"id": owner_id, "display_name": display_name},
+            )
+    with TestClient(api_app) as client:
+        yield client, api_app, {"one": owner_one_id, "two": owner_two_id}, test_session_factory
