@@ -23,6 +23,17 @@ def _validator(contract_root: Path, relative_schema_path: str) -> Draft202012Val
     return Draft202012Validator(schema, format_checker=FormatChecker())
 
 
+def _canonical_contract_sha256(path: Path) -> str:
+    """Hash contract text using the LF bytes pinned by W2's manifest.
+
+    ``.gitattributes`` keeps future worktrees on LF.  Normalizing here also
+    lets a pre-existing Windows worktree validate the same repository blob
+    after Git has previously materialized it as CRLF.
+    """
+
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+
+
 def _private_message_errors(contract_root: Path, message: dict[str, Any]) -> list[str]:
     envelope_validator = _validator(contract_root, "w1/v1/private-message-envelope.schema.json")
     errors = [error.message for error in envelope_validator.iter_errors(message)]
@@ -399,10 +410,10 @@ def test_w2_import_is_pinned_to_the_observed_runtime_contract(contract_root: Pat
         "source-event-payload.schema.json",
     }
     for name, artifact in manifest["artifacts"].items():
-        actual_sha256 = hashlib.sha256((contract_root / "w2/v1" / name).read_bytes()).hexdigest()
+        actual_sha256 = _canonical_contract_sha256(contract_root / "w2/v1" / name)
         assert actual_sha256 == artifact["sha256"]
 
     fixture_root = contract_root / "fixtures/v1/w2"
     for name, expected_sha256 in manifest["fixtures"].items():
-        actual_sha256 = hashlib.sha256((fixture_root / name).read_bytes()).hexdigest()
+        actual_sha256 = _canonical_contract_sha256(fixture_root / name)
         assert actual_sha256 == expected_sha256
