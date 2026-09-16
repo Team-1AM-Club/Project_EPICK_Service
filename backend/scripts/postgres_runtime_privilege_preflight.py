@@ -27,9 +27,17 @@ PRIVILEGE_EXPECTATIONS = (
     ("epick_worker", "jobs", "UPDATE", True),
     ("epick_worker", "sources", "INSERT", True),
     ("epick_worker", "users", "UPDATE", False),
+    ("epick_lookup", "jobs", "UPDATE", False),
+    ("epick_lookup", "outbox_messages", "SELECT", False),
     ("epick_deleter", "deletion_requests", "UPDATE", True),
     ("epick_deleter", "users", "DELETE", True),
     ("epick_deleter", "sources", "DELETE", False),
+)
+
+COLUMN_PRIVILEGE_EXPECTATIONS = (
+    ("epick_lookup", "users", "deletion_epoch", "SELECT", True),
+    ("epick_lookup", "jobs", "execution_fence", "SELECT", True),
+    ("epick_lookup", "job_commands", "payload", "SELECT", True),
 )
 
 
@@ -55,6 +63,31 @@ def main() -> None:
                     raise SystemExit(
                         f"runtime privilege mismatch: {role_name} {privilege} "
                         f"on {table_name} must be {expectation}"
+                    )
+            for (
+                role_name,
+                table_name,
+                column_name,
+                privilege,
+                expected,
+            ) in COLUMN_PRIVILEGE_EXPECTATIONS:
+                actual = connection.execute(
+                    text(
+                        "SELECT has_column_privilege("
+                        ":role_name, :table_name, :column_name, :privilege)"
+                    ),
+                    {
+                        "role_name": role_name,
+                        "table_name": f"public.{table_name}",
+                        "column_name": column_name,
+                        "privilege": privilege,
+                    },
+                ).scalar_one()
+                if actual is not expected:
+                    expectation = "present" if expected else "absent"
+                    raise SystemExit(
+                        f"runtime column privilege mismatch: {role_name} {privilege} "
+                        f"on {table_name}.{column_name} must be {expectation}"
                     )
     finally:
         engine.dispose()

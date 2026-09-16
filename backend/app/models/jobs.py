@@ -273,6 +273,18 @@ class OutboxMessage(Base):
         CheckConstraint("aggregate_revision >= 1", name="aggregate_revision_positive"),
         CheckConstraint("attempts >= 0", name="attempts_not_negative"),
         CheckConstraint(
+            "(relay_claim_token IS NULL AND relay_claimed_by IS NULL "
+            "AND relay_lease_expires_at IS NULL) OR "
+            "(relay_claim_token IS NOT NULL AND relay_claimed_by IS NOT NULL "
+            "AND relay_lease_expires_at IS NOT NULL)",
+            name="relay_claim_complete",
+        ),
+        CheckConstraint(
+            "(last_error_code IS NULL AND last_error_at IS NULL) OR "
+            "(last_error_code IS NOT NULL AND last_error_at IS NOT NULL)",
+            name="last_error_complete",
+        ),
+        CheckConstraint(
             "(visibility_scope = 'PUBLIC' AND owner_user_id IS NULL AND job_id IS NULL "
             "AND command_id IS NULL AND execution_fence IS NULL AND owner_deletion_epoch IS NULL "
             "AND deletion_request_id IS NULL AND deletion_target_id IS NULL) "
@@ -312,6 +324,15 @@ class OutboxMessage(Base):
     available_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+    relay_claim_token: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=True
+    )
+    relay_claimed_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    relay_lease_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    last_error_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

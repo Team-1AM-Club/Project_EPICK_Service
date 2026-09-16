@@ -139,6 +139,7 @@ def test_runtime_role_groups_cannot_bypass_rls_or_create_schema_objects(
                         "epick_migrator",
                         "epick_runtime",
                         "epick_worker",
+                        "epick_lookup",
                         "epick_deleter",
                     ]
                 },
@@ -154,6 +155,7 @@ def test_runtime_role_groups_cannot_bypass_rls_or_create_schema_objects(
         "epick_migrator",
         "epick_runtime",
         "epick_worker",
+        "epick_lookup",
         "epick_deleter",
     }
     assert all(not role["rolsuper"] and not role["rolbypassrls"] for role in roles)

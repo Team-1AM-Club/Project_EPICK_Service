@@ -11,9 +11,9 @@
 -- same release. Do not grant schema CREATE to runtime groups.
 
 REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public
-    FROM epick_runtime, epick_worker, epick_deleter;
+    FROM epick_runtime, epick_worker, epick_lookup, epick_deleter;
 REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public
-    FROM epick_runtime, epick_worker, epick_deleter;
+    FROM epick_runtime, epick_worker, epick_lookup, epick_deleter;
 
 -- Interactive API: owner-facing records and user commands. Canonical company,
 -- Source, Claim, and indexing data remain read-only to the API.
@@ -173,6 +173,43 @@ GRANT SELECT, INSERT, UPDATE ON TABLE
     projection_sync_states
 TO epick_worker;
 
+-- The lookup adapter has a separate, read-only login.  Its route is protected by
+-- a W2 service principal and still verifies command/fence/epoch before emitting
+-- a semantic result; the interactive API process never inherits this role.
+GRANT SELECT (id, deletion_epoch, account_status)
+ON TABLE users
+TO epick_lookup;
+
+GRANT SELECT (
+    id,
+    owner_user_id,
+    status,
+    execution_fence,
+    owner_deletion_epoch,
+    analysis_input_version,
+    active_lease_id
+)
+ON TABLE jobs
+TO epick_lookup;
+
+GRANT SELECT (
+    id,
+    job_id,
+    owner_user_id,
+    command_type,
+    command_schema_version,
+    command_sequence,
+    execution_fence,
+    owner_deletion_epoch,
+    analysis_input_version,
+    payload,
+    status,
+    created_at,
+    consumed_at
+)
+ON TABLE job_commands
+TO epick_lookup;
+
 -- The deleter advances deletion state and may remove owner-scoped data. It is
 -- deliberately denied mutation of canonical Source/knowledge tables.
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO epick_deleter;
@@ -253,6 +290,6 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public
 -- created by the principal executing this script (the migration login). They
 -- guarantee that a future table gets no runtime DML until it is reviewed here.
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
-    REVOKE ALL ON TABLES FROM epick_runtime, epick_worker, epick_deleter;
+    REVOKE ALL ON TABLES FROM epick_runtime, epick_worker, epick_lookup, epick_deleter;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
-    REVOKE ALL ON SEQUENCES FROM epick_runtime, epick_worker, epick_deleter;
+    REVOKE ALL ON SEQUENCES FROM epick_runtime, epick_worker, epick_lookup, epick_deleter;
