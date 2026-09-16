@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w1/v1/private-error.schema.json",
+  "title": "EPICK W1 protected internal error v1",
+  "description": "Safe error envelope for protected W1 routes. No credential, owner, or command payload is included.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "code", "retryable", "correlation_id"],
+  "properties": {
+    "schema_version": {
+      "const": "w1.private.error.v1"
+    },
+    "code": {
+      "enum": [
+        "UNAUTHENTICATED_SERVICE_PRINCIPAL",
+        "FORBIDDEN_SERVICE_PRINCIPAL",
+        "INVALID_LOOKUP_REQUEST",
+        "INTERNAL_RETRYABLE"
+      ]
+    },
+    "retryable": {
+      "type": "boolean"
+    },
+    "correlation_id": {
+      "type": "string",
+      "format": "uuid"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "code": { "const": "INTERNAL_RETRYABLE" } }
+      },
+      "then": {
+        "properties": { "retryable": { "const": true } }
+      },
+      "else": {
+        "properties": { "retryable": { "const": false } }
+      }
+    }
+  ]
+}

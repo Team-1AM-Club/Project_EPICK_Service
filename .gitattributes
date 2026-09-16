@@ -1,0 +1,3 @@
+# Contract manifests pin raw SHA-256 bytes. Keep JSON artifacts identical on
+# Windows developers' worktrees and Linux CI runners.
+*.json text eol=lf

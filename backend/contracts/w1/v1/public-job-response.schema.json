@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w1/v1/public-job-response.schema.json",
+  "title": "EPICK public Job response v1",
+  "description": "Public Job representation returned after an action is accepted. It deliberately excludes worker, command, owner, and queue fields.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "job_type",
+    "status",
+    "completeness",
+    "dispatch_status",
+    "stage",
+    "input_refs",
+    "progress",
+    "required_actions",
+    "checkpoint",
+    "failure",
+    "limitations",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "job_type": { "type": "string" },
+    "status": {
+      "enum": [
+        "QUEUED",
+        "RUNNING",
+        "WAITING_USER",
+        "PAUSED_RATE_LIMIT",
+        "SUCCEEDED",
+        "FAILED_RETRYABLE",
+        "FAILED_FINAL",
+        "CANCEL_REQUESTED",
+        "CANCELLED"
+      ]
+    },
+    "completeness": { "enum": ["none", "partial", "complete"] },
+    "dispatch_status": {
+      "enum": ["OUTBOX_PENDING", "ENQUEUED", "CLAIMED", "BLOCKED", "INVALIDATED"]
+    },
+    "stage": { "type": ["string", "null"] },
+    "input_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "id", "version"],
+        "properties": {
+          "type": { "type": "string" },
+          "id": { "type": ["string", "integer"], "format": "uuid" },
+          "version": { "type": ["string", "integer"] }
+        }
+      }
+    },
+    "progress": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["completed_units", "total_units", "percent"],
+      "properties": {
+        "completed_units": { "type": "integer" },
+        "total_units": { "type": ["integer", "null"] },
+        "percent": { "type": ["integer", "null"] }
+      }
+    },
+    "required_actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "code",
+          "status",
+          "context_code",
+          "expected_input_version",
+          "expected_result_version"
+        ],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "code": { "enum": ["RETRY", "CONTINUE_LIMITED", "STOP"] },
+          "status": { "const": "OPEN" },
+          "context_code": { "type": ["string", "null"] },
+          "expected_input_version": { "type": ["string", "null"] },
+          "expected_result_version": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["available", "last_completed_stage", "analysis_input_version"],
+      "properties": {
+        "available": { "type": "boolean" },
+        "last_completed_stage": { "type": ["string", "null"] },
+        "analysis_input_version": { "type": ["string", "null"] }
+      }
+    },
+    "failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "retryable", "retry_after_seconds"],
+      "properties": {
+        "code": { "type": ["string", "null"] },
+        "message": { "type": ["string", "null"] },
+        "retryable": { "type": "boolean" },
+        "retry_after_seconds": { "type": ["integer", "null"] }
+      }
+    },
+    "limitations": { "type": "array", "items": { "type": "string" } },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  }
+}

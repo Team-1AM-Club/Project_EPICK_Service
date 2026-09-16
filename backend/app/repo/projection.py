@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -62,15 +61,16 @@ class ProjectionRepository:
             )
         )
 
-    def claim_pending_public_messages(
-        self, *, limit: int, now: datetime
-    ) -> list[OutboxMessage]:
+    def claim_pending_public_messages(self, *, limit: int) -> list[OutboxMessage]:
         statement = (
             select(OutboxMessage)
             .where(
                 OutboxMessage.visibility_scope == "PUBLIC",
                 OutboxMessage.status.in_(("PENDING", "FAILED_RETRYABLE")),
-                OutboxMessage.available_at <= now,
+                # available_at is written with PostgreSQL's server clock.  Compare it
+                # against that same clock so a small application/DB clock skew cannot
+                # defer an event that was just committed as immediately available.
+                OutboxMessage.available_at <= func.now(),
             )
             .order_by(OutboxMessage.available_at, OutboxMessage.created_at, OutboxMessage.id)
             .limit(limit)

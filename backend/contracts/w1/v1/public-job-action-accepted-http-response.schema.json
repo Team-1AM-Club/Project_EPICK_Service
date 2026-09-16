@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w1/v1/public-job-action-accepted-http-response.schema.json",
+  "title": "EPICK public Job action accepted HTTP response v1",
+  "description": "A transport fixture shape. The actual HTTP response body is the public Job response, and Location is an HTTP header rather than a JSON field.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status_code", "headers", "body"],
+  "properties": {
+    "status_code": { "const": 202 },
+    "headers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["Location"],
+      "properties": {
+        "Location": {
+          "type": "string",
+          "pattern": "^/api/v1/jobs/[0-9a-fA-F-]{36}$"
+        }
+      }
+    },
+    "body": { "type": "object" }
+  }
+}

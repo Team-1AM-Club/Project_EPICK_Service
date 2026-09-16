@@ -1,0 +1,6 @@
+{
+  "schema_version": "w1.private.error.v1",
+  "code": "FORBIDDEN_SERVICE_PRINCIPAL",
+  "retryable": false,
+  "correlation_id": "40000000-0000-4000-8000-000000000002"
+}

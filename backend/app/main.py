@@ -14,21 +14,72 @@ from app.api.schemas.common import ApiErrorBody, ApiErrorResponse, ErrorFieldRes
 from app.api.v1.router import router as api_v1_router
 from app.db.session import engine
 
+OPENAPI_TAGS = [
+    {"name": "health", "description": "프로세스와 데이터베이스 준비 상태를 확인합니다."},
+    {"name": "activities", "description": "사용자 Activity와 immutable version을 관리합니다."},
+    {
+        "name": "episodes",
+        "description": "Activity에 속한 Episode와 immutable version을 관리합니다.",
+    },
+    {"name": "users", "description": "현재 사용자와 홈 read model을 조회합니다."},
+    {"name": "companies", "description": "이미 식별된 Company 및 채용공고 catalog를 조회합니다."},
+    {
+        "name": "application-projects",
+        "description": "지원 Project와 연결된 JobPosting을 관리합니다.",
+    },
+    {"name": "project-questions", "description": "지원 문항과 문항 version을 관리합니다."},
+    {
+        "name": "recommendations",
+        "description": "snapshot에 고정된 합성 추천 결과를 조회합니다.",
+    },
+    {"name": "material-selections", "description": "추천 후보의 소재 선택을 관리합니다."},
+    {
+        "name": "jobs",
+        "description": "비동기 Job 상태와 사용자 action 수락 상태를 조회·제출합니다.",
+    },
+    {"name": "inferences", "description": "추론 및 중복 suggestion을 검토합니다."},
+    {"name": "notifications", "description": "사용자 알림을 조회하고 상태를 변경합니다."},
+    {
+        "name": "preferences-and-privacy",
+        "description": "설정, 제외, 동의, 보존 상태와 피드백을 관리합니다.",
+    },
+    {"name": "account-deletion", "description": "계정 삭제 요청과 처리 상태를 관리합니다."},
+]
+
 
 def create_app() -> FastAPI:
     """Create an application instance without making health semantics depend on v1."""
 
-    app = FastAPI(title="EPICK Service API")
+    app = FastAPI(
+        title="EPICK Service API",
+        version="1.0.0",
+        description=(
+            "EPICK Service의 공개 v1 HTTP API입니다. 비동기 요청의 `202 Accepted`는 "
+            "DB 수락만 의미하며 실제 worker dispatch 또는 외부 엔진 완료를 뜻하지 않습니다."
+        ),
+        openapi_tags=OPENAPI_TAGS,
+    )
     app.middleware("http")(correlation_id_middleware)
     _register_api_error_handlers(app)
     app.include_router(api_v1_router)
 
-    @app.get("/health")
+    @app.get(
+        "/health",
+        tags=["health"],
+        summary="프로세스 liveness 확인",
+        response_description="실행 중인 API 프로세스 상태",
+    )
     def health() -> dict[str, str]:
         """FastAPI 프로세스가 실행 중인지"""
         return {"status": "ok"}
 
-    @app.get("/health/ready")
+    @app.get(
+        "/health/ready",
+        tags=["health"],
+        summary="데이터베이스 readiness 확인",
+        response_description="PostgreSQL 연결 가능 상태",
+        responses={503: {"description": "PostgreSQL에 연결할 수 없습니다."}},
+    )
     def readiness() -> dict[str, str]:
         """PostgreSQL에 연결할 수 있는지 체크"""
         try:

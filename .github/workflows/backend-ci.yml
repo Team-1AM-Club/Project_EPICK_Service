@@ -52,6 +52,7 @@ jobs:
       APP_ENV: test
       DATABASE_URL: postgresql+psycopg://epick:epick@localhost:5432/epick_test
       TEST_DATABASE_URL: postgresql+psycopg://epick:epick@localhost:5432/epick_test
+      API_CURSOR_SIGNING_KEY: ci-api-cursor-signing-key
 
     steps:
       - name: Checkout repository
@@ -73,8 +74,11 @@ jobs:
       - name: Check code
         run: python -m ruff check app tests
 
-      - name: Run tests
-        run: python -m pytest -q
+      - name: Run API and contract tests
+        run: python -m pytest tests/api tests/contract -q
+
+      - name: Run PostgreSQL integration tests
+        run: python -m pytest tests/integration/db -q
 
   build-and-push:
     needs: backend-tests

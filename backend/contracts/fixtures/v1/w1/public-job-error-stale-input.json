@@ -1,0 +1,10 @@
+{
+  "error": {
+    "code": "STALE_INPUT",
+    "message_ko": "Job의 입력 또는 결과 기준이 변경되었습니다. 최신 상태를 확인한 후 다시 시도해 주세요.",
+    "retryable": true,
+    "actions": [],
+    "correlation_id": "60000000-0000-4000-8000-000000000002",
+    "fields": []
+  }
+}

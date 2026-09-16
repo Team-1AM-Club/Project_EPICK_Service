@@ -1,0 +1,9 @@
+{
+  "schema_version": "w1.private.receipt.v1",
+  "message_id": "20000000-0000-4000-8000-000000000001",
+  "consumer": "w1.collection-result",
+  "outcome": "REJECTED_PRINCIPAL",
+  "retryable": false,
+  "error_code": "PRODUCER_CHANNEL_MISMATCH",
+  "received_at": "2026-09-16T01:00:05Z"
+}

@@ -5,6 +5,7 @@
   "producer": "w2",
   "occurred_at": "2026-09-16T01:00:00Z",
   "visibility_scope": "PRIVATE",
+  "channel": "w1.private.w2.collection-result.v1",
   "payload": {
     "schema_version": "w2.collection.v1",
     "command_id": "10000000-0000-4000-8000-000000000001",

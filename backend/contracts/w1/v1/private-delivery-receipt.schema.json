@@ -73,6 +73,25 @@
           }
         }
       }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "const": "APPLIED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "error_code": { "type": "null" }
+        }
+      },
+      "else": {
+        "properties": {
+          "error_code": { "type": "string", "minLength": 1 }
+        }
+      }
     }
   ]
 }

@@ -25,6 +25,7 @@ def workspace_api_client(
     monkeypatch.setattr(dependencies, "SessionLocal", test_session_factory)
     company_id = uuid4()
     pending_company_id = uuid4()
+    catalog_name = f"EPICK-{company_id.hex}"
     with api_migrated_engine.begin() as connection:
         for owner_id, display_name in (
             (owner_one_id, "Workspace API owner one"),
@@ -36,14 +37,19 @@ def workspace_api_client(
                     "VALUES (:id, :display_name, 'ko-KR', 'Asia/Seoul')"
                 ),
                 {"id": owner_id, "display_name": display_name},
-            )
+        )
         connection.execute(
             text(
                 "INSERT INTO companies "
                 "(id, legal_name, display_name, official_domain, identification_status) "
-                "VALUES (:id, 'EPICK 주식회사', 'EPICK', 'epick.example', 'VERIFIED')"
+                "VALUES (:id, :legal_name, :display_name, :official_domain, 'VERIFIED')"
             ),
-            {"id": company_id},
+            {
+                "id": company_id,
+                "legal_name": f"{catalog_name} 주식회사",
+                "display_name": catalog_name,
+                "official_domain": f"{company_id.hex}.example",
+            },
         )
         connection.execute(
             text(
@@ -85,7 +91,7 @@ def test_company_catalog_project_versions_and_public_status_mapping(
 
     me = client.get("/api/v1/users/me")
     home = client.get("/api/v1/home")
-    catalog = client.get("/api/v1/companies", params={"query": "EPICK"})
+    catalog = client.get("/api/v1/companies", params={"query": f"EPICK-{ids['company'].hex}"})
     unknown_catalog = client.get("/api/v1/companies", params={"query": "없는 회사"})
     rejected_create = client.post(
         "/api/v1/application-projects",

@@ -1,0 +1,10 @@
+{
+  "error": {
+    "code": "ACTION_NOT_ALLOWED",
+    "message_ko": "현재 상태에서는 요청한 작업을 수행할 수 없습니다.",
+    "retryable": false,
+    "actions": [],
+    "correlation_id": "60000000-0000-4000-8000-000000000003",
+    "fields": []
+  }
+}
