@@ -11,6 +11,15 @@ class Settings(BaseSettings):
     api_cursor_signing_key: str | None = None
     # Retention is deployment-configurable rather than scattered over mutation routers.
     api_idempotency_ttl_seconds: int = 86_400
+    # Runtime relay configuration is deliberately separate from API request handling.  The
+    # queue URL is an IaC output, never a repository constant.
+    w1_sqs_execution_queue_url: str | None = None
+    w1_outbox_relay_instance_id: str | None = None
+    w1_outbox_relay_batch_size: int = 10
+    w1_outbox_relay_lease_seconds: int = 120
+    w1_outbox_relay_poll_seconds: float = 2.0
+    w1_outbox_relay_retry_base_seconds: int = 5
+    w1_outbox_relay_retry_max_seconds: int = 300
 
     model_config = SettingsConfigDict(
         env_file=".env",

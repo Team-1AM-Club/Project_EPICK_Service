@@ -82,6 +82,10 @@ def _private_message_errors(contract_root: Path, message: dict[str, Any]) -> lis
         ("w1/v1/job.schema.json", "fixtures/v1/w1/accepted-job.json"),
         ("w1/v1/job.schema.json", "fixtures/v1/w1/cancel-requested-job.json"),
         ("w1/v1/job-command.schema.json", "fixtures/v1/w1/job-command.json"),
+        (
+            "w1/v1/private-job-dispatch.schema.json",
+            "fixtures/v1/w1/private-job-dispatch.json",
+        ),
         ("w1/v1/checkpoint.schema.json", "fixtures/v1/w1/checkpoint.json"),
         ("w1/v1/deletion-command.schema.json", "fixtures/v1/w1/deletion-command.json"),
         (

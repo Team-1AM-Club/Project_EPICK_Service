@@ -25,6 +25,17 @@ lookup request와 W2 payload의 `execution_fence`는 표현만 다르다.
   값이다. 예: integer `1` ↔ string `"1"`.
 - `command_id`와 `owner_deletion_epoch`는 양쪽 값이 정확히 같아야 한다.
 
+### 1.1 W1 내부 Job execution dispatch
+
+`private-job-dispatch.schema.json`은 W1 outbox relay가 W1 execution queue에만 보내는
+참조 메시지다. W2/W3/W4와 공유하는 payload가 아니다.
+
+- `message_id`와 `command_id`는 항상 같은 UUID다. SQS Standard 재전달도 같은 값을 유지한다.
+- body에는 owner ID, command payload, 원문, token을 넣지 않는다. worker는 수신 뒤 canonical
+  `JobCommand`와 `Job`을 PostgreSQL에서 다시 읽고 fence·deletion epoch를 확인한다.
+- `payload_ref`는 private Outbox UUID이며 디버그 상관관계용이다. payload 자체를 전달하거나
+  읽을 권한을 부여하지 않는다.
+
 `private-command-lookup-response.schema.json`의 semantic response는 모두 HTTP 200으로
 돌려준다. `AVAILABLE`만 `command`를 포함한다. `NOT_FOUND`, `STALE_FENCE`,
 `STALE_DELETION_EPOCH`, `DELETED`, `INVALIDATED`, `EXPIRED`는 non-retryable terminal
