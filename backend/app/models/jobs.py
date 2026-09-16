@@ -194,6 +194,8 @@ class JobRequiredAction(Base):
     action_code: Mapped[str] = mapped_column(String(64))
     action_status: Mapped[str] = mapped_column(String(32), server_default="OPEN")
     context_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    expected_input_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    expected_result_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

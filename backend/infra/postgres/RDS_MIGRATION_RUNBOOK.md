@@ -32,7 +32,8 @@ processes never run Alembic during startup.
 
    The manifest is deny-by-default for future tables. Extend and re-apply it
    whenever a later migration introduces a table consumed by the API, worker,
-   or deletion process.
+   or deletion process. Re-apply it for a release that changes the manifest
+   itself even when that release has no Alembic revision.
 
 7. Run the migration preflight again with `--require-head`, then start runtime
    processes with only `DATABASE_URL` configured. The API, worker, and deletion

@@ -28,6 +28,7 @@ RECOMMENDATION_RUN_STATUS_VALUES = (
     "'PENDING', 'RUNNING', 'SUCCEEDED', 'LIMITED', 'FAILED', 'CANCELLED'"
 )
 RECOMMENDATION_RESULT_STATUS_VALUES = "'PENDING', 'READY', 'LIMITED', 'FAILED'"
+RECOMMENDATION_RESULT_ORIGIN_VALUES = "'SYNTHETIC', 'ENGINE'"
 CANDIDATE_MATCH_STATUS_VALUES = (
     "'DIRECT_MATCH', 'PARTIAL_RELEVANCE', 'NEEDS_VERIFICATION', 'NO_RELEVANT_EVIDENCE'"
 )
@@ -172,6 +173,10 @@ class RecommendationRun(Base):
             f"result_status IN ({RECOMMENDATION_RESULT_STATUS_VALUES})",
             name="result_status_allowed",
         ),
+        CheckConstraint(
+            f"result_origin IN ({RECOMMENDATION_RESULT_ORIGIN_VALUES})",
+            name="result_origin_allowed",
+        ),
         CheckConstraint(f"status IN ({RECOMMENDATION_RUN_STATUS_VALUES})", name="status_allowed"),
         CheckConstraint("requested_candidate_limit > 0", name="requested_candidate_limit_positive"),
     )
@@ -194,6 +199,7 @@ class RecommendationRun(Base):
     analysis_policy_version: Mapped[str] = mapped_column(String(64))
     analysis_input_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
     result_status: Mapped[str] = mapped_column(String(32), server_default="PENDING")
+    result_origin: Mapped[str] = mapped_column(String(16), server_default="ENGINE")
     restriction_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
     status: Mapped[str] = mapped_column(String(32), server_default="PENDING")
     requested_candidate_limit: Mapped[int] = mapped_column(Integer)

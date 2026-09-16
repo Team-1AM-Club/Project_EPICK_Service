@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import date
 from typing import Final
 from uuid import UUID
@@ -12,6 +13,7 @@ from app.models.experience import (
     ActivityVersion,
     Episode,
     EpisodeVersion,
+    EpisodeVersionSkill,
     FieldAvailability,
 )
 from app.repo.experience import ExperienceRepository
@@ -72,6 +74,16 @@ class AvailabilityValidationError(ExperienceError):
     pass
 
 
+class CompletionRequirementsError(ExperienceError):
+    def __init__(self, missing_fields: tuple[str, ...]) -> None:
+        super().__init__("completion requirements are not met")
+        self.missing_fields = missing_fields
+
+
+class InvalidExperienceStateError(ExperienceError):
+    pass
+
+
 class ExperienceService:
     """Append-only Experience mutation orchestration.
 
@@ -102,6 +114,7 @@ class ExperienceService:
         outcome_text: str | None = None,
         outcome_availability: FieldAvailability | str | object = _UNSET,
         original_narrative: str | None = None,
+        usage_enabled: bool = True,
     ) -> Activity:
         values = self._activity_values(
             title=title,
@@ -120,7 +133,7 @@ class ExperienceService:
             outcome_availability=outcome_availability,
             original_narrative=original_narrative,
         )
-        activity = Activity(owner_user_id=owner_user_id)
+        activity = Activity(owner_user_id=owner_user_id, usage_enabled=usage_enabled)
         self.repository.add_activity(activity)
         self.session.flush()
         version = ActivityVersion(
@@ -159,6 +172,7 @@ class ExperienceService:
         outcome_text: str | None | object = _UNSET,
         outcome_availability: FieldAvailability | str | object = _UNSET,
         original_narrative: str | None | object = _UNSET,
+        usage_enabled: bool | object = _UNSET,
         change_reason: str | None = None,
     ) -> ActivityVersion:
         activity = self.repository.get_activity_for_update(
@@ -207,6 +221,8 @@ class ExperienceService:
         self.session.flush()
         activity.current_version_id = version.id
         activity.lock_version += 1
+        if usage_enabled is not _UNSET:
+            activity.usage_enabled = bool(usage_enabled)
         activity.updated_at = func.now()
         self.session.flush()
         return version
@@ -218,14 +234,24 @@ class ExperienceService:
         activity_id: UUID,
         title: str,
         situation_text: str | None = None,
+        situation_availability: FieldAvailability | str | object = _UNSET,
         problem_text: str | None = None,
+        problem_availability: FieldAvailability | str | object = _UNSET,
         goal_text: str | None = None,
+        goal_availability: FieldAvailability | str | object = _UNSET,
         actions_text: str | None = None,
+        actions_availability: FieldAvailability | str | object = _UNSET,
         decisions_text: str | None = None,
+        decisions_availability: FieldAvailability | str | object = _UNSET,
         decision_reasons_text: str | None = None,
+        decision_reasons_availability: FieldAvailability | str | object = _UNSET,
         result_text: str | None = None,
+        result_availability: FieldAvailability | str | object = _UNSET,
         learning_text: str | None = None,
+        learning_availability: FieldAvailability | str | object = _UNSET,
         original_narrative: str | None = None,
+        technologies: Sequence[str] = (),
+        usage_enabled: bool = True,
     ) -> Episode:
         activity = self.repository.get_activity_for_update(
             activity_id=activity_id, owner_user_id=owner_user_id
@@ -235,16 +261,28 @@ class ExperienceService:
         values = self._episode_values(
             title=title,
             situation_text=situation_text,
+            situation_availability=situation_availability,
             problem_text=problem_text,
+            problem_availability=problem_availability,
             goal_text=goal_text,
+            goal_availability=goal_availability,
             actions_text=actions_text,
+            actions_availability=actions_availability,
             decisions_text=decisions_text,
+            decisions_availability=decisions_availability,
             decision_reasons_text=decision_reasons_text,
+            decision_reasons_availability=decision_reasons_availability,
             result_text=result_text,
+            result_availability=result_availability,
             learning_text=learning_text,
+            learning_availability=learning_availability,
             original_narrative=original_narrative,
         )
-        episode = Episode(owner_user_id=owner_user_id, activity_id=activity.id)
+        episode = Episode(
+            owner_user_id=owner_user_id,
+            activity_id=activity.id,
+            usage_enabled=usage_enabled,
+        )
         self.repository.add_episode(episode)
         self.session.flush()
         version = EpisodeVersion(
@@ -258,6 +296,11 @@ class ExperienceService:
         )
         self.repository.add_episode_version(version)
         self.session.flush()
+        self._persist_episode_skills(
+            episode_version_id=version.id,
+            owner_user_id=owner_user_id,
+            technologies=technologies,
+        )
         episode.current_version_id = version.id
         episode.updated_at = func.now()
         self.session.flush()
@@ -271,14 +314,24 @@ class ExperienceService:
         expected_lock_version: int,
         title: str | object = _UNSET,
         situation_text: str | None | object = _UNSET,
+        situation_availability: FieldAvailability | str | object = _UNSET,
         problem_text: str | None | object = _UNSET,
+        problem_availability: FieldAvailability | str | object = _UNSET,
         goal_text: str | None | object = _UNSET,
+        goal_availability: FieldAvailability | str | object = _UNSET,
         actions_text: str | None | object = _UNSET,
+        actions_availability: FieldAvailability | str | object = _UNSET,
         decisions_text: str | None | object = _UNSET,
+        decisions_availability: FieldAvailability | str | object = _UNSET,
         decision_reasons_text: str | None | object = _UNSET,
+        decision_reasons_availability: FieldAvailability | str | object = _UNSET,
         result_text: str | None | object = _UNSET,
+        result_availability: FieldAvailability | str | object = _UNSET,
         learning_text: str | None | object = _UNSET,
+        learning_availability: FieldAvailability | str | object = _UNSET,
         original_narrative: str | None | object = _UNSET,
+        technologies: Sequence[str] | object = _UNSET,
+        usage_enabled: bool | object = _UNSET,
         change_reason: str | None = None,
     ) -> EpisodeVersion:
         episode = self.repository.get_episode_for_update(
@@ -302,13 +355,21 @@ class ExperienceService:
             self._provided_updates(
                 title=title,
                 situation_text=situation_text,
+                situation_availability=situation_availability,
                 problem_text=problem_text,
+                problem_availability=problem_availability,
                 goal_text=goal_text,
+                goal_availability=goal_availability,
                 actions_text=actions_text,
+                actions_availability=actions_availability,
                 decisions_text=decisions_text,
+                decisions_availability=decisions_availability,
                 decision_reasons_text=decision_reasons_text,
+                decision_reasons_availability=decision_reasons_availability,
                 result_text=result_text,
+                result_availability=result_availability,
                 learning_text=learning_text,
+                learning_availability=learning_availability,
                 original_narrative=original_narrative,
             )
         )
@@ -324,15 +385,113 @@ class ExperienceService:
         )
         self.repository.add_episode_version(version)
         self.session.flush()
+        if technologies is _UNSET:
+            technologies = tuple(
+                skill.raw_name
+                for skill in self.repository.list_episode_skills(
+                    episode_version_id=current.id,
+                    owner_user_id=owner_user_id,
+                )
+            )
+        self._persist_episode_skills(
+            episode_version_id=version.id,
+            owner_user_id=owner_user_id,
+            technologies=technologies,
+        )
         episode.current_version_id = version.id
         episode.lock_version += 1
+        if usage_enabled is not _UNSET:
+            episode.usage_enabled = bool(usage_enabled)
         episode.updated_at = func.now()
+        self.session.flush()
+        return version
+
+    def complete_activity(
+        self, *, activity_id: UUID, owner_user_id: UUID, expected_lock_version: int
+    ) -> ActivityVersion:
+        activity = self.repository.get_activity_for_update(
+            activity_id=activity_id,
+            owner_user_id=owner_user_id,
+        )
+        if activity is None or activity.current_version_id is None:
+            raise ExperienceNotFoundError("activity does not exist for this owner")
+        if activity.lock_version != expected_lock_version:
+            raise VersionConflictError("activity has a newer immutable version")
+        if activity.registration_status != "DRAFT" or activity.deletion_status != "ACTIVE":
+            raise InvalidExperienceStateError("activity cannot transition to completed")
+        current = self.repository.get_activity_version(
+            activity_version_id=activity.current_version_id,
+            owner_user_id=owner_user_id,
+        )
+        if current is None:
+            raise ExperienceNotFoundError("activity current version does not exist for this owner")
+        self._validate_activity_completion(current)
+        version = self.append_activity_version(
+            activity_id=activity_id,
+            owner_user_id=owner_user_id,
+            expected_lock_version=expected_lock_version,
+            change_reason="COMPLETED",
+        )
+        activity.registration_status = "COMPLETED"
+        self.session.flush()
+        return version
+
+    def complete_episode(
+        self, *, episode_id: UUID, owner_user_id: UUID, expected_lock_version: int
+    ) -> EpisodeVersion:
+        episode = self.repository.get_episode_for_update(
+            episode_id=episode_id,
+            owner_user_id=owner_user_id,
+        )
+        if episode is None or episode.current_version_id is None:
+            raise ExperienceNotFoundError("episode does not exist for this owner")
+        if episode.lock_version != expected_lock_version:
+            raise VersionConflictError("episode has a newer immutable version")
+        if episode.registration_status != "DRAFT" or episode.deletion_status != "ACTIVE":
+            raise InvalidExperienceStateError("episode cannot transition to completed")
+        version = self.append_episode_version(
+            episode_id=episode_id,
+            owner_user_id=owner_user_id,
+            expected_lock_version=expected_lock_version,
+            change_reason="COMPLETED",
+        )
+        episode.registration_status = "COMPLETED"
         self.session.flush()
         return version
 
     @staticmethod
     def _provided_updates(**values: object) -> dict[str, object]:
         return {field: value for field, value in values.items() if value is not _UNSET}
+
+    def _persist_episode_skills(
+        self,
+        *,
+        episode_version_id: UUID,
+        owner_user_id: UUID,
+        technologies: Sequence[str] | object,
+    ) -> None:
+        if not isinstance(technologies, Sequence) or isinstance(technologies, str):
+            raise AvailabilityValidationError("technologies must be a sequence of strings")
+        normalized_names: list[str] = []
+        seen_names: set[str] = set()
+        for technology in technologies:
+            if not isinstance(technology, str) or not technology.strip():
+                raise AvailabilityValidationError("technology must be a non-empty string")
+            normalized = technology.strip()
+            normalized_key = normalized.casefold()
+            if normalized_key not in seen_names:
+                seen_names.add(normalized_key)
+                normalized_names.append(normalized)
+        for technology in normalized_names:
+            self.repository.add_episode_version_skill(
+                EpisodeVersionSkill(
+                    episode_version_id=episode_version_id,
+                    owner_user_id=owner_user_id,
+                    raw_name=technology,
+                    origin="USER_INPUT",
+                )
+            )
+        self.session.flush()
 
     def _activity_values(
         self,
@@ -384,15 +543,47 @@ class ExperienceService:
         self._validate_activity_values(values)
         return values
 
-    def _episode_values(self, *, title: str, **texts: str | None) -> dict[str, object]:
-        values: dict[str, object] = {"title": title}
-        for name, text_value in texts.items():
-            if name == "original_narrative":
-                values[name] = text_value
-                continue
-            values[name] = text_value
-            availability_name = name.removesuffix("_text") + "_availability"
-            values[availability_name] = self._resolve_availability(_UNSET, text_value is not None)
+    def _episode_values(
+        self,
+        *,
+        title: str,
+        situation_text: str | None,
+        situation_availability: FieldAvailability | str | object,
+        problem_text: str | None,
+        problem_availability: FieldAvailability | str | object,
+        goal_text: str | None,
+        goal_availability: FieldAvailability | str | object,
+        actions_text: str | None,
+        actions_availability: FieldAvailability | str | object,
+        decisions_text: str | None,
+        decisions_availability: FieldAvailability | str | object,
+        decision_reasons_text: str | None,
+        decision_reasons_availability: FieldAvailability | str | object,
+        result_text: str | None,
+        result_availability: FieldAvailability | str | object,
+        learning_text: str | None,
+        learning_availability: FieldAvailability | str | object,
+        original_narrative: str | None,
+    ) -> dict[str, object]:
+        values: dict[str, object] = {
+            "title": title,
+            "original_narrative": original_narrative,
+        }
+        for field_name, text_value, availability in (
+            ("situation", situation_text, situation_availability),
+            ("problem", problem_text, problem_availability),
+            ("goal", goal_text, goal_availability),
+            ("actions", actions_text, actions_availability),
+            ("decisions", decisions_text, decisions_availability),
+            ("decision_reasons", decision_reasons_text, decision_reasons_availability),
+            ("result", result_text, result_availability),
+            ("learning", learning_text, learning_availability),
+        ):
+            values[f"{field_name}_text"] = text_value
+            values[f"{field_name}_availability"] = self._resolve_availability(
+                availability,
+                text_value is not None,
+            )
         self._validate_episode_values(values)
         return values
 
@@ -443,6 +634,23 @@ class ExperienceService:
             "learning",
         ):
             self._validate_pair(values, name)
+
+    def _validate_activity_completion(self, version: ActivityVersion) -> None:
+        missing: list[str] = []
+        if not version.title:
+            missing.append("title")
+        if version.organization_availability != FieldAvailability.PROVIDED.value:
+            missing.append("organization")
+        if version.activity_type_availability != FieldAvailability.PROVIDED.value:
+            missing.append("activity_type")
+        if version.period_availability != FieldAvailability.PROVIDED.value:
+            missing.append("period")
+        if version.role_availability != FieldAvailability.PROVIDED.value:
+            missing.append("role")
+        if version.outcome_status is None:
+            missing.append("outcome.status")
+        if missing:
+            raise CompletionRequirementsError(tuple(missing))
 
     @staticmethod
     def _validate_title(values: dict[str, object]) -> None:

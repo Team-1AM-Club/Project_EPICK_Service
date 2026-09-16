@@ -35,8 +35,14 @@ GRANT SELECT, INSERT, UPDATE ON TABLE
     jobs,
     job_required_actions,
     job_commands,
+    outbox_messages,
     experience_exclusions,
     snapshot_exclusions,
+    project_snapshots,
+    snapshot_episode_versions,
+    recommendation_runs,
+    material_selection_sets,
+    material_selection_items,
     inference_decisions,
     experience_duplicate_decisions,
     project_interpretation_decisions,
@@ -50,7 +56,8 @@ GRANT SELECT, INSERT, UPDATE ON TABLE
     feedback,
     analytics_events,
     notifications,
-    deletion_requests
+    deletion_requests,
+    deletion_targets
 TO epick_runtime;
 
 GRANT SELECT ON TABLE
@@ -89,15 +96,10 @@ GRANT SELECT ON TABLE
     question_analysis_intents,
     question_analysis_requirement_groups,
     question_analysis_requirements,
-    project_snapshots,
-    snapshot_episode_versions,
     snapshot_activity_versions,
     snapshot_source_versions,
     snapshot_question_analyses,
-    recommendation_runs,
     recommendation_candidates,
-    material_selection_sets,
-    material_selection_items,
     inference_suggestions,
     inference_suggestion_sources,
     experience_duplicate_suggestions

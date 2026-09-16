@@ -36,6 +36,16 @@ class DeletionRepository:
             statement = statement.where(DeletionRequest.owner_user_id == owner_user_id)
         return self.session.scalar(statement.with_for_update())
 
+    def get_request(
+        self, *, deletion_request_id: UUID, owner_user_id: UUID
+    ) -> DeletionRequest | None:
+        return self.session.scalar(
+            select(DeletionRequest).where(
+                DeletionRequest.id == deletion_request_id,
+                DeletionRequest.owner_user_id == owner_user_id,
+            )
+        )
+
     def get_target_for_update(
         self, *, deletion_request_id: UUID, deletion_target_id: UUID
     ) -> DeletionTarget | None:
@@ -55,6 +65,21 @@ class DeletionRepository:
                 .where(DeletionTarget.deletion_request_id == deletion_request_id)
                 .order_by(DeletionTarget.store_type, DeletionTarget.id)
                 .with_for_update()
+            )
+        )
+
+    def list_targets(
+        self, *, deletion_request_id: UUID, owner_user_id: UUID
+    ) -> list[DeletionTarget]:
+        return list(
+            self.session.scalars(
+                select(DeletionTarget)
+                .join(DeletionRequest, DeletionRequest.id == DeletionTarget.deletion_request_id)
+                .where(
+                    DeletionTarget.deletion_request_id == deletion_request_id,
+                    DeletionRequest.owner_user_id == owner_user_id,
+                )
+                .order_by(DeletionTarget.store_type, DeletionTarget.id)
             )
         )
 

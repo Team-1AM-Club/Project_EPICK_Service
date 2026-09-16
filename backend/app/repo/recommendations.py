@@ -13,7 +13,7 @@ from app.models.application_workspace import (
     ProjectQuestion,
     QuestionVersion,
 )
-from app.models.experience import EpisodeVersion
+from app.models.experience import Activity, Episode, EpisodeVersion
 from app.models.projection import ExperienceExclusion, SnapshotExclusion
 from app.models.recommendations import (
     MaterialSelectionItem,
@@ -124,6 +124,48 @@ class RecommendationRepository:
             .with_for_update()
         )
 
+    def get_run(self, *, run_id: UUID, owner_user_id: UUID) -> RecommendationRun | None:
+        return self.session.scalar(
+            select(RecommendationRun).where(
+                RecommendationRun.id == run_id,
+                RecommendationRun.owner_user_id == owner_user_id,
+            )
+        )
+
+    def get_candidate(
+        self, *, candidate_id: UUID, owner_user_id: UUID
+    ) -> RecommendationCandidate | None:
+        return self.session.scalar(
+            select(RecommendationCandidate).where(
+                RecommendationCandidate.id == candidate_id,
+                RecommendationCandidate.owner_user_id == owner_user_id,
+            )
+        )
+
+    def list_candidates(
+        self,
+        *,
+        run_id: UUID,
+        owner_user_id: UUID,
+        offset: int,
+        limit: int,
+    ) -> list[RecommendationCandidate]:
+        return list(
+            self.session.scalars(
+                select(RecommendationCandidate)
+                .where(
+                    RecommendationCandidate.run_id == run_id,
+                    RecommendationCandidate.owner_user_id == owner_user_id,
+                )
+                .order_by(
+                    RecommendationCandidate.candidate_no.asc(),
+                    RecommendationCandidate.id.asc(),
+                )
+                .offset(offset)
+                .limit(limit)
+            )
+        )
+
     def get_episode_versions(
         self, *, episode_version_ids: Sequence[UUID], owner_user_id: UUID
     ) -> list[EpisodeVersion]:
@@ -137,6 +179,29 @@ class RecommendationRepository:
                 )
             )
         )
+
+    def list_current_eligible_episode_versions(
+        self, *, owner_user_id: UUID
+    ) -> list[EpisodeVersion]:
+        """Return current, usable and non-deleting Experience versions only."""
+
+        statement = (
+            select(EpisodeVersion)
+            .join(Episode, Episode.id == EpisodeVersion.episode_id)
+            .join(Activity, Activity.id == EpisodeVersion.activity_id)
+            .where(
+                EpisodeVersion.owner_user_id == owner_user_id,
+                Episode.owner_user_id == owner_user_id,
+                Activity.owner_user_id == owner_user_id,
+                Episode.current_version_id == EpisodeVersion.id,
+                Episode.usage_enabled.is_(True),
+                Activity.usage_enabled.is_(True),
+                Episode.deletion_status == "ACTIVE",
+                Activity.deletion_status == "ACTIVE",
+            )
+            .order_by(Episode.updated_at.desc(), Episode.id.asc())
+        )
+        return list(self.session.scalars(statement))
 
     def next_snapshot_no(self, *, project_id: UUID) -> int:
         latest = self.session.scalar(
@@ -163,6 +228,40 @@ class RecommendationRepository:
                     SnapshotEpisodeVersion.snapshot_id == snapshot_id,
                     SnapshotEpisodeVersion.episode_version_id == episode_version_id,
                     SnapshotEpisodeVersion.owner_user_id == owner_user_id,
+                )
+            )
+            is not None
+        )
+
+    def list_snapshot_episode_version_ids(
+        self, *, snapshot_id: UUID, owner_user_id: UUID
+    ) -> list[UUID]:
+        return list(
+            self.session.scalars(
+                select(SnapshotEpisodeVersion.episode_version_id)
+                .where(
+                    SnapshotEpisodeVersion.snapshot_id == snapshot_id,
+                    SnapshotEpisodeVersion.owner_user_id == owner_user_id,
+                )
+                .order_by(SnapshotEpisodeVersion.episode_version_id.asc())
+            )
+        )
+
+    def episode_version_is_selectable(
+        self, *, episode_version_id: UUID, owner_user_id: UUID
+    ) -> bool:
+        return (
+            self.session.scalar(
+                select(EpisodeVersion.id)
+                .join(Episode, Episode.id == EpisodeVersion.episode_id)
+                .join(Activity, Activity.id == EpisodeVersion.activity_id)
+                .where(
+                    EpisodeVersion.id == episode_version_id,
+                    EpisodeVersion.owner_user_id == owner_user_id,
+                    Episode.owner_user_id == owner_user_id,
+                    Activity.owner_user_id == owner_user_id,
+                    Episode.deletion_status == "ACTIVE",
+                    Activity.deletion_status == "ACTIVE",
                 )
             )
             is not None
@@ -249,6 +348,41 @@ class RecommendationRepository:
                 MaterialSelectionSet.is_current.is_(True),
             )
             .with_for_update()
+        )
+
+    def get_current_selection(
+        self, *, question_id: UUID, owner_user_id: UUID
+    ) -> MaterialSelectionSet | None:
+        return self.session.scalar(
+            select(MaterialSelectionSet).where(
+                MaterialSelectionSet.question_id == question_id,
+                MaterialSelectionSet.owner_user_id == owner_user_id,
+                MaterialSelectionSet.is_current.is_(True),
+            )
+        )
+
+    def get_selection(
+        self, *, selection_set_id: UUID, owner_user_id: UUID
+    ) -> MaterialSelectionSet | None:
+        return self.session.scalar(
+            select(MaterialSelectionSet).where(
+                MaterialSelectionSet.id == selection_set_id,
+                MaterialSelectionSet.owner_user_id == owner_user_id,
+            )
+        )
+
+    def list_selection_items(
+        self, *, selection_set_id: UUID, owner_user_id: UUID
+    ) -> list[MaterialSelectionItem]:
+        return list(
+            self.session.scalars(
+                select(MaterialSelectionItem)
+                .where(
+                    MaterialSelectionItem.selection_set_id == selection_set_id,
+                    MaterialSelectionItem.owner_user_id == owner_user_id,
+                )
+                .order_by(MaterialSelectionItem.selection_order.asc())
+            )
         )
 
     def active_question_count(self, *, project_id: UUID, owner_user_id: UUID) -> int:

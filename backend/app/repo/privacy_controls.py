@@ -43,6 +43,11 @@ class PrivacyControlsRepository:
             .with_for_update()
         )
 
+    def get_user_settings(self, *, owner_user_id: UUID) -> UserSettings | None:
+        return self.session.scalar(
+            select(UserSettings).where(UserSettings.owner_user_id == owner_user_id)
+        )
+
     def get_recommendation_preferences_for_update(
         self, *, owner_user_id: UUID
     ) -> RecommendationPreference | None:
@@ -50,6 +55,15 @@ class PrivacyControlsRepository:
             select(RecommendationPreference)
             .where(RecommendationPreference.owner_user_id == owner_user_id)
             .with_for_update()
+        )
+
+    def get_recommendation_preferences(
+        self, *, owner_user_id: UUID
+    ) -> RecommendationPreference | None:
+        return self.session.scalar(
+            select(RecommendationPreference).where(
+                RecommendationPreference.owner_user_id == owner_user_id
+            )
         )
 
     def get_project_preference_for_update(
@@ -116,6 +130,14 @@ class PrivacyControlsRepository:
             .order_by(Consent.decided_at.desc(), Consent.id.desc())
             .limit(1)
             .with_for_update()
+        )
+
+    def get_latest_consent(self, *, owner_user_id: UUID, consent_type: str) -> Consent | None:
+        return self.session.scalar(
+            select(Consent)
+            .where(Consent.owner_user_id == owner_user_id, Consent.consent_type == consent_type)
+            .order_by(Consent.decided_at.desc(), Consent.id.desc())
+            .limit(1)
         )
 
     def get_activity_version(

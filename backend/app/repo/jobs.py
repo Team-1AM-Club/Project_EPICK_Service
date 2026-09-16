@@ -17,6 +17,7 @@ from app.models.jobs import (
     OutboxMessage,
     OwnerExecutionSlot,
 )
+from app.models.lifecycle_operations import JobCheckpoint
 
 
 class JobRepository:
@@ -45,6 +46,75 @@ class JobRepository:
         return self.session.scalar(
             select(Job).where(Job.id == job_id, Job.owner_user_id == owner_user_id)
         )
+
+    def list_jobs(
+        self, *, owner_user_id: UUID, offset: int, limit: int
+    ) -> list[Job]:
+        statement = (
+            select(Job)
+            .where(Job.owner_user_id == owner_user_id)
+            .order_by(Job.updated_at.desc(), Job.id.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        return list(self.session.scalars(statement))
+
+    def list_input_refs(self, *, job_id: UUID, owner_user_id: UUID) -> list[JobInputRef]:
+        statement = (
+            select(JobInputRef)
+            .where(JobInputRef.job_id == job_id, JobInputRef.owner_user_id == owner_user_id)
+            .order_by(JobInputRef.created_at, JobInputRef.id)
+        )
+        return list(self.session.scalars(statement))
+
+    def list_open_required_actions(
+        self, *, job_id: UUID, owner_user_id: UUID
+    ) -> list[JobRequiredAction]:
+        statement = (
+            select(JobRequiredAction)
+            .where(
+                JobRequiredAction.job_id == job_id,
+                JobRequiredAction.owner_user_id == owner_user_id,
+                JobRequiredAction.action_status == "OPEN",
+                JobRequiredAction.resolved_at.is_(None),
+            )
+            .order_by(JobRequiredAction.created_at, JobRequiredAction.id)
+        )
+        return list(self.session.scalars(statement))
+
+    def get_required_action_for_update(
+        self, *, action_id: UUID, job_id: UUID, owner_user_id: UUID
+    ) -> JobRequiredAction | None:
+        statement = (
+            select(JobRequiredAction)
+            .where(
+                JobRequiredAction.id == action_id,
+                JobRequiredAction.job_id == job_id,
+                JobRequiredAction.owner_user_id == owner_user_id,
+            )
+            .with_for_update()
+        )
+        return self.session.scalar(statement)
+
+    def get_current_checkpoint(
+        self, *, job: Job, for_update: bool = False
+    ) -> JobCheckpoint | None:
+        statement = (
+            select(JobCheckpoint)
+            .where(
+                JobCheckpoint.job_id == job.id,
+                JobCheckpoint.owner_user_id == job.owner_user_id,
+                JobCheckpoint.execution_fence == job.execution_fence,
+                JobCheckpoint.owner_deletion_epoch == job.owner_deletion_epoch,
+                JobCheckpoint.analysis_input_version.is_not_distinct_from(job.analysis_input_version),
+                JobCheckpoint.resumable.is_(True),
+            )
+            .order_by(JobCheckpoint.checkpoint_revision.desc())
+            .limit(1)
+        )
+        if for_update:
+            statement = statement.with_for_update()
+        return self.session.scalar(statement)
 
     def get_latest_command(self, *, job_id: UUID) -> JobCommand | None:
         statement = (

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from hmac import compare_digest
+from typing import Any
 from uuid import UUID
 
 from app.models.identity import IdempotencyRecord
@@ -49,6 +50,13 @@ class IdempotencyService:
         return record, False
 
     @staticmethod
-    def complete(record: IdempotencyRecord, *, response_status: int, response_ref: str) -> None:
+    def complete(
+        record: IdempotencyRecord,
+        *,
+        response_status: int,
+        response_ref: str,
+        response_body: dict[str, Any] | None = None,
+    ) -> None:
         record.response_status = response_status
         record.response_ref = response_ref
+        record.response_body = response_body

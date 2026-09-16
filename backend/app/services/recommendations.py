@@ -38,6 +38,14 @@ class RecommendationValidationError(RecommendationError):
     pass
 
 
+class RecommendationStaleInputError(RecommendationError):
+    pass
+
+
+class MaterialSelectionConflictError(RecommendationError):
+    pass
+
+
 class RecommendationService:
     """Transaction-scoped Snapshot, candidate, and material-selection orchestration.
 
@@ -188,11 +196,124 @@ class RecommendationService:
             job_id=job_id,
             analysis_policy_version=analysis_policy_version,
             analysis_input_version=analysis_input_version,
+            result_origin="SYNTHETIC",
             requested_candidate_limit=requested_candidate_limit,
             limitations=self._normalize_limitations(limitations),
         )
         self.repository.add_run(run)
         project.status = "RECOMMENDING"
+        self.session.flush()
+        return run
+
+    def create_synthetic_recommendation_run(
+        self,
+        *,
+        owner_user_id: UUID,
+        question_id: UUID,
+        expected_question_version: int,
+        expected_snapshot_no: int,
+        requested_candidate_limit: int,
+        include_excluded: bool,
+        allow_limited_analysis: bool,
+    ) -> RecommendationRun:
+        """Freeze owner-scoped inputs and accept one synthetic recommendation Run.
+
+        The method intentionally only records a pending Run.  Calling a
+        recommendation executor is a separate worker/test seam, never part of
+        the HTTP request transaction.
+        """
+
+        question = self.repository.get_question_for_update(
+            question_id=question_id, owner_user_id=owner_user_id
+        )
+        if question is None or question.current_version_id is None or question.status != "ACTIVE":
+            raise RecommendationNotFoundError("question does not exist for this owner")
+        if question.current_version_id is None:
+            raise RecommendationNotFoundError("question has no current version")
+        question_version = self.repository.get_question_version(
+            question_version_id=question.current_version_id,
+            owner_user_id=owner_user_id,
+        )
+        if question_version is None:
+            raise RecommendationNotFoundError("question version does not exist for this owner")
+        if question_version.version_no != expected_question_version:
+            raise RecommendationStaleInputError("question version is stale")
+
+        project = self.repository.get_project_for_update(
+            project_id=question.project_id, owner_user_id=owner_user_id
+        )
+        if project is None or project.current_version_id is None:
+            raise RecommendationNotFoundError("project does not exist for this owner")
+        active_snapshot_no = 0
+        if project.active_snapshot_id is not None:
+            active_snapshot = self.repository.get_snapshot(
+                snapshot_id=project.active_snapshot_id, owner_user_id=owner_user_id
+            )
+            if active_snapshot is None:
+                raise RecommendationNotFoundError("active snapshot does not exist for this owner")
+            active_snapshot_no = active_snapshot.snapshot_no
+        if active_snapshot_no != expected_snapshot_no:
+            raise RecommendationStaleInputError("snapshot version is stale")
+
+        project_version = self.repository.get_project_version(
+            project_version_id=project.current_version_id,
+            project_id=project.id,
+            owner_user_id=owner_user_id,
+        )
+        if project_version is None:
+            raise RecommendationNotFoundError("project version does not exist for this owner")
+        eligible_versions = self.repository.list_current_eligible_episode_versions(
+            owner_user_id=owner_user_id
+        )
+        exclusions = self.repository.get_active_exclusions_for_episode_versions(
+            owner_user_id=owner_user_id,
+            episode_version_ids=[version.id for version in eligible_versions],
+            project_id=project.id,
+            company_id=project_version.company_id,
+            role_id=self.repository.get_role_id_for_role_version(
+                role_version_id=project_version.role_version_id
+            ),
+        )
+        excluded_episode_ids = {
+            exclusion.episode_id for exclusion in exclusions if exclusion.episode_id is not None
+        }
+        excluded_activity_ids = {
+            exclusion.activity_id for exclusion in exclusions if exclusion.activity_id is not None
+        }
+        episode_version_ids = tuple(
+            version.id
+            for version in eligible_versions
+            if include_excluded
+            or (
+                version.episode_id not in excluded_episode_ids
+                and version.activity_id not in excluded_activity_ids
+            )
+        )
+        limitations: list[str] = []
+        if not episode_version_ids:
+            if not allow_limited_analysis:
+                raise RecommendationValidationError("no eligible episode version is available")
+            limitations.append("NO_ELIGIBLE_EPISODE_VERSION")
+
+        snapshot = self.create_snapshot(
+            owner_user_id=owner_user_id,
+            project_id=project.id,
+            episode_version_ids=episode_version_ids,
+            recommendation_policy_version="synthetic-v1",
+            limitations=limitations,
+        )
+        run = self.create_recommendation_run(
+            owner_user_id=owner_user_id,
+            project_id=project.id,
+            question_id=question.id,
+            snapshot_id=snapshot.id,
+            analysis_policy_version="synthetic-v1",
+            analysis_input_version=f"snapshot:{snapshot.snapshot_no}",
+            requested_candidate_limit=requested_candidate_limit,
+            question_version_id=question_version.id,
+            limitations=limitations,
+        )
+        run.limited_analysis = bool(limitations)
         self.session.flush()
         return run
 
@@ -327,6 +448,119 @@ class RecommendationService:
             project.status = "MATERIALS_SELECTED"
         self.session.flush()
         return selection_set
+
+    def select_candidate(
+        self,
+        *,
+        owner_user_id: UUID,
+        candidate_id: UUID,
+        question_id: UUID,
+        run_id: UUID,
+        result_version: str,
+        replace_existing: bool,
+    ) -> tuple[MaterialSelectionSet, bool]:
+        """Select one candidate and return ``(selection, created)``.
+
+        A duplicate current selection is a domain-level idempotent result even
+        when the caller uses a new HTTP idempotency key.
+        """
+
+        candidate = self.repository.get_candidate(
+            candidate_id=candidate_id, owner_user_id=owner_user_id
+        )
+        if candidate is None or candidate.run_id != run_id or candidate.question_id != question_id:
+            raise RecommendationNotFoundError("candidate does not belong to this run or question")
+        if candidate.result_version != result_version:
+            raise RecommendationStaleInputError("candidate result version is stale")
+        if candidate.validation_status not in {"PASSED", "LIMITED"}:
+            raise RecommendationValidationError("candidate is not selectable")
+        if not self.repository.episode_version_is_selectable(
+            episode_version_id=candidate.episode_version_id,
+            owner_user_id=owner_user_id,
+        ):
+            raise RecommendationValidationError("candidate episode version is no longer selectable")
+
+        run = self.repository.get_run_for_update(run_id=run_id, owner_user_id=owner_user_id)
+        if (
+            run is None
+            or run.question_id != question_id
+            or run.snapshot_id != candidate.snapshot_id
+        ):
+            raise RecommendationNotFoundError("run does not belong to this question")
+        if (
+            run.status not in {"SUCCEEDED", "LIMITED"}
+            or run.result_status not in {"READY", "LIMITED"}
+        ):
+            raise RecommendationValidationError("recommendation result is not ready")
+
+        current = self.repository.get_current_selection_for_update(
+            question_id=question_id, owner_user_id=owner_user_id
+        )
+        if current is not None:
+            current_items = self.repository.list_selection_items(
+                selection_set_id=current.id, owner_user_id=owner_user_id
+            )
+            if (
+                current.run_id == run_id
+                and len(current_items) == 1
+                and current_items[0].candidate_id == candidate_id
+            ):
+                return current, False
+            if not replace_existing:
+                raise MaterialSelectionConflictError("a current selection already exists")
+
+        selection = self.replace_material_selection(
+            owner_user_id=owner_user_id,
+            project_id=run.project_id,
+            question_id=question_id,
+            run_id=run_id,
+            candidate_ids=(candidate_id,),
+        )
+        return selection, True
+
+    def clear_current_material_selection(
+        self, *, owner_user_id: UUID, question_id: UUID
+    ) -> MaterialSelectionSet:
+        question = self.repository.get_question_for_update(
+            question_id=question_id, owner_user_id=owner_user_id
+        )
+        if question is None:
+            raise RecommendationNotFoundError("question does not exist for this owner")
+        current = self.repository.get_current_selection_for_update(
+            question_id=question_id, owner_user_id=owner_user_id
+        )
+        if current is None:
+            raise RecommendationNotFoundError("current material selection does not exist")
+        current.is_current = False
+        current.superseded_at = datetime.now(UTC)
+        project = self.repository.get_project_for_update(
+            project_id=question.project_id, owner_user_id=owner_user_id
+        )
+        if project is not None and project.status == "MATERIALS_SELECTED":
+            project.status = "READY"
+        self.session.flush()
+        return current
+
+    def complete_synthetic_run(
+        self,
+        *,
+        owner_user_id: UUID,
+        run_id: UUID,
+        limited: bool,
+    ) -> RecommendationRun:
+        """Mark a previously accepted synthetic run complete from a worker seam."""
+
+        run = self.repository.get_run_for_update(run_id=run_id, owner_user_id=owner_user_id)
+        if run is None:
+            raise RecommendationNotFoundError("recommendation run does not exist for this owner")
+        if run.result_origin != "SYNTHETIC":
+            raise RecommendationValidationError("only synthetic runs use this executor")
+        run.status = "LIMITED" if limited else "SUCCEEDED"
+        run.result_status = "LIMITED" if limited else "READY"
+        run.limited_analysis = limited
+        run.completed_at = datetime.now(UTC)
+        self.session.flush()
+        return run
 
     @staticmethod
     def _normalize_limitations(limitations: Sequence[str]) -> list[str]:
