@@ -1,0 +1,7 @@
+{
+  "required_action_id": "50000000-0000-4000-8000-000000000001",
+  "from_stage": "RETRIEVING_CANDIDATES",
+  "expected_input_version": "analysis-v1",
+  "expected_result_version": "result-v3",
+  "acknowledge_rate_limit": true
+}

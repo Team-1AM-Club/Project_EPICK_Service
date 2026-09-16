@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w1/v1/public-job-retry-request.schema.json",
+  "title": "EPICK public Job retry compatibility request v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "required_action_id",
+    "from_stage",
+    "expected_input_version",
+    "expected_result_version",
+    "acknowledge_rate_limit"
+  ],
+  "properties": {
+    "required_action_id": { "type": "string", "format": "uuid" },
+    "from_stage": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "expected_input_version": { "type": ["string", "null"], "maxLength": 64 },
+    "expected_result_version": { "type": ["string", "null"], "maxLength": 64 },
+    "acknowledge_rate_limit": { "type": "boolean" }
+  }
+}

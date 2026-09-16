@@ -5,6 +5,7 @@
   "producer": "w3",
   "occurred_at": "2026-09-16T01:01:00Z",
   "visibility_scope": "PRIVATE",
+  "channel": "w1.private.w3.core-source-decision.v1",
   "payload": {
     "schema_version": "w1.core-source-decision.v1",
     "decision_id": "31000000-0000-4000-8000-000000000001",

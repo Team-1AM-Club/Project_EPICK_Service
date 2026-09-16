@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w1/v1/public-api-error.schema.json",
+  "title": "EPICK public API error envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["error"],
+  "properties": {
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message_ko",
+        "retryable",
+        "actions",
+        "correlation_id",
+        "fields"
+      ],
+      "properties": {
+        "code": {
+          "enum": [
+            "RESOURCE_NOT_FOUND",
+            "STALE_INPUT",
+            "ACTION_NOT_ALLOWED",
+            "IDEMPOTENCY_CONFLICT"
+          ]
+        },
+        "message_ko": { "type": "string", "minLength": 1 },
+        "retryable": { "type": "boolean" },
+        "actions": { "type": "array", "items": { "type": "string" } },
+        "correlation_id": { "type": "string", "format": "uuid" },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["field", "reason"],
+            "properties": {
+              "field": { "type": "string" },
+              "reason": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

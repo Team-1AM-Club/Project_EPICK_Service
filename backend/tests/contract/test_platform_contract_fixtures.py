@@ -8,6 +8,8 @@ from typing import Any
 import pytest
 from jsonschema import Draft202012Validator, FormatChecker
 
+from app.main import create_app
+
 
 def _load(path: Path) -> dict[str, Any]:
     with path.open(encoding="utf-8") as stream:
@@ -80,8 +82,92 @@ def _private_message_errors(contract_root: Path, message: dict[str, Any]) -> lis
             "fixtures/v1/w1/private-command-lookup-available.json",
         ),
         (
+            "w1/v1/private-command-lookup-response.schema.json",
+            "fixtures/v1/w1/private-command-lookup-not-found.json",
+        ),
+        (
+            "w1/v1/private-command-lookup-response.schema.json",
+            "fixtures/v1/w1/private-command-lookup-stale-fence.json",
+        ),
+        (
+            "w1/v1/private-command-lookup-response.schema.json",
+            "fixtures/v1/w1/private-command-lookup-stale-deletion-epoch.json",
+        ),
+        (
+            "w1/v1/private-command-lookup-response.schema.json",
+            "fixtures/v1/w1/private-command-lookup-deleted.json",
+        ),
+        (
+            "w1/v1/private-command-lookup-response.schema.json",
+            "fixtures/v1/w1/private-command-lookup-invalidated.json",
+        ),
+        (
+            "w1/v1/private-command-lookup-response.schema.json",
+            "fixtures/v1/w1/private-command-lookup-expired.json",
+        ),
+        (
+            "w1/v1/private-w2-command-dispatch.schema.json",
+            "fixtures/v1/w1/private-w2-command-dispatch.json",
+        ),
+        (
+            "w1/v1/private-error.schema.json",
+            "fixtures/v1/w1/private-error-unauthenticated.json",
+        ),
+        (
+            "w1/v1/private-error.schema.json",
+            "fixtures/v1/w1/private-error-forbidden.json",
+        ),
+        (
             "w1/v1/private-delivery-receipt.schema.json",
             "fixtures/v1/w1/private-delivery-receipt-applied.json",
+        ),
+        (
+            "w1/v1/private-delivery-receipt.schema.json",
+            "fixtures/v1/w1/private-delivery-receipt-duplicate.json",
+        ),
+        (
+            "w1/v1/private-delivery-receipt.schema.json",
+            "fixtures/v1/w1/private-delivery-receipt-stale-discarded.json",
+        ),
+        (
+            "w1/v1/private-delivery-receipt.schema.json",
+            "fixtures/v1/w1/private-delivery-receipt-rejected-schema.json",
+        ),
+        (
+            "w1/v1/private-delivery-receipt.schema.json",
+            "fixtures/v1/w1/private-delivery-receipt-rejected-principal.json",
+        ),
+        (
+            "w1/v1/private-delivery-receipt.schema.json",
+            "fixtures/v1/w1/private-delivery-receipt-retryable-infra.json",
+        ),
+        (
+            "w1/v1/public-job-action-request.schema.json",
+            "fixtures/v1/w1/public-job-action-retry-request.json",
+        ),
+        (
+            "w1/v1/public-job-retry-request.schema.json",
+            "fixtures/v1/w1/public-job-retry-request.json",
+        ),
+        (
+            "w1/v1/public-job-action-accepted-http-response.schema.json",
+            "fixtures/v1/w1/public-job-action-retry-accepted-http-response.json",
+        ),
+        (
+            "w1/v1/public-api-error.schema.json",
+            "fixtures/v1/w1/public-job-error-resource-not-found.json",
+        ),
+        (
+            "w1/v1/public-api-error.schema.json",
+            "fixtures/v1/w1/public-job-error-stale-input.json",
+        ),
+        (
+            "w1/v1/public-api-error.schema.json",
+            "fixtures/v1/w1/public-job-error-action-not-allowed.json",
+        ),
+        (
+            "w1/v1/public-api-error.schema.json",
+            "fixtures/v1/w1/public-job-error-idempotency-conflict.json",
         ),
         (
             "w2/v1/source-collection.command.schema.json",
@@ -150,6 +236,98 @@ def test_private_command_lookup_available_response_contains_a_w2_command(
     command_validator = _validator(contract_root, "w2/v1/source-collection.command.schema.json")
 
     assert list(command_validator.iter_errors(response["command"])) == []
+
+
+def test_w1_dispatch_binds_the_w2_payload_to_the_exact_lookup_request(
+    contract_root: Path,
+) -> None:
+    dispatch = _load(contract_root / "fixtures/v1/w1/private-w2-command-dispatch.json")
+    payload = dispatch["payload"]
+    lookup_request = dispatch["lookup_request"]
+
+    payload_validator = _validator(contract_root, "w2/v1/source-collection.command.schema.json")
+    lookup_validator = _validator(contract_root, "w1/v1/private-command-lookup-request.schema.json")
+    assert list(payload_validator.iter_errors(payload)) == []
+    assert list(lookup_validator.iter_errors(lookup_request)) == []
+
+    assert dispatch["message_id"] == payload["command_id"] == lookup_request["command_id"]
+    # W2 owns the historical string field; W1 lookup owns the canonical integer.
+    # The dispatch adapter allows only canonical base-10 rendering, never e.g. "01".
+    assert payload["execution_fence"] == str(lookup_request["execution_fence"])
+    assert payload["owner_deletion_epoch"] == lookup_request["owner_deletion_epoch"]
+
+    core_decision = _load(
+        contract_root / "fixtures/v1/w1/private-core-source-decision-company.json"
+    )
+    pin = dispatch["core_decision_pin"]
+    assert pin["origin_message_id"] == core_decision["message_id"]
+    for field in (
+        "decision_id",
+        "decision_scope",
+        "company_id",
+        "question_version_id",
+        "source_id",
+        "analysis_input_version",
+        "decision_version",
+        "is_core",
+        "decision_code",
+        "reason_code",
+    ):
+        assert pin[field] == core_decision["payload"][field]
+
+
+def test_w1_private_result_deduplication_and_core_decision_scope_are_explicit(
+    contract_root: Path,
+) -> None:
+    w2_result = _load(contract_root / "fixtures/v1/w1/private-w2-collection-result-complete.json")
+    company_decision = _load(
+        contract_root / "fixtures/v1/w1/private-core-source-decision-company.json"
+    )
+    question_decision = _load(
+        contract_root / "fixtures/v1/w1/private-core-source-decision-question.json"
+    )
+
+    assert w2_result["channel"] == "w1.private.w2.collection-result.v1"
+    assert w2_result["message_id"]
+    assert company_decision["channel"] == "w1.private.w3.core-source-decision.v1"
+    assert question_decision["channel"] == "w1.private.w4.core-source-decision.v1"
+    for decision_message in (company_decision, question_decision):
+        decision = decision_message["payload"]
+        assert decision["decision_id"]
+        assert decision["analysis_input_version"]
+        assert decision["decision_version"] >= 1
+        assert decision["reason_code"]
+
+
+def test_public_job_action_contract_matches_the_live_openapi_surface(contract_root: Path) -> None:
+    accepted = _load(
+        contract_root / "fixtures/v1/w1/public-job-action-retry-accepted-http-response.json"
+    )
+    job_response_validator = _validator(contract_root, "w1/v1/public-job-response.schema.json")
+    assert list(job_response_validator.iter_errors(accepted["body"])) == []
+    assert accepted["headers"]["Location"].endswith(accepted["body"]["id"])
+
+    schema = create_app().openapi()
+    paths = schema["paths"]
+    action = paths["/api/v1/jobs/{job_id}/actions"]["post"]
+    retry = paths["/api/v1/jobs/{job_id}/retry"]["post"]
+    assert "202" in action["responses"]
+    assert "202" in retry["responses"]
+    for operation in (action, retry):
+        assert {"404", "409"} <= set(operation["responses"])
+
+
+def test_public_job_error_status_mapping_is_stable(contract_root: Path) -> None:
+    expected_statuses = {
+        "public-job-error-resource-not-found.json": (404, "RESOURCE_NOT_FOUND"),
+        "public-job-error-stale-input.json": (409, "STALE_INPUT"),
+        "public-job-error-action-not-allowed.json": (409, "ACTION_NOT_ALLOWED"),
+        "public-job-error-idempotency-conflict.json": (409, "IDEMPOTENCY_CONFLICT"),
+    }
+    for fixture_name, (_, code) in expected_statuses.items():
+        payload = _load(contract_root / "fixtures/v1/w1" / fixture_name)
+        assert payload["error"]["code"] == code
+    assert {status for status, _ in expected_statuses.values()} == {404, 409}
 
 
 @pytest.mark.parametrize(
