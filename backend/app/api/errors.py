@@ -99,6 +99,15 @@ class ActionNotAllowedError(ApiProblem):
         )
 
 
+class ActiveReferenceExistsError(ApiProblem):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=409,
+            code="ACTIVE_REFERENCE_EXISTS",
+            message_ko="현재 선택 또는 실행 결과가 연결되어 있어 처리할 수 없습니다.",
+        )
+
+
 class ExecutionPolicyUnconfiguredError(ApiProblem):
     def __init__(self) -> None:
         super().__init__(

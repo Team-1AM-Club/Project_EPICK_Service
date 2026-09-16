@@ -15,13 +15,14 @@ from app.models.application_workspace import (
 )
 from app.repo.application_workspace import ApplicationWorkspaceRepository
 
-_UNSET: Final = object()
+UNSET: Final = object()
 _PROJECT_COPY_FIELDS: Final = (
     "company_id",
     "title",
     "season",
     "organization_name",
     "role_name",
+    "job_posting_id",
     "role_version_id",
 )
 _QUESTION_COPY_FIELDS: Final = ("prompt", "character_limit", "source")
@@ -36,6 +37,14 @@ class ApplicationWorkspaceNotFoundError(ApplicationWorkspaceError):
 
 
 class WorkspaceVersionConflictError(ApplicationWorkspaceError):
+    pass
+
+
+class QuestionOrderConflictError(ApplicationWorkspaceError):
+    pass
+
+
+class ActiveQuestionReferenceError(ApplicationWorkspaceError):
     pass
 
 
@@ -77,6 +86,7 @@ class ApplicationWorkspaceService:
         role_name: str,
         season: str | None = None,
         organization_name: str | None = None,
+        job_posting_id: UUID | None = None,
     ) -> ApplicationProject:
         self._validate_project_values(title=title, role_name=role_name)
         project = ApplicationProject(owner_user_id=owner_user_id)
@@ -91,6 +101,7 @@ class ApplicationWorkspaceService:
             season=season,
             organization_name=organization_name,
             role_name=role_name,
+            job_posting_id=job_posting_id,
         )
         self.repository.add_project_version(version)
         self.session.flush()
@@ -105,11 +116,12 @@ class ApplicationWorkspaceService:
         owner_user_id: UUID,
         project_id: UUID,
         expected_lock_version: int,
-        company_id: UUID | object = _UNSET,
-        title: str | object = _UNSET,
-        role_name: str | object = _UNSET,
-        season: str | None | object = _UNSET,
-        organization_name: str | None | object = _UNSET,
+        company_id: UUID | object = UNSET,
+        title: str | object = UNSET,
+        role_name: str | object = UNSET,
+        season: str | None | object = UNSET,
+        organization_name: str | None | object = UNSET,
+        job_posting_id: UUID | None | object = UNSET,
         change_reason: str | None = None,
     ) -> ApplicationProjectVersion:
         project = self.repository.get_project_for_update(
@@ -132,6 +144,7 @@ class ApplicationWorkspaceService:
                 role_name=role_name,
                 season=season,
                 organization_name=organization_name,
+                job_posting_id=job_posting_id,
             )
         )
         self._validate_project_values(title=values["title"], role_name=values["role_name"])
@@ -168,6 +181,13 @@ class ApplicationWorkspaceService:
         )
         if project is None:
             raise ApplicationWorkspaceNotFoundError("project does not exist for this owner")
+        if (
+            self.repository.get_question_by_display_order(
+                project_id=project.id, display_order=display_order
+            )
+            is not None
+        ):
+            raise QuestionOrderConflictError("question display order is already in use")
         question = ProjectQuestion(
             owner_user_id=owner_user_id,
             project_id=project.id,
@@ -197,15 +217,17 @@ class ApplicationWorkspaceService:
         owner_user_id: UUID,
         question_id: UUID,
         expected_lock_version: int,
-        prompt: str | object = _UNSET,
-        source: str | object = _UNSET,
-        character_limit: int | None | object = _UNSET,
+        prompt: str | object = UNSET,
+        source: str | object = UNSET,
+        character_limit: int | None | object = UNSET,
     ) -> QuestionVersion:
         question = self.repository.get_question_for_update(
             question_id=question_id, owner_user_id=owner_user_id
         )
         if question is None or question.current_version_id is None:
             raise ApplicationWorkspaceNotFoundError("question does not exist for this owner")
+        if question.status != "ACTIVE":
+            raise ApplicationWorkspaceNotFoundError("question is archived")
         if question.lock_version != expected_lock_version:
             raise WorkspaceVersionConflictError("question has a newer immutable version")
         current = self.repository.get_question_version(
@@ -233,9 +255,41 @@ class ApplicationWorkspaceService:
         self.session.flush()
         return version
 
+    def archive_question(
+        self,
+        *,
+        owner_user_id: UUID,
+        question_id: UUID,
+        expected_lock_version: int,
+    ) -> ProjectQuestion:
+        question = self.repository.get_question_for_update(
+            question_id=question_id, owner_user_id=owner_user_id
+        )
+        if question is None:
+            raise ApplicationWorkspaceNotFoundError("question does not exist for this owner")
+        if question.lock_version != expected_lock_version:
+            raise WorkspaceVersionConflictError("question has a newer immutable version")
+        if question.status == "ARCHIVED":
+            return question
+        if self.repository.has_current_material_selection(
+            question_id=question.id, owner_user_id=owner_user_id
+        ):
+            raise ActiveQuestionReferenceError("question has an active material selection")
+        # `display_order` is globally unique per Project, including archived rows.
+        # Moving the archived row beyond the visible range frees its order for a
+        # later user-created Question without rewriting past immutable versions.
+        question.display_order = self.repository.next_question_display_order(
+            project_id=question.project_id
+        )
+        question.status = "ARCHIVED"
+        question.lock_version += 1
+        question.updated_at = func.now()
+        self.session.flush()
+        return question
+
     @staticmethod
     def _provided_updates(**values: object) -> dict[str, object]:
-        return {field: value for field, value in values.items() if value is not _UNSET}
+        return {field: value for field, value in values.items() if value is not UNSET}
 
     @staticmethod
     def _validate_project_values(*, title: object, role_name: object) -> None:
