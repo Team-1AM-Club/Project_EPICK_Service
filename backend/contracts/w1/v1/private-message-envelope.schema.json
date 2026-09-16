@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w1/v1/private-message-envelope.schema.json",
+  "title": "EPICK W1 private inbound message envelope v1",
+  "description": "A protected W1 inbound transport record. It must never be published as a common public event.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "message_id",
+    "message_type",
+    "producer",
+    "occurred_at",
+    "visibility_scope",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "w1.private.v1"
+    },
+    "message_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "message_type": {
+      "enum": [
+        "w2.collection.result.v1",
+        "w1.core-source-decision.v1"
+      ]
+    },
+    "producer": {
+      "enum": ["w2", "w3", "w4"]
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "visibility_scope": {
+      "const": "PRIVATE"
+    },
+    "payload": {
+      "type": "object"
+    }
+  }
+}

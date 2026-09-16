@@ -1,0 +1,21 @@
+{
+  "schema_version": "w1.private.v1",
+  "message_id": "30000000-0000-4000-8000-000000000001",
+  "message_type": "w1.core-source-decision.v1",
+  "producer": "w3",
+  "occurred_at": "2026-09-16T01:01:00Z",
+  "visibility_scope": "PRIVATE",
+  "payload": {
+    "schema_version": "w1.core-source-decision.v1",
+    "decision_id": "31000000-0000-4000-8000-000000000001",
+    "decision_scope": "COMPANY_KNOWLEDGE",
+    "company_id": "10000000-0000-4000-8000-000000000004",
+    "question_version_id": null,
+    "source_id": "10000000-0000-4000-8000-000000000005",
+    "analysis_input_version": "company-input:v7",
+    "decision_version": 1,
+    "is_core": true,
+    "decision_code": "CORE_REQUIRED",
+    "reason_code": "REQUESTED_ANALYSIS_REQUIRED"
+  }
+}

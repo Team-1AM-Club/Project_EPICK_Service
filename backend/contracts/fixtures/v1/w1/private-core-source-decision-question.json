@@ -1,0 +1,21 @@
+{
+  "schema_version": "w1.private.v1",
+  "message_id": "30000000-0000-4000-8000-000000000002",
+  "message_type": "w1.core-source-decision.v1",
+  "producer": "w4",
+  "occurred_at": "2026-09-16T01:02:00Z",
+  "visibility_scope": "PRIVATE",
+  "payload": {
+    "schema_version": "w1.core-source-decision.v1",
+    "decision_id": "31000000-0000-4000-8000-000000000002",
+    "decision_scope": "QUESTION_MATCHING",
+    "company_id": null,
+    "question_version_id": "10000000-0000-4000-8000-000000000009",
+    "source_id": "10000000-0000-4000-8000-000000000005",
+    "analysis_input_version": "question-input:v4",
+    "decision_version": 2,
+    "is_core": false,
+    "decision_code": "NON_CORE_OPTIONAL",
+    "reason_code": "SUPPLEMENTARY_CONTEXT"
+  }
+}

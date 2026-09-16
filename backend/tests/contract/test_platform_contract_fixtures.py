@@ -21,6 +21,36 @@ def _validator(contract_root: Path, relative_schema_path: str) -> Draft202012Val
     return Draft202012Validator(schema, format_checker=FormatChecker())
 
 
+def _private_message_errors(contract_root: Path, message: dict[str, Any]) -> list[str]:
+    envelope_validator = _validator(contract_root, "w1/v1/private-message-envelope.schema.json")
+    errors = [error.message for error in envelope_validator.iter_errors(message)]
+    if errors:
+        return errors
+
+    message_type = message["message_type"]
+    producer = message["producer"]
+    payload = message["payload"]
+    if message_type == "w2.collection.result.v1":
+        if producer != "w2":
+            errors.append("w2.collection.result.v1 must be produced by w2")
+        payload_validator = _validator(contract_root, "w2/v1/source-collection.result.schema.json")
+        errors.extend(error.message for error in payload_validator.iter_errors(payload))
+        return errors
+
+    payload_validator = _validator(contract_root, "w1/v1/core-source-decision.schema.json")
+    errors.extend(error.message for error in payload_validator.iter_errors(payload))
+    if not errors:
+        expected_producer = {
+            "COMPANY_KNOWLEDGE": "w3",
+            "QUESTION_MATCHING": "w4",
+        }[payload["decision_scope"]]
+        if producer != expected_producer:
+            errors.append(
+                f"{payload['decision_scope']} must be produced by {expected_producer}"
+            )
+    return errors
+
+
 @pytest.mark.parametrize(
     ("schema_path", "fixture_path"),
     [
@@ -41,6 +71,18 @@ def _validator(contract_root: Path, relative_schema_path: str) -> Draft202012Val
         ("w1/v1/job-command.schema.json", "fixtures/v1/w1/job-command.json"),
         ("w1/v1/checkpoint.schema.json", "fixtures/v1/w1/checkpoint.json"),
         ("w1/v1/deletion-command.schema.json", "fixtures/v1/w1/deletion-command.json"),
+        (
+            "w1/v1/private-command-lookup-request.schema.json",
+            "fixtures/v1/w1/private-command-lookup-request.json",
+        ),
+        (
+            "w1/v1/private-command-lookup-response.schema.json",
+            "fixtures/v1/w1/private-command-lookup-available.json",
+        ),
+        (
+            "w1/v1/private-delivery-receipt.schema.json",
+            "fixtures/v1/w1/private-delivery-receipt-applied.json",
+        ),
         (
             "w2/v1/source-collection.command.schema.json",
             "fixtures/v1/w2/source-collection-command.json",
@@ -88,6 +130,29 @@ def test_w2_public_source_events_match_the_common_envelope_and_w2_payload(
 
 
 @pytest.mark.parametrize(
+    "fixture_path",
+    [
+        "fixtures/v1/w1/private-w2-collection-result-complete.json",
+        "fixtures/v1/w1/private-core-source-decision-company.json",
+        "fixtures/v1/w1/private-core-source-decision-question.json",
+    ],
+)
+def test_w1_private_message_fixtures_match_their_bound_contracts(
+    contract_root: Path, fixture_path: str
+) -> None:
+    assert _private_message_errors(contract_root, _load(contract_root / fixture_path)) == []
+
+
+def test_private_command_lookup_available_response_contains_a_w2_command(
+    contract_root: Path,
+) -> None:
+    response = _load(contract_root / "fixtures/v1/w1/private-command-lookup-available.json")
+    command_validator = _validator(contract_root, "w2/v1/source-collection.command.schema.json")
+
+    assert list(command_validator.iter_errors(response["command"])) == []
+
+
+@pytest.mark.parametrize(
     ("schema_path", "fixture_path"),
     [
         (
@@ -95,6 +160,14 @@ def test_w2_public_source_events_match_the_common_envelope_and_w2_payload(
             "fixtures/v1/common/invalid-public-private-field.json",
         ),
         ("w1/v1/job.schema.json", "fixtures/v1/w1/invalid-job-status.json"),
+        (
+            "w1/v1/private-message-envelope.schema.json",
+            "fixtures/v1/w1/invalid-private-envelope-public-scope.json",
+        ),
+        (
+            "w1/v1/core-source-decision.schema.json",
+            "fixtures/v1/w1/invalid-core-source-decision-code.json",
+        ),
     ],
 )
 def test_prohibited_or_unknown_contract_values_are_rejected(
@@ -122,6 +195,14 @@ def test_w2_public_source_events_reject_private_or_transport_fields(
     assert list(envelope_validator.iter_errors(event)) or list(
         payload_validator.iter_errors(event["payload"])
     )
+
+
+def test_w1_private_core_decision_rejects_wrong_producer_for_scope(contract_root: Path) -> None:
+    fixture = _load(
+        contract_root / "fixtures/v1/w1/invalid-private-core-decision-producer-scope.json"
+    )
+
+    assert _private_message_errors(contract_root, fixture)
 
 
 def test_w2_import_is_pinned_to_the_observed_runtime_contract(contract_root: Path) -> None:

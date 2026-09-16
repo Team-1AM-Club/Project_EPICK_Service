@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w1/v1/private-command-lookup-request.schema.json",
+  "title": "EPICK W1 protected command lookup request v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "command_id",
+    "execution_fence",
+    "owner_deletion_epoch"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "w1.private.command-lookup.v1"
+    },
+    "command_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "execution_fence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "owner_deletion_epoch": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

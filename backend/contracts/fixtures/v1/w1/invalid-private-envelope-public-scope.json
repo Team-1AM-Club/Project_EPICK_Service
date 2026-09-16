@@ -1,0 +1,9 @@
+{
+  "schema_version": "w1.private.v1",
+  "message_id": "40000000-0000-4000-8000-000000000001",
+  "message_type": "w2.collection.result.v1",
+  "producer": "w2",
+  "occurred_at": "2026-09-16T01:03:00Z",
+  "visibility_scope": "PUBLIC",
+  "payload": {}
+}

@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w1/v1/private-delivery-receipt.schema.json",
+  "title": "EPICK W1 private delivery receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "message_id",
+    "consumer",
+    "outcome",
+    "retryable",
+    "error_code",
+    "received_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "w1.private.receipt.v1"
+    },
+    "message_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "consumer": {
+      "enum": ["w1.collection-result", "w1.core-source-decision"]
+    },
+    "outcome": {
+      "enum": [
+        "APPLIED",
+        "DUPLICATE",
+        "STALE_DISCARDED",
+        "REJECTED_SCHEMA",
+        "REJECTED_PRINCIPAL",
+        "RETRYABLE_INFRA_FAILURE"
+      ]
+    },
+    "retryable": {
+      "type": "boolean"
+    },
+    "error_code": {
+      "type": ["string", "null"],
+      "maxLength": 64
+    },
+    "received_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "const": "RETRYABLE_INFRA_FAILURE"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "retryable": {
+            "const": true
+          },
+          "error_code": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "retryable": {
+            "const": false
+          }
+        }
+      }
+    }
+  ]
+}
