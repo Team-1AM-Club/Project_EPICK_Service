@@ -1,0 +1,120 @@
+{
+  "contract": "w3-restriction/0.1-draft",
+  "team_approval": "PENDING",
+  "pytest": {
+    "tests": 131,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1,
+    "passed": 130,
+    "timestamp": "2026-09-13T02:52:56.548762+09:00"
+  },
+  "ruff_check": "PASS",
+  "ruff_format_check": "PASS",
+  "exported_contract_drift": "PASS",
+  "smoke": {
+    "schema_version": "w3-restriction/0.1-draft",
+    "team_contract_approved": false,
+    "transport": "real-http-subprocess",
+    "storage": "sqlite-fts5",
+    "passed": 23,
+    "total": 23,
+    "error": null,
+    "checks": [
+      {
+        "name": "health",
+        "passed": true
+      },
+      {
+        "name": "event_committed_without_index_ack",
+        "passed": true
+      },
+      {
+        "name": "real_fts_index_ack",
+        "passed": true
+      },
+      {
+        "name": "actual_search_hit",
+        "passed": true
+      },
+      {
+        "name": "w4_cache_ready",
+        "passed": true
+      },
+      {
+        "name": "restriction_blocks_ack",
+        "passed": true
+      },
+      {
+        "name": "restriction_removes_search",
+        "passed": true
+      },
+      {
+        "name": "undelivered_signal_still_blocks_cache",
+        "passed": true
+      },
+      {
+        "name": "duplicate_is_idempotent",
+        "passed": true
+      },
+      {
+        "name": "stale_release_cannot_restore",
+        "passed": true
+      },
+      {
+        "name": "release_requires_reindex",
+        "passed": true
+      },
+      {
+        "name": "mismatch_blocks_ack",
+        "passed": true
+      },
+      {
+        "name": "correct_index_retry",
+        "passed": true
+      },
+      {
+        "name": "gap_blocks_use",
+        "passed": true
+      },
+      {
+        "name": "contiguous_replay",
+        "passed": true
+      },
+      {
+        "name": "replay_requires_index",
+        "passed": true
+      },
+      {
+        "name": "replay_exact_expiry",
+        "passed": true
+      },
+      {
+        "name": "stale_snapshot_rejected",
+        "passed": true
+      },
+      {
+        "name": "snapshot_marks_history_gap",
+        "passed": true
+      },
+      {
+        "name": "snapshot_reindex",
+        "passed": true
+      },
+      {
+        "name": "real_clock_ttl_blocks_cache",
+        "passed": true
+      },
+      {
+        "name": "real_clock_ttl_removes_search",
+        "passed": true
+      },
+      {
+        "name": "durable_signal_ack",
+        "passed": true
+      }
+    ]
+  },
+  "github_actions": "NOT_RUN",
+  "actual_w2_outbox_and_existing_w4_app": "NOT_CONNECTED"
+}

@@ -1,0 +1,222 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:epick:w3-restriction:0.1-draft:replay",
+  "$defs": {
+    "Event": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "w3-restriction/0.1-draft",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "event_type": {
+          "const": "source.restriction.changed",
+          "title": "Event Type",
+          "type": "string"
+        },
+        "event_id": {
+          "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "aggregate_id": {
+          "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+          "title": "Aggregate Id",
+          "type": "string"
+        },
+        "aggregate_revision": {
+          "maximum": 9223372036854775807,
+          "minimum": 1,
+          "title": "Aggregate Revision",
+          "type": "integer"
+        },
+        "occurred_at": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "published_at": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+          "title": "Published At",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/Restriction"
+        }
+      },
+      "required": [
+        "schema_version",
+        "event_type",
+        "event_id",
+        "aggregate_id",
+        "aggregate_revision",
+        "occurred_at",
+        "published_at",
+        "payload"
+      ],
+      "title": "Event",
+      "type": "object"
+    },
+    "IndexKey": {
+      "additionalProperties": false,
+      "properties": {
+        "source_version_id": {
+          "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+          "title": "Source Version Id",
+          "type": "string"
+        },
+        "extraction_revision_id": {
+          "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+          "title": "Extraction Revision Id",
+          "type": "string"
+        },
+        "representation": {
+          "enum": [
+            "text",
+            "html",
+            "markdown"
+          ],
+          "title": "Representation",
+          "type": "string"
+        },
+        "normalization_version": {
+          "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+          "title": "Normalization Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_version_id",
+        "extraction_revision_id",
+        "representation",
+        "normalization_version"
+      ],
+      "title": "IndexKey",
+      "type": "object"
+    },
+    "Restriction": {
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {
+          "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "restriction_id": {
+          "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+          "title": "Restriction Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "RESTRICTED",
+            "RELEASED"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "accuracy": {
+          "enum": [
+            "UNKNOWN",
+            "CONFIRMED",
+            "DISPUTED"
+          ],
+          "title": "Accuracy",
+          "type": "string"
+        },
+        "reason_code": {
+          "enum": [
+            "POLICY_REVIEW",
+            "RIGHTS_RESTRICTION",
+            "ACCURACY_REVIEW",
+            "RESOLVED"
+          ],
+          "title": "Reason Code",
+          "type": "string"
+        },
+        "replacement_source_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Replacement Source Id"
+        },
+        "index_key": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IndexKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "source_id",
+        "restriction_id",
+        "status",
+        "accuracy",
+        "reason_code",
+        "replacement_source_id",
+        "index_key"
+      ],
+      "title": "Restriction",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "w3-restriction/0.1-draft",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_id": {
+      "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+      "title": "Source Id",
+      "type": "string"
+    },
+    "after_revision": {
+      "maximum": 9223372036854775807,
+      "minimum": 0,
+      "title": "After Revision",
+      "type": "integer"
+    },
+    "high_watermark": {
+      "maximum": 9223372036854775807,
+      "minimum": 0,
+      "title": "High Watermark",
+      "type": "integer"
+    },
+    "retention_start": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+      "title": "Retention Start",
+      "type": "string"
+    },
+    "events": {
+      "items": {
+        "$ref": "#/$defs/Event"
+      },
+      "maxItems": 500,
+      "title": "Events",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "source_id",
+    "after_revision",
+    "high_watermark",
+    "retention_start",
+    "events"
+  ],
+  "title": "ReplayBatch",
+  "type": "object"
+}

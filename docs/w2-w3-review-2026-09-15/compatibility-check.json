@@ -1,0 +1,987 @@
+{
+  "review_version": "w2-w3-mapping-review/2026-09-15.1",
+  "w3_candidate_contract": "w3-restriction/0.1-draft",
+  "received_json_syntax_valid_files": 11,
+  "w2_json_schema_validation": "NOT_RUN",
+  "envelope_schema_received": false,
+  "collection_command_result_schema_received": false,
+  "runtime_integration_tests": "NOT_RUN",
+  "adapter_implemented": false,
+  "event_compatibility_checks": [
+    {
+      "file": "source-event-observation-changed.json",
+      "direct_w3_dto_accepted": false,
+      "validation_errors": [
+        {
+          "location": [
+            "producer"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "aggregate_type"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "revision"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "schema_version"
+          ],
+          "type": "literal_error"
+        },
+        {
+          "location": [
+            "event_type"
+          ],
+          "type": "literal_error"
+        },
+        {
+          "location": [
+            "event_id"
+          ],
+          "type": "string_pattern_mismatch"
+        },
+        {
+          "location": [
+            "aggregate_id"
+          ],
+          "type": "string_pattern_mismatch"
+        },
+        {
+          "location": [
+            "aggregate_revision"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "published_at"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "payload",
+            "schema_version"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "observation_id"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "source_version_id"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "policy_decision_id"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "observed_at"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "access_class"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "acquisition_status"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "http_status"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "checked_url"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "error_code"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "representation"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "source_id"
+          ],
+          "type": "string_pattern_mismatch"
+        },
+        {
+          "location": [
+            "payload",
+            "restriction_id"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "payload",
+            "status"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "payload",
+            "accuracy"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "payload",
+            "reason_code"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "payload",
+            "replacement_source_id"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "payload",
+            "index_key"
+          ],
+          "type": "missing"
+        }
+      ]
+    },
+    {
+      "file": "source-event-restriction-changed.json",
+      "direct_w3_dto_accepted": false,
+      "validation_errors": [
+        {
+          "location": [
+            "producer"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "aggregate_type"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "revision"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "schema_version"
+          ],
+          "type": "literal_error"
+        },
+        {
+          "location": [
+            "event_id"
+          ],
+          "type": "string_pattern_mismatch"
+        },
+        {
+          "location": [
+            "aggregate_id"
+          ],
+          "type": "string_pattern_mismatch"
+        },
+        {
+          "location": [
+            "aggregate_revision"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "published_at"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "payload",
+            "schema_version"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "source_version_id"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "restriction_revision"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "restriction_status"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "accuracy_status"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "changed_at"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "replacement_ref"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "source_id"
+          ],
+          "type": "string_pattern_mismatch"
+        },
+        {
+          "location": [
+            "payload",
+            "restriction_id"
+          ],
+          "type": "string_pattern_mismatch"
+        },
+        {
+          "location": [
+            "payload",
+            "status"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "payload",
+            "accuracy"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "payload",
+            "reason_code"
+          ],
+          "type": "literal_error"
+        },
+        {
+          "location": [
+            "payload",
+            "replacement_source_id"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "payload",
+            "index_key"
+          ],
+          "type": "missing"
+        }
+      ]
+    },
+    {
+      "file": "source-event-version-available.json",
+      "direct_w3_dto_accepted": false,
+      "validation_errors": [
+        {
+          "location": [
+            "producer"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "aggregate_type"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "revision"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "schema_version"
+          ],
+          "type": "literal_error"
+        },
+        {
+          "location": [
+            "event_type"
+          ],
+          "type": "literal_error"
+        },
+        {
+          "location": [
+            "event_id"
+          ],
+          "type": "string_pattern_mismatch"
+        },
+        {
+          "location": [
+            "aggregate_id"
+          ],
+          "type": "string_pattern_mismatch"
+        },
+        {
+          "location": [
+            "aggregate_revision"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "published_at"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "payload",
+            "schema_version"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "source_version_id"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "extraction_revision_id"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "company_id"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "source_type"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "url_or_path"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "title"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "policy"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "acquisition_status"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "extraction_status"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "accuracy_status"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "freshness_status"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "published_at"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "collected_at"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "checked_at"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "valid_from"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "valid_to"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "content_hash"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "hash_profile_version"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "parser_version"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "language"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "evidence_spans"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "posting_sections"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "retention_scope"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "normalized_body_ref"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "limitations"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "metadata"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "source_id"
+          ],
+          "type": "string_pattern_mismatch"
+        },
+        {
+          "location": [
+            "payload",
+            "restriction_id"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "payload",
+            "status"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "payload",
+            "accuracy"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "payload",
+            "reason_code"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "payload",
+            "replacement_source_id"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "payload",
+            "index_key"
+          ],
+          "type": "missing"
+        }
+      ]
+    },
+    {
+      "file": "source-event-version-partial.json",
+      "direct_w3_dto_accepted": false,
+      "validation_errors": [
+        {
+          "location": [
+            "producer"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "aggregate_type"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "revision"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "schema_version"
+          ],
+          "type": "literal_error"
+        },
+        {
+          "location": [
+            "event_type"
+          ],
+          "type": "literal_error"
+        },
+        {
+          "location": [
+            "event_id"
+          ],
+          "type": "string_pattern_mismatch"
+        },
+        {
+          "location": [
+            "aggregate_id"
+          ],
+          "type": "string_pattern_mismatch"
+        },
+        {
+          "location": [
+            "aggregate_revision"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "published_at"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "payload",
+            "schema_version"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "source_version_id"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "extraction_revision_id"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "company_id"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "source_type"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "url_or_path"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "title"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "policy"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "acquisition_status"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "extraction_status"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "accuracy_status"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "freshness_status"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "published_at"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "collected_at"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "checked_at"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "valid_from"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "valid_to"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "content_hash"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "hash_profile_version"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "parser_version"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "language"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "evidence_spans"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "posting_sections"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "retention_scope"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "normalized_body_ref"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "limitations"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "metadata"
+          ],
+          "type": "extra_forbidden"
+        },
+        {
+          "location": [
+            "payload",
+            "source_id"
+          ],
+          "type": "string_pattern_mismatch"
+        },
+        {
+          "location": [
+            "payload",
+            "restriction_id"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "payload",
+            "status"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "payload",
+            "accuracy"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "payload",
+            "reason_code"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "payload",
+            "replacement_source_id"
+          ],
+          "type": "missing"
+        },
+        {
+          "location": [
+            "payload",
+            "index_key"
+          ],
+          "type": "missing"
+        }
+      ]
+    }
+  ],
+  "invalid_payload_field_comparison": {
+    "invalid-source-event-private-field.json": {
+      "unexpected_payload_fields": [
+        "job_id"
+      ],
+      "method": "property_allowlist_comparison_only"
+    },
+    "invalid-source-event-transport-fields.json": {
+      "unexpected_payload_fields": [
+        "event_id",
+        "revision"
+      ],
+      "method": "property_allowlist_comparison_only"
+    }
+  },
+  "revision_observations": [
+    {
+      "file": "source-event-version-available.json",
+      "event_type": "source.version.available",
+      "envelope_revision": 1,
+      "restriction_revision": null
+    },
+    {
+      "file": "source-event-version-partial.json",
+      "event_type": "source.version.available",
+      "envelope_revision": 2,
+      "restriction_revision": null
+    },
+    {
+      "file": "source-event-observation-changed.json",
+      "event_type": "source.observation.changed",
+      "envelope_revision": 3,
+      "restriction_revision": null
+    },
+    {
+      "file": "source-event-restriction-changed.json",
+      "event_type": "source.restriction.changed",
+      "envelope_revision": 4,
+      "restriction_revision": 1
+    }
+  ]
+}

@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum
 from typing import Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -95,11 +96,23 @@ class NativeLocator(StrictModel):
 
 
 class SourceRef(StrictModel):
-    source_id: str = Field(pattern=r"^[A-Za-z][A-Za-z0-9._:-]{2,127}$")
-    source_version_id: str = Field(pattern=r"^[A-Za-z][A-Za-z0-9._:-]{2,127}$")
+    source_id: str = Field(
+        pattern=r"^(?:[A-Za-z][A-Za-z0-9._:-]{2,127}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$"
+    )
+    source_version_id: str = Field(
+        pattern=r"^(?:[A-Za-z][A-Za-z0-9._:-]{2,127}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$"
+    )
     source_kind: str = Field(min_length=1)
     parent_source_id: str | None = None
     observed_at: datetime | None = None
+
+    @field_validator("source_id", "source_version_id")
+    @classmethod
+    def canonical_uuid(cls, value):
+        try:
+            return str(UUID(value))
+        except ValueError:
+            return value
 
 
 class IntegrityAssertion(StrictModel):

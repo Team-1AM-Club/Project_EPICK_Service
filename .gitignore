@@ -28,3 +28,9 @@ tmp/w3-local-review/
 .DS_Store
 Thumbs.db
 *.swp
+
+# Restriction runtime databases and generated local verification evidence
+.runtime/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm

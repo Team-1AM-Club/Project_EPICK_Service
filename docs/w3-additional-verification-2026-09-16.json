@@ -1,0 +1,49 @@
+{
+  "date": "2026-09-16",
+  "schema_version": "w3-c01/0.2-candidate",
+  "adoption": "PENDING_W2_W4_PM_AGREEMENT",
+  "commit_reference": "Delivery ZIP root HANDOFF_BASELINE.json implementation_commit",
+  "pytest": {
+    "command": "python -m pytest -q --basetemp=.runtime/c01-additional-final -p no:cacheprovider --junitxml=.runtime/c01-additional-final.xml",
+    "passed": 176,
+    "skipped": 1,
+    "failures": 0,
+    "errors": 0,
+    "skip_reason": "Solar external API live test not executed"
+  },
+  "new_w4_consumer_tests": {
+    "path": "tests/integration/test_c01_w4_contract.py",
+    "passed": 7,
+    "coverage": [
+      "Typed knowledge SourceVersion/generation validation",
+      "Consumer restart after durable apply before ACK",
+      "ACK response loss and identical retry",
+      "Gap/replay/snapshot block until reindex",
+      "Stale and conflicting generation",
+      "Fail-closed status outage",
+      "Exported W4 fixture and schemas",
+      "Requirement root and node Evidence reference validation"
+    ]
+  },
+  "http": {
+    "c01_subprocess_smoke": {"passed": 18, "total": 18, "error": null},
+    "report": ".runtime/c01-additional-final-smoke/result.json",
+    "duplicate_delivery_ack": "Verified with actual localhost HTTP endpoint"
+  },
+  "ruff": {"check": "passed", "formatted_files": 69},
+  "export": {"c01_files": 19, "legacy_files": 19, "drift": []},
+  "independent_review": {
+    "finding": "Dangling Requirement tree/evidence references accepted by typed consumer",
+    "resolution": "Reuse validate_requirement_candidate before cache persistence",
+    "regressions_confirmed_by_reviewer": 2,
+    "remaining_findings_in_scope": 0
+  },
+  "not_executed": [
+    "W4 team's actual application consumer acceptance",
+    "Actual W2 application integration",
+    "W1 private deletion signal implementation and integration",
+    "GitHub Actions remote run",
+    "Deployment",
+    "External messages"
+  ]
+}

@@ -1,0 +1,320 @@
+{
+  "date": "2026-09-16",
+  "version": "w3-c01/0.2-candidate",
+  "scope": "LOCAL_CANDIDATE_NOT_TEAM_ADOPTED",
+  "pytest": {
+    "tests": 170,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1,
+    "passed": 169,
+    "command": "python -m pytest -q --basetemp=.runtime/c01-full-final-1 -p no:cacheprovider --junitxml=.runtime/c01-full-final-1.xml",
+    "skipped_reason": "Solar external API live test not authorized/executed"
+  },
+  "c01_smoke": {
+    "schema_version": "w3-c01/0.2-candidate",
+    "adoption": "PENDING",
+    "scope": "LOCAL_HTTP_SQLITE_REFERENCE_W4",
+    "checks": [
+      {
+        "name": "receipt_not_index_ack",
+        "passed": true
+      },
+      {
+        "name": "restriction_cursor_not_fabricated",
+        "passed": true
+      },
+      {
+        "name": "real_fts_ready",
+        "passed": true
+      },
+      {
+        "name": "search_has_exact_evidence",
+        "passed": true
+      },
+      {
+        "name": "durable_signal_delivery",
+        "passed": true
+      },
+      {
+        "name": "cache_usable",
+        "passed": true
+      },
+      {
+        "name": "active_blocks",
+        "passed": true
+      },
+      {
+        "name": "search_removed",
+        "passed": true
+      },
+      {
+        "name": "cache_blocked_before_delivery",
+        "passed": true
+      },
+      {
+        "name": "duplicate",
+        "passed": true
+      },
+      {
+        "name": "release_requires_reindex",
+        "passed": true
+      },
+      {
+        "name": "release_reindexed",
+        "passed": true
+      },
+      {
+        "name": "gap_blocks",
+        "passed": true
+      },
+      {
+        "name": "retention_requires_snapshot",
+        "passed": true
+      },
+      {
+        "name": "snapshot_metadata_only",
+        "passed": true
+      },
+      {
+        "name": "snapshot_reindex",
+        "passed": true
+      },
+      {
+        "name": "delivery_ack_separate",
+        "passed": true
+      },
+      {
+        "name": "two_cursors_final",
+        "passed": true
+      }
+    ],
+    "passed": 18,
+    "total": 18,
+    "error": null
+  },
+  "legacy_smoke": {
+    "schema_version": "w3-restriction/0.1-draft",
+    "team_contract_approved": false,
+    "transport": "real-http-subprocess",
+    "storage": "sqlite-fts5",
+    "passed": 23,
+    "total": 23,
+    "error": null,
+    "checks": [
+      {
+        "name": "health",
+        "passed": true
+      },
+      {
+        "name": "event_committed_without_index_ack",
+        "passed": true
+      },
+      {
+        "name": "real_fts_index_ack",
+        "passed": true
+      },
+      {
+        "name": "actual_search_hit",
+        "passed": true
+      },
+      {
+        "name": "w4_cache_ready",
+        "passed": true
+      },
+      {
+        "name": "restriction_blocks_ack",
+        "passed": true
+      },
+      {
+        "name": "restriction_removes_search",
+        "passed": true
+      },
+      {
+        "name": "undelivered_signal_still_blocks_cache",
+        "passed": true
+      },
+      {
+        "name": "duplicate_is_idempotent",
+        "passed": true
+      },
+      {
+        "name": "stale_release_cannot_restore",
+        "passed": true
+      },
+      {
+        "name": "release_requires_reindex",
+        "passed": true
+      },
+      {
+        "name": "mismatch_blocks_ack",
+        "passed": true
+      },
+      {
+        "name": "correct_index_retry",
+        "passed": true
+      },
+      {
+        "name": "gap_blocks_use",
+        "passed": true
+      },
+      {
+        "name": "contiguous_replay",
+        "passed": true
+      },
+      {
+        "name": "replay_requires_index",
+        "passed": true
+      },
+      {
+        "name": "replay_exact_expiry",
+        "passed": true
+      },
+      {
+        "name": "stale_snapshot_rejected",
+        "passed": true
+      },
+      {
+        "name": "snapshot_marks_history_gap",
+        "passed": true
+      },
+      {
+        "name": "snapshot_reindex",
+        "passed": true
+      },
+      {
+        "name": "real_clock_ttl_blocks_cache",
+        "passed": true
+      },
+      {
+        "name": "real_clock_ttl_removes_search",
+        "passed": true
+      },
+      {
+        "name": "durable_signal_ack",
+        "passed": true
+      }
+    ]
+  },
+  "ruff": {
+    "check": "passed",
+    "format_files": 68
+  },
+  "schemas": {
+    "legacy_files": 19,
+    "c01_files": 16,
+    "drift": []
+  },
+  "build": {
+    "wheel": "w3_knowledge-0.1.0-py3-none-any.whl",
+    "sha256": "328a77ebdd4e3bed85d4f23ddfc8e1a3a26ed462197a4822a78d232235022a42",
+    "w2_schema_in_wheel": true,
+    "sdist": "built"
+  },
+  "producer_originals": {
+    "files": 7,
+    "byte_identical": true
+  },
+  "review": {
+    "independent": true,
+    "fixed_findings": [
+      "pending restriction omitted by snapshot",
+      "snapshot event ID not persisted",
+      "UUID case identity mismatch",
+      "restriction revision reused in snapshot"
+    ]
+  },
+  "not_run": [
+    "actual W2/W4 applications",
+    "GitHub Actions remote CI",
+    "W1 private deletion integration",
+    "deployment"
+  ],
+  "git": {
+    "branch": "feat/w3-knowledge-validation",
+    "new_changes_committed": false,
+    "new_changes_pushed": false
+  },
+  "relocated_source_smoke": {
+    "schema_version": "w3-c01/0.2-candidate",
+    "adoption": "PENDING",
+    "scope": "LOCAL_HTTP_SQLITE_REFERENCE_W4",
+    "checks": [
+      {
+        "name": "receipt_not_index_ack",
+        "passed": true
+      },
+      {
+        "name": "restriction_cursor_not_fabricated",
+        "passed": true
+      },
+      {
+        "name": "real_fts_ready",
+        "passed": true
+      },
+      {
+        "name": "search_has_exact_evidence",
+        "passed": true
+      },
+      {
+        "name": "durable_signal_delivery",
+        "passed": true
+      },
+      {
+        "name": "cache_usable",
+        "passed": true
+      },
+      {
+        "name": "active_blocks",
+        "passed": true
+      },
+      {
+        "name": "search_removed",
+        "passed": true
+      },
+      {
+        "name": "cache_blocked_before_delivery",
+        "passed": true
+      },
+      {
+        "name": "duplicate",
+        "passed": true
+      },
+      {
+        "name": "release_requires_reindex",
+        "passed": true
+      },
+      {
+        "name": "release_reindexed",
+        "passed": true
+      },
+      {
+        "name": "gap_blocks",
+        "passed": true
+      },
+      {
+        "name": "retention_requires_snapshot",
+        "passed": true
+      },
+      {
+        "name": "snapshot_metadata_only",
+        "passed": true
+      },
+      {
+        "name": "snapshot_reindex",
+        "passed": true
+      },
+      {
+        "name": "delivery_ack_separate",
+        "passed": true
+      },
+      {
+        "name": "two_cursors_final",
+        "passed": true
+      }
+    ],
+    "passed": 18,
+    "total": 18,
+    "error": null
+  }
+}

@@ -1,0 +1,282 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w2/v1/source-event-payload.schema.json",
+  "title": "W2 Source public event payload v1",
+  "oneOf": [
+    { "$ref": "#/$defs/SourceVersionPayload" },
+    { "$ref": "#/$defs/SourceObservationPayload" },
+    { "$ref": "#/$defs/SourceRestrictionPayload" }
+  ],
+  "$defs": {
+    "DateValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "raw_text", "value", "precision", "timezone"],
+      "properties": {
+        "status": { "enum": ["known", "unknown", "conflicting", "not_applicable"] },
+        "raw_text": { "type": ["string", "null"] },
+        "value": { "type": ["string", "null"] },
+        "precision": { "type": ["string", "null"] },
+        "timezone": { "type": ["string", "null"] }
+      }
+    },
+    "Policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_decision_id",
+        "official_status",
+        "access_class",
+        "collection_permission",
+        "excerpt_storage_permission",
+        "body_storage_permission",
+        "redistribution_permission",
+        "checked_at",
+        "policy_version"
+      ],
+      "properties": {
+        "policy_decision_id": { "type": "string", "format": "uuid" },
+        "official_status": { "enum": ["verified", "unverified", "rejected"] },
+        "access_class": { "enum": ["public", "restricted", "unavailable", "unknown"] },
+        "collection_permission": { "enum": ["allowed", "denied", "unknown"] },
+        "excerpt_storage_permission": { "enum": ["allowed", "denied", "unknown"] },
+        "body_storage_permission": { "enum": ["allowed", "denied", "unknown"] },
+        "redistribution_permission": { "enum": ["allowed", "denied", "unknown"] },
+        "checked_at": { "type": "string", "format": "date-time" },
+        "policy_version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "Locator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "value", "normalization_version", "start", "end"],
+      "properties": {
+        "kind": { "enum": ["css", "xpath", "json_pointer", "normalized_text"] },
+        "value": { "type": "string", "minLength": 1 },
+        "normalization_version": { "type": ["string", "null"] },
+        "start": { "type": ["integer", "null"], "minimum": 0 },
+        "end": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+    "Evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_id",
+        "source_version_id",
+        "section_title",
+        "text_excerpt",
+        "locator",
+        "chunk_order"
+      ],
+      "properties": {
+        "evidence_id": { "type": "string", "format": "uuid" },
+        "source_version_id": { "type": "string", "format": "uuid" },
+        "section_title": { "type": ["string", "null"] },
+        "text_excerpt": { "type": "string", "minLength": 1 },
+        "locator": { "$ref": "#/$defs/Locator" },
+        "chunk_order": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "PostingSection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "section_key",
+        "kind",
+        "heading_raw",
+        "text_raw",
+        "evidence_ids",
+        "order",
+        "relation_text"
+      ],
+      "properties": {
+        "section_key": { "type": "string", "minLength": 1 },
+        "kind": {
+          "enum": [
+            "title",
+            "role",
+            "organization",
+            "duties",
+            "required",
+            "preferred",
+            "general",
+            "location",
+            "employment_type",
+            "published",
+            "deadline"
+          ]
+        },
+        "heading_raw": { "type": ["string", "null"] },
+        "text_raw": { "type": "string", "minLength": 1 },
+        "evidence_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "format": "uuid" }
+        },
+        "order": { "type": "integer", "minimum": 0 },
+        "relation_text": { "type": ["string", "null"] }
+      }
+    },
+    "PublicMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["representation", "content_type", "normalization_version"],
+      "properties": {
+        "representation": { "type": "string", "minLength": 1 },
+        "content_type": { "type": "string", "minLength": 1 },
+        "normalization_version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "SourceVersionPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "source_id",
+        "source_version_id",
+        "extraction_revision_id",
+        "company_id",
+        "source_type",
+        "url_or_path",
+        "title",
+        "policy",
+        "acquisition_status",
+        "extraction_status",
+        "accuracy_status",
+        "freshness_status",
+        "published_at",
+        "collected_at",
+        "checked_at",
+        "valid_from",
+        "valid_to",
+        "content_hash",
+        "hash_profile_version",
+        "parser_version",
+        "language",
+        "evidence_spans",
+        "posting_sections",
+        "retention_scope",
+        "normalized_body_ref",
+        "limitations",
+        "metadata"
+      ],
+      "properties": {
+        "schema_version": { "const": "w2.source.v1" },
+        "source_id": { "type": "string", "format": "uuid" },
+        "source_version_id": { "type": "string", "format": "uuid" },
+        "extraction_revision_id": { "type": "string", "format": "uuid" },
+        "company_id": { "type": "string", "format": "uuid" },
+        "source_type": {
+          "enum": [
+            "company_website",
+            "job_posting",
+            "press_release",
+            "executive_message",
+            "ir_disclosure",
+            "official_api"
+          ]
+        },
+        "url_or_path": { "type": "string", "format": "uri" },
+        "title": { "type": ["string", "null"] },
+        "policy": { "$ref": "#/$defs/Policy" },
+        "acquisition_status": { "enum": ["AVAILABLE", "PARTIALLY_EXTRACTED"] },
+        "extraction_status": { "enum": ["complete", "partial"] },
+        "accuracy_status": {
+          "enum": ["unverified", "verified_in_scope", "error_confirmed", "superseded"]
+        },
+        "freshness_status": { "enum": ["current", "stale", "unknown"] },
+        "published_at": { "$ref": "#/$defs/DateValue" },
+        "collected_at": { "type": "string", "format": "date-time" },
+        "checked_at": { "type": "string", "format": "date-time" },
+        "valid_from": { "$ref": "#/$defs/DateValue" },
+        "valid_to": { "$ref": "#/$defs/DateValue" },
+        "content_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "hash_profile_version": { "type": "string", "minLength": 1 },
+        "parser_version": { "type": "string", "minLength": 1 },
+        "language": { "type": ["string", "null"] },
+        "evidence_spans": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Evidence" }
+        },
+        "posting_sections": { "type": "array", "items": { "$ref": "#/$defs/PostingSection" } },
+        "retention_scope": { "enum": ["excerpts_only", "normalized_body"] },
+        "normalized_body_ref": { "type": ["string", "null"] },
+        "limitations": { "type": "array", "items": { "type": "string" } },
+        "metadata": { "$ref": "#/$defs/PublicMetadata" }
+      }
+    },
+    "SourceObservationPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "observation_id",
+        "source_id",
+        "source_version_id",
+        "policy_decision_id",
+        "observed_at",
+        "access_class",
+        "acquisition_status",
+        "http_status",
+        "checked_url",
+        "error_code",
+        "representation"
+      ],
+      "properties": {
+        "schema_version": { "const": "w2.source.v1" },
+        "observation_id": { "type": "string", "format": "uuid" },
+        "source_id": { "type": "string", "format": "uuid" },
+        "source_version_id": { "type": ["string", "null"], "format": "uuid" },
+        "policy_decision_id": { "type": ["string", "null"], "format": "uuid" },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "access_class": { "enum": ["public", "restricted", "unavailable", "unknown"] },
+        "acquisition_status": {
+          "enum": [
+            "AVAILABLE",
+            "PARTIALLY_EXTRACTED",
+            "ACCESS_DENIED",
+            "NOT_FOUND",
+            "RATE_LIMITED",
+            "EXTRACTION_FAILED"
+          ]
+        },
+        "http_status": { "type": ["integer", "null"], "minimum": 100, "maximum": 599 },
+        "checked_url": { "type": "string", "format": "uri" },
+        "error_code": { "type": ["string", "null"] },
+        "representation": { "type": ["string", "null"] }
+      }
+    },
+    "SourceRestrictionPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "restriction_id",
+        "source_id",
+        "source_version_id",
+        "restriction_revision",
+        "restriction_status",
+        "accuracy_status",
+        "reason_code",
+        "changed_at",
+        "replacement_ref"
+      ],
+      "properties": {
+        "schema_version": { "const": "w2.source.v1" },
+        "restriction_id": { "type": "string", "format": "uuid" },
+        "source_id": { "type": "string", "format": "uuid" },
+        "source_version_id": { "type": ["string", "null"], "format": "uuid" },
+        "restriction_revision": { "type": "integer", "minimum": 1 },
+        "restriction_status": { "enum": ["active", "cleared"] },
+        "accuracy_status": {
+          "enum": ["unverified", "verified_in_scope", "error_confirmed", "superseded"]
+        },
+        "reason_code": { "type": "string", "minLength": 1 },
+        "changed_at": { "type": "string", "format": "date-time" },
+        "replacement_ref": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

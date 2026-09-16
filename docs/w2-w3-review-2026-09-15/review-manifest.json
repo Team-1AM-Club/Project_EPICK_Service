@@ -1,0 +1,32 @@
+{
+  "review_version": "w2-w3-mapping-review/2026-09-15.1",
+  "status": "PROPOSAL_PENDING_APPROVAL",
+  "received_files_copied_without_changes": true,
+  "schema_or_runtime_modified": false,
+  "file_sha256": {
+    "W2_W3_Contract_Change_Proposal_2026-09-15.md": "c02f5fc8275b226a60e20cc9a3d4e1c90b5e87ef9da9cc2926821aeb65fd4041",
+    "compatibility-check.json": "b9262aa66d76eddc632dcb4001b4e8c803a8ae8c4842fce8547a747fee48c33c",
+    "received/source-event-payload.schema.json": "418207ecdcffaa3ce5fd66a2d5f5dc0e479561b7e786a54ccd3c1218632ebf1e",
+    "received/w2/invalid-source-event-private-field.json": "0bc12dd561b8c70f2b3137644c12b9ec327f80cb60c4819900611bb95c7cc4bb",
+    "received/w2/invalid-source-event-transport-fields.json": "4aaab1a380658c7f5742c769d5718b6593c1791fad1f1b98d523c97eb71d93df",
+    "received/w2/source-collection-command.json": "351100a6e07cebeb2fc9b23ab1ccb7303652b08b1c9de2cdd4c46f4713f2d154",
+    "received/w2/source-collection-result-complete.json": "2c91e4d66410bf50c6bb3dcc2661779f4846f1934fa9fe02ba8274b9a51eadbd",
+    "received/w2/source-collection-result-failure.json": "124a19ea95ecae16b1944e6fceefc4531a941d3c1119908b0ba6d46c051f3c16",
+    "received/w2/source-collection-result-partial.json": "fa82e140dcff7af159eafd56cbfe7de7581934cf32ba0e70dbe182874262953c",
+    "received/w2/source-event-observation-changed.json": "030f39005f7bcf6ae96fc5a0d3a4eabad32d9fd88053d54d94af7e1cddd6b141",
+    "received/w2/source-event-restriction-changed.json": "79f59482a3ab8b89bdd4eff4c862eab90ab7de1514dbe25d047231d32bbe910c",
+    "received/w2/source-event-version-available.json": "85d9fcde994011d1e5481509c8fc0146d5b7ffbbb02a15f22a222b769ae7a51d",
+    "received/w2/source-event-version-partial.json": "60183562d13bd5f6be5a9c46739216af9e4bd72aa2c14a783f7e3c104ba04ece",
+    "w3-baseline/consume-response.schema.json": "1d0e67fa020a9367e29537e10ecbf3fbdaec07799f630b172afaa33a9b99ca9c",
+    "w3-baseline/delivery-receipt.schema.json": "a95464c0900ce20a2fc4d7d9605946aa24fb9f6084efdb6805ef64b49f82a423",
+    "w3-baseline/event.schema.json": "50d8eeacca6bb40a02499ced9d0928d8f196bd7c0a66837e924ef5a378db85da",
+    "w3-baseline/index-request.schema.json": "4ab592355fd4580bba28a469687e29c1e8f1202d65f0c6ebe7674bdfe7757d27",
+    "w3-baseline/recovery-response.schema.json": "53afadbf0024967788f129c1a6af8d44d9b53f6958b3574f3b6b3ced239d808c",
+    "w3-baseline/replay.schema.json": "0c839917698425d459ff873bdb98b1f1b8ce2fa541b5b96d1fcef1e6bda1d6fd",
+    "w3-baseline/signal.schema.json": "b137399a5626e1a3c7b9eee3b245ab1f065cb493fa8257049cc29855d873a75a",
+    "w3-baseline/snapshot.schema.json": "020d6b73d82a32cb71a254ce93fe3a96ef10d536da2127659fce66aada8dc22e",
+    "w3-baseline/status.schema.json": "420caa45723d321c4eecb3b213479924e6b504efbf468d52e07b02436da299a5",
+    "w3-baseline/README.md": "ebc463a2dd36a84ad382b047d5f8958a2bf2809e034699c4b292a9bc0ee00341",
+    "w3-baseline/contracts.py": "aaf676826779dda80a07a4af4efb83fc177cf70be3c77725f018563f481df949"
+  }
+}

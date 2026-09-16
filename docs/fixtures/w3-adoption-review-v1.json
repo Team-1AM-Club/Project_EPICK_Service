@@ -1,0 +1,151 @@
+{
+  "review_version": "w3-adoption-review/2026-09-14.1",
+  "candidate_contract": "w3-restriction/0.1-draft",
+  "kind": "decision_fixtures_not_endpoint_payloads",
+  "team_approval": "PENDING",
+  "private_lifecycle_implemented": false,
+  "path_base": "repository_or_review_zip_root",
+  "public_inputs": {
+    "initial": "contracts/restriction/v0.1-draft/examples/initial.json",
+    "restrict": "contracts/restriction/v0.1-draft/examples/restrict.json",
+    "release": "contracts/restriction/v0.1-draft/examples/release.json",
+    "replay": "contracts/restriction/v0.1-draft/examples/replay.json",
+    "snapshot": "contracts/restriction/v0.1-draft/examples/snapshot.json",
+    "index": "contracts/restriction/v0.1-draft/examples/index-request.json"
+  },
+  "signals": {
+    "ready5": {
+      "schema_version": "w3-restriction/0.1-draft",
+      "event_type": "w3.source.usability.changed",
+      "signal_id": "review-signal-5",
+      "source_id": "demo-source",
+      "generation": 5,
+      "restriction_revision": 3,
+      "required_revision": 3,
+      "usable": true,
+      "reason": "READY",
+      "index_key": {
+        "source_version_id": "demo-version",
+        "extraction_revision_id": "demo-extraction",
+        "representation": "text",
+        "normalization_version": "demo-normalization"
+      },
+      "history_complete": false
+    },
+    "restricted6": {
+      "schema_version": "w3-restriction/0.1-draft",
+      "event_type": "w3.source.usability.changed",
+      "signal_id": "review-signal-6",
+      "source_id": "demo-source",
+      "generation": 6,
+      "restriction_revision": 4,
+      "required_revision": 4,
+      "usable": false,
+      "reason": "RESTRICTED",
+      "index_key": {
+        "source_version_id": "demo-version",
+        "extraction_revision_id": "demo-extraction",
+        "representation": "text",
+        "normalization_version": "demo-normalization"
+      },
+      "history_complete": false
+    },
+    "conflicting6": {
+      "schema_version": "w3-restriction/0.1-draft",
+      "event_type": "w3.source.usability.changed",
+      "signal_id": "review-conflicting-6",
+      "source_id": "demo-source",
+      "generation": 6,
+      "restriction_revision": 4,
+      "required_revision": 4,
+      "usable": true,
+      "reason": "READY",
+      "index_key": {
+        "source_version_id": "demo-version",
+        "extraction_revision_id": "demo-extraction",
+        "representation": "text",
+        "normalization_version": "demo-normalization"
+      },
+      "history_complete": false
+    }
+  },
+  "scenarios": [
+    {
+      "id": "A01",
+      "boundary": "public",
+      "evidence": "existing_local_regression_scope_not_rerun_for_this_memo",
+      "steps": ["initial", "index with revision 1 and valid expires_at", "restrict", "duplicate restrict", "late initial", "release", "index with revision 3 and valid expires_at"],
+      "expected": ["no search/cache while restricted", "no rollback by duplicate or stale event", "release requires reindex"],
+      "owners": ["W2", "W3", "W4"]
+    },
+    {
+      "id": "A02",
+      "boundary": "public",
+      "evidence": "existing_local_regression_scope_not_rerun_for_this_memo",
+      "steps": ["initial revision 1", "release revision 3 causes gap", "replay revisions 2 and 3 within retention OR replay at published_at exclusion boundary", "for expired history reject snapshot revision 2 then accept snapshot revision 3", "reindex"],
+      "expected": ["gap blocks use", "expired missing history requires snapshot", "stale snapshot rejected", "snapshot marks history_complete=false", "reindex may become READY while history_complete remains false"],
+      "owners": ["W2", "W3", "W4"]
+    },
+    {
+      "id": "A03",
+      "boundary": "public_w4_signal",
+      "evidence": "new_schema_valid_review_examples_existing_adapter_regression_scope",
+      "signal_sequence": ["ready5", "restricted6", "restricted6", "ready5", "conflicting6"],
+      "expected_apply_outcomes": ["APPLIED", "APPLIED", "DUPLICATE", "STALE", "CONFLICT"],
+      "expected": ["new generation invalidates cache", "READY does not recreate an old cached result", "conflict blocks cache"],
+      "owners": ["W3", "W4"]
+    },
+    {
+      "id": "A04",
+      "boundary": "private_lifecycle_proposal",
+      "execution_status": "NOT_IMPLEMENTED_NOT_EXECUTED",
+      "private_notation_is_wire_dto": false,
+      "scope": "synthetic-private-scope-a",
+      "steps": [
+        {"private_state": "ACTIVE", "lifecycle_revision": 10},
+        {"private_state": "DELETED", "lifecycle_revision": 11, "authority": "W1"},
+        {"public_action": "RELEASED or current Source snapshot and successful reindex"}
+      ],
+      "expected": ["private scope stays deleted", "private data/display/cache not restored even if Source is READY", "public event contains no private scope identifier"],
+      "owners": ["W1", "W3_if_holding_private_derivatives", "W4"]
+    },
+    {
+      "id": "A05",
+      "boundary": "private_lifecycle_proposal",
+      "execution_status": "NOT_IMPLEMENTED_NOT_EXECUTED",
+      "private_notation_is_wire_dto": false,
+      "scope": "synthetic-private-scope-a",
+      "steps": ["start private job with lifecycle revision 10", "commit W1 deletion revision 11", "receive old ACTIVE revision 10 and old job result/checkpoint"],
+      "expected": ["reject private result commit and display", "do not roll back deletion", "private consumer receipt distinguishes blocked from physical purge completed"],
+      "owners": ["W1", "W3_if_holding_private_derivatives", "W4"]
+    },
+    {
+      "id": "A06",
+      "boundary": "private_lifecycle_proposal",
+      "execution_status": "NOT_IMPLEMENTED_NOT_EXECUTED",
+      "private_notation_is_wire_dto": false,
+      "scopes": ["synthetic-private-scope-a", "synthetic-private-scope-b"],
+      "public_source": "demo-source",
+      "steps": ["both scopes may use the same public Source under their own authorization", "delete scope a in W1"],
+      "expected": ["scope a and its private descendants/results are blocked", "scope b remains governed by its own authorization", "no Source-wide restriction is emitted solely because a was deleted"],
+      "owners": ["W1", "W3_if_holding_private_derivatives", "W4"]
+    },
+    {
+      "id": "A07",
+      "boundary": "private_lifecycle_proposal",
+      "execution_status": "NOT_IMPLEMENTED_NOT_EXECUTED",
+      "private_notation_is_wire_dto": false,
+      "steps": ["W1 deletion committed", "restore old backup or replay old private job", "W1 says deleted/absent OR current lifecycle lookup fails"],
+      "expected": ["fail closed on deleted/absent/unverified scope", "do not recreate scope from public replay/snapshot", "new intentional user resource gets a distinct identity"],
+      "owners": ["W1", "W3_if_holding_private_derivatives", "W4", "operations"]
+    },
+    {
+      "id": "A08",
+      "boundary": "public_stream_recovery",
+      "execution_status": "RUNBOOK_REQUIREMENT_JOINT_RECOVERY_TEST_PENDING",
+      "steps": ["W4 has cache from original W3 database", "W3 database is reset/restored and generation restarts"],
+      "expected": ["invalidate existing W4 cache and resynchronize all relevant Source states before use", "do not compare different database incarnations using generation alone", "an epoch DTO alternative requires a separately approved contract change"],
+      "owners": ["W3", "W4", "operations"]
+    }
+  ]
+}

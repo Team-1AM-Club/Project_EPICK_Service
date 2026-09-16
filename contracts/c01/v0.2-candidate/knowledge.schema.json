@@ -1,0 +1,881 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:epick:w3-c01:0.2-candidate:knowledge",
+  "$defs": {
+    "CheckStatus": {
+      "enum": [
+        "PASS",
+        "FAIL",
+        "PENDING",
+        "NOT_REQUIRED"
+      ],
+      "title": "CheckStatus",
+      "type": "string"
+    },
+    "Claim": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": {
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "statement": {
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subject"
+        },
+        "scope": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scope"
+        },
+        "period": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Period"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "comparison_basis": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Comparison Basis"
+        },
+        "verification_status": {
+          "$ref": "#/$defs/VerificationStatus"
+        },
+        "usage_status": {
+          "$ref": "#/$defs/UsageStatus"
+        },
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/ValidationCheck"
+          },
+          "title": "Checks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "statement",
+        "evidence_ids",
+        "verification_status",
+        "usage_status",
+        "checks"
+      ],
+      "title": "Claim",
+      "type": "object"
+    },
+    "ConditionNode": {
+      "additionalProperties": false,
+      "properties": {
+        "node_id": {
+          "pattern": "^[A-Za-z][A-Za-z0-9._:-]{2,127}$",
+          "title": "Node Id",
+          "type": "string"
+        },
+        "operator": {
+          "$ref": "#/$defs/ConditionOperator"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "children": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Children",
+          "type": "array"
+        },
+        "evidence_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Id"
+        },
+        "same_experience_required": {
+          "default": false,
+          "title": "Same Experience Required",
+          "type": "boolean"
+        },
+        "comparison_basis": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Comparison Basis"
+        },
+        "exception_text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exception Text"
+        }
+      },
+      "required": [
+        "node_id",
+        "operator",
+        "text"
+      ],
+      "title": "ConditionNode",
+      "type": "object"
+    },
+    "ConditionOperator": {
+      "enum": [
+        "AND",
+        "OR",
+        "LEAF"
+      ],
+      "title": "ConditionOperator",
+      "type": "string"
+    },
+    "ErrorCode": {
+      "enum": [
+        "POLICY_DENIED",
+        "POLICY_UNKNOWN",
+        "INPUT_CONTRACT_INVALID",
+        "RAW_TEXT_MISSING",
+        "VERSION_MISSING",
+        "EVIDENCE_UNVERIFIABLE",
+        "PROVIDER_RATE_LIMITED",
+        "PROVIDER_RESPONSE_INVALID",
+        "LIVE_CONFIGURATION_REQUIRED"
+      ],
+      "title": "ErrorCode",
+      "type": "string"
+    },
+    "EvaluationMode": {
+      "enum": [
+        "SYNTHETIC",
+        "PROVIDER_MOCK",
+        "SAMPLE_DIAGNOSTIC",
+        "LIVE"
+      ],
+      "title": "EvaluationMode",
+      "type": "string"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": {
+          "pattern": "^[A-Za-z][A-Za-z0-9._:-]{2,127}$",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "source_ref": {
+          "$ref": "#/$defs/SourceRef"
+        },
+        "artifact_id": {
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "excerpt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Excerpt"
+        },
+        "start_offset": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Offset"
+        },
+        "end_offset": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Offset"
+        },
+        "native_locator": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NativeLocator"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "expected_integrity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IntegrityAssertion"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "observed_integrity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IntegrityAssertion"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "evidence_id",
+        "source_ref",
+        "artifact_id"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "IntegrityAssertion": {
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "const": "sha256",
+          "default": "sha256",
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "digest": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "scope": {
+          "default": "artifact",
+          "enum": [
+            "artifact",
+            "excerpt"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "reported_by": {
+          "default": "W3_CURRENT",
+          "enum": [
+            "W3_CURRENT",
+            "UPSTREAM_REPORTED"
+          ],
+          "title": "Reported By",
+          "type": "string"
+        }
+      },
+      "required": [
+        "digest"
+      ],
+      "title": "IntegrityAssertion",
+      "type": "object"
+    },
+    "KnowledgeBundle": {
+      "additionalProperties": false,
+      "properties": {
+        "evidences": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          },
+          "title": "Evidences",
+          "type": "array"
+        },
+        "claims": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Claim"
+          },
+          "title": "Claims",
+          "type": "array"
+        },
+        "requirements": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Requirement"
+          },
+          "title": "Requirements",
+          "type": "array"
+        },
+        "requirement_presence": {
+          "$ref": "#/$defs/RequirementPresenceState"
+        },
+        "source_reviews": {
+          "items": {
+            "$ref": "#/$defs/SourceReview"
+          },
+          "title": "Source Reviews",
+          "type": "array"
+        },
+        "limitations": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Limitation"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "mode": {
+          "$ref": "#/$defs/EvaluationMode"
+        },
+        "purpose": {
+          "$ref": "#/$defs/Purpose"
+        }
+      },
+      "required": [
+        "requirement_presence",
+        "source_reviews",
+        "mode",
+        "purpose"
+      ],
+      "title": "KnowledgeBundle",
+      "type": "object"
+    },
+    "Limitation": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "impact": {
+          "title": "Impact",
+          "type": "string"
+        },
+        "source_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "artifact_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifact Id"
+        }
+      },
+      "required": [
+        "code",
+        "impact"
+      ],
+      "title": "Limitation",
+      "type": "object"
+    },
+    "NativeLocator": {
+      "additionalProperties": false,
+      "description": "원본을 재현하기 위한 위치. text offset과 혼동하지 않는다.",
+      "properties": {
+        "locator_type": {
+          "enum": [
+            "url_fragment",
+            "document_page",
+            "json_pointer",
+            "external_reference"
+          ],
+          "title": "Locator Type",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        },
+        "reproducible": {
+          "default": false,
+          "title": "Reproducible",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "locator_type",
+        "value"
+      ],
+      "title": "NativeLocator",
+      "type": "object"
+    },
+    "Necessity": {
+      "enum": [
+        "REQUIRED",
+        "PREFERRED",
+        "GENERAL"
+      ],
+      "title": "Necessity",
+      "type": "string"
+    },
+    "ProcessingStatus": {
+      "enum": [
+        "COMPLETED",
+        "LIMITED",
+        "PAUSED",
+        "FAILED"
+      ],
+      "title": "ProcessingStatus",
+      "type": "string"
+    },
+    "Purpose": {
+      "enum": [
+        "SYNTHETIC_ACCEPTANCE",
+        "SAMPLE_DIAGNOSTIC",
+        "PROVIDER_POC",
+        "PRODUCTION_STRUCTURE"
+      ],
+      "title": "Purpose",
+      "type": "string"
+    },
+    "Requirement": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": {
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "original_text": {
+          "minLength": 1,
+          "title": "Original Text",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "necessity": {
+          "$ref": "#/$defs/Necessity"
+        },
+        "condition_nodes": {
+          "items": {
+            "$ref": "#/$defs/ConditionNode"
+          },
+          "title": "Condition Nodes",
+          "type": "array"
+        },
+        "root_node_id": {
+          "title": "Root Node Id",
+          "type": "string"
+        },
+        "company_scope": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Company Scope"
+        },
+        "posting_scope": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Posting Scope"
+        },
+        "role_scope": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Scope"
+        },
+        "time_scope": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Time Scope"
+        },
+        "technical_terms": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Technical Terms",
+          "type": "array"
+        },
+        "verification_status": {
+          "$ref": "#/$defs/VerificationStatus"
+        },
+        "usage_status": {
+          "$ref": "#/$defs/UsageStatus"
+        },
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/ValidationCheck"
+          },
+          "title": "Checks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "original_text",
+        "evidence_ids",
+        "necessity",
+        "condition_nodes",
+        "root_node_id",
+        "verification_status",
+        "usage_status",
+        "checks"
+      ],
+      "title": "Requirement",
+      "type": "object"
+    },
+    "RequirementPresenceState": {
+      "enum": [
+        "FOUND",
+        "NONE_IN_EXAMINED_SCOPE",
+        "NOT_ASSESSED"
+      ],
+      "title": "RequirementPresenceState",
+      "type": "string"
+    },
+    "SafeError": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "retry_after_seconds": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Retry After Seconds"
+        },
+        "source_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Id"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "SafeError",
+      "type": "object"
+    },
+    "SourceRef": {
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {
+          "pattern": "^(?:[A-Za-z][A-Za-z0-9._:-]{2,127}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_version_id": {
+          "pattern": "^(?:[A-Za-z][A-Za-z0-9._:-]{2,127}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+          "title": "Source Version Id",
+          "type": "string"
+        },
+        "source_kind": {
+          "minLength": 1,
+          "title": "Source Kind",
+          "type": "string"
+        },
+        "parent_source_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Source Id"
+        },
+        "observed_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observed At"
+        }
+      },
+      "required": [
+        "source_id",
+        "source_version_id",
+        "source_kind"
+      ],
+      "title": "SourceRef",
+      "type": "object"
+    },
+    "SourceReview": {
+      "additionalProperties": false,
+      "properties": {
+        "source_ref": {
+          "$ref": "#/$defs/SourceRef"
+        },
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/ValidationCheck"
+          },
+          "title": "Checks",
+          "type": "array"
+        },
+        "limitations": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Limitation"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "process_status": {
+          "$ref": "#/$defs/ProcessingStatus"
+        }
+      },
+      "required": [
+        "source_ref",
+        "checks",
+        "process_status"
+      ],
+      "title": "SourceReview",
+      "type": "object"
+    },
+    "UsageStatus": {
+      "enum": [
+        "USABLE",
+        "RESTRICTED",
+        "BLOCKED"
+      ],
+      "title": "UsageStatus",
+      "type": "string"
+    },
+    "ValidationCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "check_id": {
+          "title": "Check Id",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/CheckStatus"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "source_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "evidence_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Id"
+        },
+        "reported_by": {
+          "default": "W3_CURRENT",
+          "enum": [
+            "W3_CURRENT",
+            "UPSTREAM_REPORTED"
+          ],
+          "title": "Reported By",
+          "type": "string"
+        }
+      },
+      "required": [
+        "check_id",
+        "status",
+        "code",
+        "message"
+      ],
+      "title": "ValidationCheck",
+      "type": "object"
+    },
+    "VerificationStatus": {
+      "enum": [
+        "VERIFIED",
+        "PENDING",
+        "FAILED"
+      ],
+      "title": "VerificationStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "bundle": {
+      "$ref": "#/$defs/KnowledgeBundle"
+    },
+    "status": {
+      "$ref": "#/$defs/ProcessingStatus"
+    },
+    "errors": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/SafeError"
+      },
+      "title": "Errors",
+      "type": "array"
+    }
+  },
+  "required": [
+    "bundle",
+    "status"
+  ],
+  "title": "StructureResponse",
+  "type": "object"
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": "w3-restriction/0.1-draft",
+  "source_id": "demo-source",
+  "restriction_revision": 3,
+  "index_key": {
+    "source_version_id": "demo-version",
+    "extraction_revision_id": "demo-extraction",
+    "representation": "text",
+    "normalization_version": "demo-normalization"
+  },
+  "retention_scope": "excerpts_only",
+  "expires_at": "2026-09-14T00:00:00Z",
+  "documents": [
+    {
+      "document_id": "demo-document",
+      "evidence_id": "demo-evidence",
+      "text": "Synthetic semiconductor evidence."
+    }
+  ]
+}

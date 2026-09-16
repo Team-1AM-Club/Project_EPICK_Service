@@ -1,0 +1,152 @@
+{
+  "schema_version": "w3-c01/0.2-candidate",
+  "source_id": "10000000-0000-4000-8000-000000000005",
+  "after_cursor": 0,
+  "high_watermark": 3,
+  "retention_floor_cursor": 0,
+  "events": [
+    {
+      "schema_version": "1.0",
+      "event_id": "20000000-0000-4000-8000-000000000001",
+      "event_type": "source.version.available",
+      "producer": "w2",
+      "occurred_at": "2026-09-15T00:00:00Z",
+      "aggregate_type": "source",
+      "aggregate_id": "10000000-0000-4000-8000-000000000005",
+      "revision": 1,
+      "payload": {
+        "schema_version": "w2.source.v1",
+        "source_id": "10000000-0000-4000-8000-000000000005",
+        "source_version_id": "10000000-0000-4000-8000-000000000007",
+        "extraction_revision_id": "10000000-0000-4000-8000-000000000008",
+        "company_id": "10000000-0000-4000-8000-000000000004",
+        "source_type": "job_posting",
+        "url_or_path": "https://synthetic.example/jobs/1",
+        "title": "Synthetic platform engineer job posting",
+        "policy": {
+          "policy_decision_id": "10000000-0000-4000-8000-000000000011",
+          "official_status": "verified",
+          "access_class": "public",
+          "collection_permission": "allowed",
+          "excerpt_storage_permission": "allowed",
+          "body_storage_permission": "unknown",
+          "redistribution_permission": "allowed",
+          "checked_at": "2026-09-15T00:00:00Z",
+          "policy_version": "synthetic-policy-v1"
+        },
+        "acquisition_status": "AVAILABLE",
+        "extraction_status": "complete",
+        "accuracy_status": "unverified",
+        "freshness_status": "unknown",
+        "published_at": {
+          "status": "unknown",
+          "raw_text": null,
+          "value": null,
+          "precision": null,
+          "timezone": null
+        },
+        "collected_at": "2026-09-15T00:00:00Z",
+        "checked_at": "2026-09-15T00:00:00Z",
+        "valid_from": {
+          "status": "unknown",
+          "raw_text": null,
+          "value": null,
+          "precision": null,
+          "timezone": null
+        },
+        "valid_to": {
+          "status": "unknown",
+          "raw_text": null,
+          "value": null,
+          "precision": null,
+          "timezone": null
+        },
+        "content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "hash_profile_version": "v1",
+        "parser_version": "synthetic-parser-v1",
+        "language": "en",
+        "evidence_spans": [
+          {
+            "evidence_id": "10000000-0000-4000-8000-000000000012",
+            "source_version_id": "10000000-0000-4000-8000-000000000007",
+            "section_title": "Required qualifications",
+            "text_excerpt": "Experience operating public cloud services.",
+            "locator": {
+              "kind": "css",
+              "value": "#required",
+              "normalization_version": null,
+              "start": null,
+              "end": null
+            },
+            "chunk_order": 0
+          }
+        ],
+        "posting_sections": [
+          {
+            "section_key": "required",
+            "kind": "required",
+            "heading_raw": "Required qualifications",
+            "text_raw": "Experience operating public cloud services.",
+            "evidence_ids": [
+              "10000000-0000-4000-8000-000000000012"
+            ],
+            "order": 0,
+            "relation_text": null
+          }
+        ],
+        "retention_scope": "excerpts_only",
+        "normalized_body_ref": null,
+        "limitations": [],
+        "metadata": {
+          "representation": "static_html",
+          "content_type": "text/html",
+          "normalization_version": "v1"
+        }
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "event_id": "20000000-0000-4000-8000-000000000004",
+      "event_type": "source.restriction.changed",
+      "producer": "w2",
+      "occurred_at": "2026-09-15T00:15:00Z",
+      "aggregate_type": "source",
+      "aggregate_id": "10000000-0000-4000-8000-000000000005",
+      "revision": 2,
+      "payload": {
+        "schema_version": "w2.source.v1",
+        "restriction_id": "10000000-0000-4000-8000-000000000015",
+        "source_id": "10000000-0000-4000-8000-000000000005",
+        "source_version_id": "10000000-0000-4000-8000-000000000007",
+        "restriction_revision": 1,
+        "restriction_status": "active",
+        "accuracy_status": "error_confirmed",
+        "reason_code": "SOURCE_POLICY_BLOCKED",
+        "changed_at": "2026-09-15T00:15:00Z",
+        "replacement_ref": null
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "event_id": "30000000-0000-4000-8000-000000000003",
+      "event_type": "source.restriction.changed",
+      "producer": "w2",
+      "occurred_at": "2026-09-15T00:15:00Z",
+      "aggregate_type": "source",
+      "aggregate_id": "10000000-0000-4000-8000-000000000005",
+      "revision": 3,
+      "payload": {
+        "schema_version": "w2.source.v1",
+        "restriction_id": "10000000-0000-4000-8000-000000000015",
+        "source_id": "10000000-0000-4000-8000-000000000005",
+        "source_version_id": "10000000-0000-4000-8000-000000000007",
+        "restriction_revision": 2,
+        "restriction_status": "cleared",
+        "accuracy_status": "verified_in_scope",
+        "reason_code": "SYNTHETIC_RESOLVED",
+        "changed_at": "2026-09-15T00:15:00Z",
+        "replacement_ref": null
+      }
+    }
+  ]
+}

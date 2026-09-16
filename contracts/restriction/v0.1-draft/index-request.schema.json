@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:epick:w3-restriction:0.1-draft:index-request",
+  "$defs": {
+    "Document": {
+      "additionalProperties": false,
+      "properties": {
+        "document_id": {
+          "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+          "title": "Document Id",
+          "type": "string"
+        },
+        "evidence_id": {
+          "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 100000,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "evidence_id",
+        "text"
+      ],
+      "title": "Document",
+      "type": "object"
+    },
+    "IndexKey": {
+      "additionalProperties": false,
+      "properties": {
+        "source_version_id": {
+          "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+          "title": "Source Version Id",
+          "type": "string"
+        },
+        "extraction_revision_id": {
+          "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+          "title": "Extraction Revision Id",
+          "type": "string"
+        },
+        "representation": {
+          "enum": [
+            "text",
+            "html",
+            "markdown"
+          ],
+          "title": "Representation",
+          "type": "string"
+        },
+        "normalization_version": {
+          "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+          "title": "Normalization Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_version_id",
+        "extraction_revision_id",
+        "representation",
+        "normalization_version"
+      ],
+      "title": "IndexKey",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "w3-restriction/0.1-draft",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_id": {
+      "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+      "title": "Source Id",
+      "type": "string"
+    },
+    "restriction_revision": {
+      "maximum": 9223372036854775807,
+      "minimum": 1,
+      "title": "Restriction Revision",
+      "type": "integer"
+    },
+    "index_key": {
+      "$ref": "#/$defs/IndexKey"
+    },
+    "retention_scope": {
+      "enum": [
+        "full",
+        "excerpts_only",
+        "none"
+      ],
+      "title": "Retention Scope",
+      "type": "string"
+    },
+    "expires_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+      "title": "Expires At",
+      "type": "string"
+    },
+    "documents": {
+      "items": {
+        "$ref": "#/$defs/Document"
+      },
+      "maxItems": 100,
+      "title": "Documents",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "source_id",
+    "restriction_revision",
+    "index_key",
+    "retention_scope",
+    "expires_at",
+    "documents"
+  ],
+  "title": "IndexRequest",
+  "type": "object"
+}

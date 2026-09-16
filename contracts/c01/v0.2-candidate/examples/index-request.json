@@ -1,0 +1,21 @@
+{
+  "schema_version": "w3-c01/0.2-candidate",
+  "source_id": "10000000-0000-4000-8000-000000000005",
+  "event_cursor": 3,
+  "restriction_revision": 2,
+  "index_key": {
+    "source_version_id": "10000000-0000-4000-8000-000000000007",
+    "extraction_revision_id": "10000000-0000-4000-8000-000000000008",
+    "representation": "static_html",
+    "normalization_version": "v1"
+  },
+  "retention_scope": "excerpts_only",
+  "expires_at": "2026-09-16T00:30:00Z",
+  "documents": [
+    {
+      "document_id": "30000000-0000-4000-8000-000000000004",
+      "evidence_id": "10000000-0000-4000-8000-000000000012",
+      "text": "Experience operating public cloud services."
+    }
+  ]
+}

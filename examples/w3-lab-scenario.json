@@ -1,0 +1,311 @@
+{
+  "lab_only": true,
+  "description": "Synthetic restriction / index / replay / retention validation. TTL=10 is a test value, not an operational policy.",
+  "steps": [
+    {
+      "op": "consume",
+      "event": {
+        "event_id": "demo-1",
+        "source_id": "demo-source",
+        "revision": 1,
+        "blocked": false,
+        "version": "v1",
+        "extraction": "ex1",
+        "normalization": "norm1"
+      },
+      "now": 0,
+      "expect": "APPLIED"
+    },
+    {
+      "op": "index",
+      "source_id": "demo-source",
+      "key": [
+        "v1",
+        "ex1",
+        "norm1"
+      ],
+      "expect": {
+        "reason": "READY",
+        "ack": true
+      }
+    },
+    {
+      "op": "consume",
+      "event": {
+        "event_id": "demo-2",
+        "source_id": "demo-source",
+        "revision": 2,
+        "blocked": true,
+        "version": "v1",
+        "extraction": "ex1",
+        "normalization": "norm1"
+      },
+      "now": 1,
+      "expect": "APPLIED"
+    },
+    {
+      "op": "query",
+      "source_id": "demo-source",
+      "expect": {
+        "reason": "RESTRICTED",
+        "ack": false
+      }
+    },
+    {
+      "op": "consume",
+      "event": {
+        "event_id": "demo-2",
+        "source_id": "demo-source",
+        "revision": 2,
+        "blocked": true,
+        "version": "v1",
+        "extraction": "ex1",
+        "normalization": "norm1"
+      },
+      "now": 2,
+      "expect": "DUPLICATE"
+    },
+    {
+      "op": "consume",
+      "event": {
+        "event_id": "late-demo",
+        "source_id": "demo-source",
+        "revision": 1,
+        "blocked": false,
+        "version": "v1",
+        "extraction": "ex1",
+        "normalization": "norm1"
+      },
+      "now": 2,
+      "expect": "STALE"
+    },
+    {
+      "op": "query",
+      "source_id": "demo-source",
+      "expect": {
+        "reason": "RESTRICTED",
+        "ack": false
+      }
+    },
+    {
+      "op": "consume",
+      "event": {
+        "event_id": "demo-3",
+        "source_id": "demo-source",
+        "revision": 3,
+        "blocked": false,
+        "version": "v1",
+        "extraction": "ex1",
+        "normalization": "norm1"
+      },
+      "now": 3,
+      "expect": "APPLIED"
+    },
+    {
+      "op": "query",
+      "source_id": "demo-source",
+      "expect": {
+        "reason": "READY",
+        "ack": true
+      }
+    },
+    {
+      "op": "index",
+      "source_id": "demo-source",
+      "key": [
+        "v1",
+        "ex2",
+        "norm1"
+      ],
+      "expect": {
+        "reason": "INDEX_MISMATCH",
+        "ack": false
+      }
+    },
+    {
+      "op": "index",
+      "source_id": "demo-source",
+      "key": [
+        "v1",
+        "ex1",
+        "norm1"
+      ],
+      "fail": true,
+      "expect": {
+        "reason": "INDEX_FAILED",
+        "ack": false
+      }
+    },
+    {
+      "op": "index",
+      "source_id": "demo-source",
+      "key": [
+        "v1",
+        "ex1",
+        "norm1"
+      ],
+      "expect": {
+        "reason": "READY",
+        "ack": true
+      }
+    },
+    {
+      "op": "consume",
+      "event": {
+        "event_id": "demo-5",
+        "source_id": "demo-source",
+        "revision": 5,
+        "blocked": false,
+        "version": "v1",
+        "extraction": "ex1",
+        "normalization": "norm1"
+      },
+      "now": 5,
+      "expect": "GAP"
+    },
+    {
+      "op": "query",
+      "source_id": "demo-source",
+      "expect": {
+        "reason": "EVENT_GAP",
+        "ack": false
+      }
+    },
+    {
+      "op": "publish",
+      "event": {
+        "event_id": "demo-4",
+        "source_id": "demo-source",
+        "revision": 4,
+        "blocked": true,
+        "version": "v1",
+        "extraction": "ex1",
+        "normalization": "norm1"
+      },
+      "at": 4,
+      "expect": null
+    },
+    {
+      "op": "replay",
+      "source_id": "demo-source",
+      "now": 6,
+      "retention": 10,
+      "expect": "REPLAYED"
+    },
+    {
+      "op": "query",
+      "source_id": "demo-source",
+      "expect": {
+        "reason": "READY",
+        "ack": true
+      }
+    },
+    {
+      "op": "publish",
+      "event": {
+        "event_id": "demo-6",
+        "source_id": "demo-source",
+        "revision": 6,
+        "blocked": true,
+        "version": "v1",
+        "extraction": "ex1",
+        "normalization": "norm1"
+      },
+      "at": 6,
+      "expect": null
+    },
+    {
+      "op": "consume",
+      "event": {
+        "event_id": "demo-7",
+        "source_id": "demo-source",
+        "revision": 7,
+        "blocked": false,
+        "version": "v1",
+        "extraction": "ex1",
+        "normalization": "norm1"
+      },
+      "now": 7,
+      "expect": "GAP"
+    },
+    {
+      "op": "replay",
+      "source_id": "demo-source",
+      "now": 16,
+      "retention": 10,
+      "expect": "SNAPSHOT_REQUIRED"
+    },
+    {
+      "op": "query",
+      "source_id": "demo-source",
+      "expect": {
+        "reason": "EVENT_GAP",
+        "ack": false
+      }
+    },
+    {
+      "op": "snapshot",
+      "event": {
+        "event_id": "demo-7",
+        "source_id": "demo-source",
+        "revision": 7,
+        "blocked": false,
+        "version": "v1",
+        "extraction": "ex1",
+        "normalization": "norm1"
+      },
+      "now": 16,
+      "expect": {
+        "reason": "INDEX_MISMATCH",
+        "ack": false,
+        "limitations": [
+          "HISTORY_UNAVAILABLE"
+        ]
+      }
+    },
+    {
+      "op": "index",
+      "source_id": "demo-source",
+      "key": [
+        "v1",
+        "ex1",
+        "norm1"
+      ],
+      "expect": {
+        "reason": "READY",
+        "ack": true
+      }
+    },
+    {
+      "op": "retain",
+      "source_id": "demo-source",
+      "full": "Synthetic complete text.",
+      "excerpt": "Synthetic excerpt.",
+      "scope": "EXCERPT",
+      "now": 20,
+      "ttl": 10,
+      "expect": null
+    },
+    {
+      "op": "read_body",
+      "source_id": "demo-source",
+      "now": 29,
+      "expect": "Synthetic excerpt."
+    },
+    {
+      "op": "query",
+      "source_id": "demo-source",
+      "now": 30,
+      "expect": {
+        "reason": "BODY_UNAVAILABLE",
+        "ack": false
+      }
+    },
+    {
+      "op": "read_body",
+      "source_id": "demo-source",
+      "now": 30,
+      "expect": null
+    }
+  ]
+}

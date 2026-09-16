@@ -1,0 +1,126 @@
+{
+  "ready": {
+    "schema_version": "w3-c01/0.2-candidate",
+    "source_id": "10000000-0000-4000-8000-000000000005",
+    "event_cursor": 3,
+    "required_event_cursor": 3,
+    "restriction_revision": 2,
+    "required_restriction_revision": 2,
+    "generation": 4,
+    "restriction_scope": "source",
+    "reason": "READY",
+    "index_ack": true,
+    "index_key": {
+      "source_version_id": "10000000-0000-4000-8000-000000000007",
+      "extraction_revision_id": "10000000-0000-4000-8000-000000000008",
+      "representation": "static_html",
+      "normalization_version": "v1"
+    },
+    "history_complete": true,
+    "event_type": "w3.source.usability.changed",
+    "signal_id": "30000000-0000-4000-8000-000000000005",
+    "usable": true
+  },
+  "ready_status": {
+    "schema_version": "w3-c01/0.2-candidate",
+    "source_id": "10000000-0000-4000-8000-000000000005",
+    "event_cursor": 3,
+    "required_event_cursor": 3,
+    "restriction_revision": 2,
+    "required_restriction_revision": 2,
+    "generation": 4,
+    "restriction_scope": "source",
+    "reason": "READY",
+    "index_ack": true,
+    "index_key": {
+      "source_version_id": "10000000-0000-4000-8000-000000000007",
+      "extraction_revision_id": "10000000-0000-4000-8000-000000000008",
+      "representation": "static_html",
+      "normalization_version": "v1"
+    },
+    "history_complete": true
+  },
+  "blocked": {
+    "schema_version": "w3-c01/0.2-candidate",
+    "source_id": "10000000-0000-4000-8000-000000000005",
+    "event_cursor": 4,
+    "required_event_cursor": 4,
+    "restriction_revision": 3,
+    "required_restriction_revision": 3,
+    "generation": 5,
+    "restriction_scope": "source",
+    "reason": "RESTRICTED",
+    "index_ack": false,
+    "index_key": {
+      "source_version_id": "10000000-0000-4000-8000-000000000007",
+      "extraction_revision_id": "10000000-0000-4000-8000-000000000008",
+      "representation": "static_html",
+      "normalization_version": "v1"
+    },
+    "history_complete": true,
+    "event_type": "w3.source.usability.changed",
+    "signal_id": "30000000-0000-4000-8000-000000000006",
+    "usable": false
+  },
+  "blocked_status": {
+    "schema_version": "w3-c01/0.2-candidate",
+    "source_id": "10000000-0000-4000-8000-000000000005",
+    "event_cursor": 4,
+    "required_event_cursor": 4,
+    "restriction_revision": 3,
+    "required_restriction_revision": 3,
+    "generation": 5,
+    "restriction_scope": "source",
+    "reason": "RESTRICTED",
+    "index_ack": false,
+    "index_key": {
+      "source_version_id": "10000000-0000-4000-8000-000000000007",
+      "extraction_revision_id": "10000000-0000-4000-8000-000000000008",
+      "representation": "static_html",
+      "normalization_version": "v1"
+    },
+    "history_complete": true
+  },
+  "knowledge": {
+    "status": "LIMITED",
+    "errors": [],
+    "bundle": {
+      "mode": "SYNTHETIC",
+      "purpose": "SYNTHETIC_ACCEPTANCE",
+      "requirement_presence": "NOT_ASSESSED",
+      "claims": [],
+      "requirements": [],
+      "limitations": [],
+      "source_reviews": [
+        {
+          "source_ref": {
+            "source_id": "10000000-0000-4000-8000-000000000005",
+            "source_version_id": "10000000-0000-4000-8000-000000000007",
+            "source_kind": "job_posting"
+          },
+          "checks": [],
+          "limitations": [],
+          "process_status": "LIMITED"
+        }
+      ],
+      "evidences": [
+        {
+          "evidence_id": "evidence-c01-demo",
+          "artifact_id": "c01-demo",
+          "source_ref": {
+            "source_id": "10000000-0000-4000-8000-000000000005",
+            "source_version_id": "10000000-0000-4000-8000-000000000007",
+            "source_kind": "job_posting"
+          },
+          "excerpt": "Experience operating public cloud services."
+        }
+      ]
+    }
+  },
+  "ack": {
+    "signal_id": "30000000-0000-4000-8000-000000000005"
+  },
+  "ack_response": {
+    "delivered": true
+  }
+}

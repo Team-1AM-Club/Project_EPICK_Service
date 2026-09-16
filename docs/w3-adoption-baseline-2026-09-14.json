@@ -1,0 +1,46 @@
+{
+  "review_version": "w3-adoption-review/2026-09-14.1",
+  "candidate_contract": "w3-restriction/0.1-draft",
+  "team_approval": "PENDING",
+  "remote_candidate_commit": null,
+  "baseline_archive": "EPICK_W3_Restriction_Handoff_2026-09-13.zip",
+  "baseline_archive_sha256": "0df5a6c0b44b669e1ee5d1f7eb92e5e13d250c60bd010f8530369e19824da02b",
+  "baseline_file_sha256": {
+    "contracts/restriction/v0.1-draft/consume-response.schema.json": "1d0e67fa020a9367e29537e10ecbf3fbdaec07799f630b172afaa33a9b99ca9c",
+    "contracts/restriction/v0.1-draft/delivery-receipt.schema.json": "a95464c0900ce20a2fc4d7d9605946aa24fb9f6084efdb6805ef64b49f82a423",
+    "contracts/restriction/v0.1-draft/event.schema.json": "50d8eeacca6bb40a02499ced9d0928d8f196bd7c0a66837e924ef5a378db85da",
+    "contracts/restriction/v0.1-draft/examples/index-request.json": "05cc899d6b2e886b906c6ae9a2a1b708b1552fe3e2a67d39f7fa79a0c5022856",
+    "contracts/restriction/v0.1-draft/examples/initial.json": "b6d92205752d47c676dd96d9faf1f72326b5bdd6040cc9b0f1b8e36597b7cad9",
+    "contracts/restriction/v0.1-draft/examples/release.json": "63f84950416023c09f85870d063c4dbebf8302602f5d5e8f1d6e74984963ee81",
+    "contracts/restriction/v0.1-draft/examples/replay.json": "c639bef7df1f45f3b51eacfe17722c6456e4ccfec983a0f72b2d4e2df647ee41",
+    "contracts/restriction/v0.1-draft/examples/restrict.json": "103918dac9d57a3de1e0e673939e1106c1498709a29b174e6992fff905b62e8e",
+    "contracts/restriction/v0.1-draft/examples/snapshot.json": "2d6e9b792032ee73f9ec66dd6caae135df0c3ee7c8bcd7ef89c592e1b58bb665",
+    "contracts/restriction/v0.1-draft/index-request.schema.json": "4ab592355fd4580bba28a469687e29c1e8f1202d65f0c6ebe7674bdfe7757d27",
+    "contracts/restriction/v0.1-draft/invalid/future-version.json": "36c00a7c0ebc8f1b6750c4b7d6684ee6a6ba2101463e215ebfceaac63fc80a34",
+    "contracts/restriction/v0.1-draft/invalid/private-field.json": "37dda2fd921b11e892cb267de237310fb2a738146bea8f5d6856c9df3eb90bbe",
+    "contracts/restriction/v0.1-draft/invalid/revision-string.json": "beff783e8807ff24dd23e108f09cafb5251c28fc4b02d62a7160a7abb57982d4",
+    "contracts/restriction/v0.1-draft/invalid/source-mismatch.json": "1d7e66659b9d1a6a148a0ee2fe1e7b2e690a4bde8560ddf5cb6a7f9fe58c9007",
+    "contracts/restriction/v0.1-draft/README.md": "ebc463a2dd36a84ad382b047d5f8958a2bf2809e034699c4b292a9bc0ee00341",
+    "contracts/restriction/v0.1-draft/recovery-response.schema.json": "53afadbf0024967788f129c1a6af8d44d9b53f6958b3574f3b6b3ced239d808c",
+    "contracts/restriction/v0.1-draft/replay.schema.json": "0c839917698425d459ff873bdb98b1f1b8ce2fa541b5b96d1fcef1e6bda1d6fd",
+    "contracts/restriction/v0.1-draft/signal.schema.json": "b137399a5626e1a3c7b9eee3b245ab1f065cb493fa8257049cc29855d873a75a",
+    "contracts/restriction/v0.1-draft/snapshot.schema.json": "020d6b73d82a32cb71a254ce93fe3a96ef10d536da2127659fce66aada8dc22e",
+    "contracts/restriction/v0.1-draft/status.schema.json": "420caa45723d321c4eecb3b213479924e6b504efbf468d52e07b02436da299a5",
+    "docs/w3-restriction-handoff.md": "1053c83f003e67ce008f74f17025f464b7749b968206a46fe4312eb801f17d7e",
+    "docs/w3-restriction-verification.json": "0d5dba78d133b63fb9d8d0c90238e8df123e7c550f6126823d549868ac527925",
+    "src/w3_knowledge/restriction/contracts.py": "aaf676826779dda80a07a4af4efb83fc177cf70be3c77725f018563f481df949"
+  },
+  "review_artifact_sha256": {
+    "docs/w3-contract-adoption-reply-2026-09-14.md": "4bea9fa52ceb1cee43b15c5b967624902bb22865f1e3c40c673587b482c0b79d",
+    "docs/fixtures/w3-adoption-review-v1.json": "d71f938d8a79edf11ec1bfebdb1c8015b546ae8c364c0951169d661c93599009"
+  },
+  "checks": {
+    "baseline_files_unchanged": true,
+    "public_inputs_validated": 6,
+    "signal_examples_validated": 3,
+    "invalid_examples_rejected": 4,
+    "decision_scenarios": 8,
+    "private_scenarios_not_implemented": 4,
+    "runtime_tests_rerun": false
+  }
+}

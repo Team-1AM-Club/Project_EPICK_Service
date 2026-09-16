@@ -1,0 +1,12 @@
+{
+  "provenance": "User supplied W2 schema and six public event examples, copied without edits",
+  "sha256": {
+    "contracts/c01/v0.2-candidate/fixtures/invalid-source-event-private-field.json": "0bc12dd561b8c70f2b3137644c12b9ec327f80cb60c4819900611bb95c7cc4bb",
+    "contracts/c01/v0.2-candidate/fixtures/invalid-source-event-transport-fields.json": "4aaab1a380658c7f5742c769d5718b6593c1791fad1f1b98d523c97eb71d93df",
+    "contracts/c01/v0.2-candidate/fixtures/source-event-observation-changed.json": "030f39005f7bcf6ae96fc5a0d3a4eabad32d9fd88053d54d94af7e1cddd6b141",
+    "contracts/c01/v0.2-candidate/fixtures/source-event-restriction-changed.json": "79f59482a3ab8b89bdd4eff4c862eab90ab7de1514dbe25d047231d32bbe910c",
+    "contracts/c01/v0.2-candidate/fixtures/source-event-version-available.json": "85d9fcde994011d1e5481509c8fc0146d5b7ffbbb02a15f22a222b769ae7a51d",
+    "contracts/c01/v0.2-candidate/fixtures/source-event-version-partial.json": "60183562d13bd5f6be5a9c46739216af9e4bd72aa2c14a783f7e3c104ba04ece",
+    "src/w3_knowledge/c01/source-event-payload.schema.json": "418207ecdcffaa3ce5fd66a2d5f5dc0e479561b7e786a54ccd3c1218632ebf1e"
+  }
+}
