@@ -118,7 +118,11 @@ def verify_t059_isolation(
 
     try:
         with session_factory.begin() as session:
-            session.execute(text("SELECT 1"))
+            # JobWorker protects its account-status/deletion-epoch check with a
+            # PostgreSQL row lock.  Exercising the same lock shape here catches
+            # an incomplete worker privilege manifest before the synthetic
+            # runner seeds rows or publishes any SQS message.
+            session.execute(text("SELECT id FROM users LIMIT 1 FOR UPDATE"))
     except SQLAlchemyError as error:
         raise T059IsolationPreflightError(
             "isolated worker database connectivity check failed"

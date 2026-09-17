@@ -19,11 +19,11 @@ DATABASE_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 RUNTIME_ROLE_TEMPLATE_SQL = BACKEND_ROOT / "infra" / "postgres" / "runtime_roles.sql"
 
 
-def test_current_migration_head_includes_w2_commit_gate() -> None:
-    """Keep the durable W2 commit gate in the declared forward-only chain."""
+def test_current_migration_head_includes_w1_worker_owner_lock() -> None:
+    """Keep the worker owner-row lock policy in the declared forward-only chain."""
 
     config = Config(str(BACKEND_ROOT / "alembic.ini"))
-    assert ScriptDirectory.from_config(config).get_current_head() == "024_w2_commit_gate"
+    assert ScriptDirectory.from_config(config).get_current_head() == "025_w1_worker_owner_lock"
 
 
 def _admin_database_url(database_url: str) -> tuple[str, str]:

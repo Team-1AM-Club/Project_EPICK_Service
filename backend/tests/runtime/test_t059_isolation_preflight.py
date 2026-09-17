@@ -13,14 +13,20 @@ from app.runtime.t059_isolation_preflight import (
 
 
 class StubSession:
+    def __init__(self) -> None:
+        self.statements: list[str] = []
+
     def execute(self, statement: object) -> None:
-        del statement
+        self.statements.append(str(statement))
 
 
 class StubSessionFactory:
+    def __init__(self) -> None:
+        self.session = StubSession()
+
     @contextmanager
     def begin(self):
-        yield StubSession()
+        yield self.session
 
 
 class StubSqsClient:
@@ -119,10 +125,11 @@ def test_preflight_rejects_non_isolated_queues_or_run_ids(
 
 def test_preflight_checks_only_the_isolated_execution_queue_without_messages() -> None:
     sqs_client = StubSqsClient()
+    session_factory = StubSessionFactory()
 
     result = verify_t059_isolation(
         config=_config(),
-        session_factory=StubSessionFactory(),
+        session_factory=session_factory,
         sqs_client=sqs_client,
     )
 
@@ -139,3 +146,4 @@ def test_preflight_checks_only_the_isolated_execution_queue_without_messages() -
             "AttributeNames": ["QueueArn"],
         }
     ]
+    assert session_factory.session.statements == ["SELECT id FROM users LIMIT 1 FOR UPDATE"]
