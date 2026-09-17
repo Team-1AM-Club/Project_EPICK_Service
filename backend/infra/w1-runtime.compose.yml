@@ -1,0 +1,69 @@
+# This file intentionally contains no public API service.  Public API deployment
+# continues to use its API-only environment, while every service below receives the
+# worker-only environment file selected by W1_RUNTIME_ENV_FILE.
+#
+# W1-only startup:
+#   docker compose -f w1-runtime.compose.yml --profile w1-control up -d
+#
+# After W1 execution SQS and W2 command queue are configured:
+#   docker compose -f w1-runtime.compose.yml --profile w1-execution up -d
+#
+# W2 result consumption is intentionally unavailable until W2 supplies the queue
+# endpoint and its consumer/producer deployment is jointly prepared:
+#   docker compose -f w1-runtime.compose.yml --profile w2-result up -d
+services:
+  w1-commit-gate-recovery:
+    image: ${BACKEND_IMAGE:?set BACKEND_IMAGE to the immutable backend image reference}
+    env_file:
+      - ${W1_RUNTIME_ENV_FILE:?set W1_RUNTIME_ENV_FILE to the worker-only env file}
+    command: ["python", "scripts/run_w2_commit_gate_recovery_worker.py"]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    profiles: ["w1-control"]
+
+  w1-outbox-relay:
+    image: ${BACKEND_IMAGE:?set BACKEND_IMAGE to the immutable backend image reference}
+    env_file:
+      - ${W1_RUNTIME_ENV_FILE:?set W1_RUNTIME_ENV_FILE to the worker-only env file}
+    command: ["python", "scripts/run_outbox_relay.py"]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    profiles: ["w1-execution"]
+
+  w1-job-worker:
+    image: ${BACKEND_IMAGE:?set BACKEND_IMAGE to the immutable backend image reference}
+    env_file:
+      - ${W1_RUNTIME_ENV_FILE:?set W1_RUNTIME_ENV_FILE to the worker-only env file}
+    command: ["python", "scripts/run_job_worker.py"]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    profiles: ["w1-execution"]
+
+  w2-collection-result-worker:
+    image: ${BACKEND_IMAGE:?set BACKEND_IMAGE to the immutable backend image reference}
+    env_file:
+      - ${W1_RUNTIME_ENV_FILE:?set W1_RUNTIME_ENV_FILE to the worker-only env file}
+    command: ["python", "scripts/run_result_worker.py"]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    profiles: ["w2-result"]

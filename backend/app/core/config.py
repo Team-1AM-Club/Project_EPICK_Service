@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     w1_outbox_relay_poll_seconds: float = 2.0
     w1_outbox_relay_retry_base_seconds: int = 5
     w1_outbox_relay_retry_max_seconds: int = 300
+    # Commit-gate recovery is a W1-only control-plane worker.  It runs independently
+    # from the public API and never parses a raw W2 ACK payload.
+    w1_commit_gate_recovery_batch_size: int = 100
+    w1_commit_gate_recovery_poll_seconds: float = 5.0
     # Runtime processes never inherit the API database login.  These values are provided from
     # runtime-only Secrets Manager entries once R-3 provisions the private host.
     worker_database_url: str | None = None
