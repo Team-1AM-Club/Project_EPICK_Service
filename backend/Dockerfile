@@ -2,6 +2,11 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+# The worker-only Compose stack bind-mounts the RDS CA bundle at this path.
+# Create its parent in the immutable image so the mount target is deterministic
+# even with a read-only root filesystem.
+RUN mkdir -p /run/epick
+
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 

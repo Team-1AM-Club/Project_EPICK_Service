@@ -11,6 +11,10 @@
 # W2 result consumption is intentionally unavailable until W2 supplies the queue
 # endpoint and its consumer/producer deployment is jointly prepared:
 #   docker compose -f w1-runtime.compose.yml --profile w2-result up -d
+#
+# `RDS_CA_BUNDLE_PATH` is a host-only setting.  It must name the CA bundle on
+# the Worker EC2 host (for staging: /opt/epick/certs/global-bundle.pem); it is
+# never written into the worker env file or exposed to the public API.
 services:
   w1-commit-gate-recovery:
     image: ${BACKEND_IMAGE:?set BACKEND_IMAGE to the immutable backend image reference}
@@ -22,6 +26,13 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    volumes:
+      - type: bind
+        source: ${RDS_CA_BUNDLE_PATH:?set RDS_CA_BUNDLE_PATH to the host RDS CA bundle}
+        target: /run/epick/rds-ca.pem
+        read_only: true
+        bind:
+          create_host_path: false
     security_opt:
       - no-new-privileges:true
     profiles: ["w1-control"]
@@ -36,6 +47,13 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    volumes:
+      - type: bind
+        source: ${RDS_CA_BUNDLE_PATH:?set RDS_CA_BUNDLE_PATH to the host RDS CA bundle}
+        target: /run/epick/rds-ca.pem
+        read_only: true
+        bind:
+          create_host_path: false
     security_opt:
       - no-new-privileges:true
     profiles: ["w1-execution"]
@@ -50,6 +68,13 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    volumes:
+      - type: bind
+        source: ${RDS_CA_BUNDLE_PATH:?set RDS_CA_BUNDLE_PATH to the host RDS CA bundle}
+        target: /run/epick/rds-ca.pem
+        read_only: true
+        bind:
+          create_host_path: false
     security_opt:
       - no-new-privileges:true
     profiles: ["w1-execution"]
@@ -64,6 +89,13 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    volumes:
+      - type: bind
+        source: ${RDS_CA_BUNDLE_PATH:?set RDS_CA_BUNDLE_PATH to the host RDS CA bundle}
+        target: /run/epick/rds-ca.pem
+        read_only: true
+        bind:
+          create_host_path: false
     security_opt:
       - no-new-privileges:true
     profiles: ["w2-result"]
