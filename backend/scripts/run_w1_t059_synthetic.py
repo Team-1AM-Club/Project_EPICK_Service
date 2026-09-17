@@ -26,6 +26,11 @@ from sqlalchemy import create_engine, func, select  # noqa: E402
 from sqlalchemy.engine import URL, make_url  # noqa: E402
 from sqlalchemy.orm import Session, sessionmaker  # noqa: E402
 
+# The outbox model has a database foreign key to deletion_requests.  Production
+# application startup imports the deletion models through its route/service
+# graph; this standalone operator script must register that table explicitly
+# before JobService flushes an outbox message.
+from app.models.deletion import DeletionRequest  # noqa: F401, E402
 from app.models.identity import User  # noqa: E402
 from app.models.jobs import Job, JobCommand, JobExecutionLease, OutboxMessage  # noqa: E402
 from app.models.sources import AnalysisSourceDecision, JobSourceLink, Source  # noqa: E402
