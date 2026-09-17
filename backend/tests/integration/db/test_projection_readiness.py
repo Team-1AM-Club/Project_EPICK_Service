@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 import pytest
@@ -294,7 +294,13 @@ def test_redelivery_dedup_and_late_projection_revision_do_not_regress_state(
     assert [message.id for message in first_claim] == [event.id]
     assert first_claim[0].status == "PUBLISHING"
     assert first_claim[0].attempts == 1
-    service.mark_public_outbox_retryable(event_id=event.id, available_at=datetime.now(UTC))
+    # The repository deliberately compares availability against PostgreSQL's
+    # clock.  Give this fixture a clearly due value instead of relying on the
+    # host and database clocks agreeing within one scheduling tick.
+    service.mark_public_outbox_retryable(
+        event_id=event.id,
+        available_at=datetime.now(UTC) - timedelta(seconds=1),
+    )
     db_session.commit()
 
     second_claim = service.claim_public_outbox_messages(limit=1)

@@ -14,6 +14,7 @@ from app.models.deletion import DeletionRequest, DeletionTarget
 from app.models.jobs import OutboxMessage
 from app.repo.deletion import DeletionRepository
 from app.services.jobs import JobService
+from app.services.w2_commit_gate import W2CommitGateService
 
 _DEFAULT_PREVIEW_TTL: Final = timedelta(minutes=30)
 _DELETION_STORES: Final = ("POSTGRESQL", "NEO4J", "VECTOR", "CACHE", "CHECKPOINT")
@@ -310,6 +311,16 @@ class DeletionOrchestrationService:
         request.status = "RUNNING"
         request.failure_code = None
         request.updated_at = now
+        # Reconcile the private W2 visibility gate before this workflow takes
+        # the broader active-Job locks below.  The owner epoch is already
+        # advanced in this transaction: PREPARE-stage work becomes ABORT and
+        # W1-committed private work becomes PURGE tied to this new epoch.
+        for job_id in self.repository.list_active_job_ids(owner_user_id=request.owner_user_id):
+            W2CommitGateService(self.session).reconcile_open_operations_for_owner_deletion(
+                owner_user_id=request.owner_user_id,
+                job_id=job_id,
+                purge_owner_deletion_epoch=next_epoch,
+            )
         for auth_session in self.repository.get_open_auth_sessions_for_update(
             owner_user_id=request.owner_user_id
         ):

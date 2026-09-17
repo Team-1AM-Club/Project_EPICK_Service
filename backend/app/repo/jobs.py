@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -134,6 +134,19 @@ class JobRepository:
         )
         return self.session.scalar(statement)
 
+    def get_latest_dispatch_outbox_message(self, *, command_id: UUID) -> OutboxMessage | None:
+        """Return the command dispatch record, never a W2 commit-gate control message."""
+
+        return self.session.scalar(
+            select(OutboxMessage)
+            .where(
+                OutboxMessage.command_id == command_id,
+                OutboxMessage.message_type != "w1.private.w2.commit-gate.v1",
+            )
+            .order_by(OutboxMessage.created_at.desc())
+            .limit(1)
+        )
+
     def add_job(self, job: Job) -> None:
         self.session.add(job)
 
@@ -166,6 +179,18 @@ class JobRepository:
             .returning(InboxReceipt.event_id)
         )
         return self.session.execute(statement).scalar_one_or_none() is not None
+
+    def update_inbox_receipt_outcome(
+        self, *, consumer_name: str, event_id: UUID, outcome_code: str
+    ) -> None:
+        self.session.execute(
+            update(InboxReceipt)
+            .where(
+                InboxReceipt.consumer_name == consumer_name,
+                InboxReceipt.event_id == event_id,
+            )
+            .values(outcome_code=outcome_code)
+        )
 
     def get_open_required_action_for_update(
         self, *, job_id: UUID, owner_user_id: UUID, action_code: str

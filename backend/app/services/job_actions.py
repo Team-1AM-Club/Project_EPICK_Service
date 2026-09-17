@@ -144,18 +144,11 @@ class JobActionService:
         if replayed:
             return self._replay(record=record, owner_user_id=owner_user_id, job_id=job_id)
 
-        job = self.jobs.repository.get_job_for_update(
-            job_id=job_id, owner_user_id=owner_user_id
-        )
-        if job is None:
-            raise JobNotFoundError("Job does not exist for this owner")
-        if job.status in {"SUCCEEDED", "FAILED_FINAL", "CANCELLED"}:
-            response_status = 200
-        elif job.status == "CANCEL_REQUESTED":
-            response_status = 202
-        else:
-            job = self.jobs.request_cancellation(owner_user_id=owner_user_id, job_id=job_id)
-            response_status = 202 if job.status == "CANCEL_REQUESTED" else 200
+        # ``JobService`` enters the shared W2 commit-gate lock boundary before
+        # it locks/invalidate the current JobCommand.  Do not take Job here
+        # first: doing so would invert User -> Job -> W2 command -> operation.
+        job = self.jobs.request_cancellation(owner_user_id=owner_user_id, job_id=job_id)
+        response_status = 202 if job.status == "CANCEL_REQUESTED" else 200
         return JobActionAcceptance(
             job=job,
             idempotency_record=record,

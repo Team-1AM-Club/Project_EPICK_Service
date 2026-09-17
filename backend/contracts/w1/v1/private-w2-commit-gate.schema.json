@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w1/v1/private-w2-commit-gate.schema.json",
+  "title": "EPICK W1 to W2 private commit-gate command v1",
+  "description": "A W1-owned durable commit-gate command. W2 must apply it only to its owner-scoped, non-visible staging result whose immutable binding matches every field. This command never authorizes public Source deletion.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "message_id",
+    "message_type",
+    "producer",
+    "visibility_scope",
+    "operation_id",
+    "operation_revision",
+    "action",
+    "command_id",
+    "job_id",
+    "authenticated_owner_ref",
+    "execution_fence",
+    "owner_deletion_epoch",
+    "result_digest",
+    "issued_at"
+  ],
+  "properties": {
+    "schema_version": { "const": "w1.private.w2.commit-gate.v1" },
+    "message_id": { "type": "string", "format": "uuid" },
+    "message_type": { "const": "w1.private.w2.commit-gate.v1" },
+    "producer": { "const": "w1" },
+    "visibility_scope": { "const": "PRIVATE" },
+    "operation_id": { "type": "string", "format": "uuid" },
+    "operation_revision": { "type": "integer", "minimum": 1 },
+    "action": { "enum": ["PREPARE", "FINALIZE", "ABORT", "PURGE"] },
+    "command_id": { "type": "string", "format": "uuid" },
+    "job_id": { "type": "string", "format": "uuid" },
+    "authenticated_owner_ref": { "type": "string", "format": "uuid" },
+    "execution_fence": { "type": "integer", "minimum": 1 },
+    "owner_deletion_epoch": { "type": "integer", "minimum": 0 },
+    "purge_owner_deletion_epoch": { "type": "integer", "minimum": 1 },
+    "result_digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "issued_at": { "type": "string", "format": "date-time" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "action": { "const": "PURGE" } } },
+      "then": { "required": ["purge_owner_deletion_epoch"] },
+      "else": { "not": { "required": ["purge_owner_deletion_epoch"] } }
+    }
+  ]
+}

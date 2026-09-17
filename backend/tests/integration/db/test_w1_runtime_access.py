@@ -13,11 +13,12 @@ RUNTIME_ROLE_TEMPLATE_SQL = BACKEND_ROOT / "infra" / "postgres" / "runtime_roles
 RUNTIME_PRIVILEGES_SQL = BACKEND_ROOT / "infra" / "postgres" / "runtime_privileges.sql"
 
 
-def _seed_private_command(migrated_engine: Engine) -> tuple[UUID, UUID, UUID, UUID]:
+def _seed_private_command(migrated_engine: Engine) -> tuple[UUID, UUID, UUID, UUID, UUID]:
     owner_id = uuid4()
     job_id = uuid4()
     command_id = uuid4()
     outbox_id = uuid4()
+    operation_id = uuid4()
     with migrated_engine.begin() as connection:
         connection.execute(text(RUNTIME_ROLE_TEMPLATE_SQL.read_text(encoding="utf-8")))
         connection.execute(text(RUNTIME_PRIVILEGES_SQL.read_text(encoding="utf-8")))
@@ -84,19 +85,44 @@ def _seed_private_command(migrated_engine: Engine) -> tuple[UUID, UUID, UUID, UU
                 ),
             },
         )
-    return owner_id, job_id, command_id, outbox_id
+        connection.execute(
+            text(
+                "INSERT INTO w2_commit_operations ("
+                "id, command_id, job_id, owner_user_id, execution_fence, "
+                "owner_deletion_epoch, result_digest, operation_revision, state"
+                ") VALUES ("
+                ":id, :command_id, :job_id, :owner_id, 1, 0, :result_digest, 1, "
+                "'PREPARE_PENDING'"
+                ")"
+            ),
+            {
+                "id": operation_id,
+                "command_id": command_id,
+                "job_id": job_id,
+                "owner_id": owner_id,
+                "result_digest": "sha256:" + "a" * 64,
+            },
+        )
+    return owner_id, job_id, command_id, outbox_id, operation_id
 
 
 @pytest.mark.postgres
 def test_worker_and_lookup_roles_receive_only_their_operational_rls_access(
     migrated_engine: Engine,
 ) -> None:
-    _, job_id, command_id, outbox_id = _seed_private_command(migrated_engine)
+    _, job_id, command_id, outbox_id, operation_id = _seed_private_command(migrated_engine)
 
     with migrated_engine.connect() as connection:
         with connection.begin():
             connection.execute(text("SET LOCAL ROLE epick_runtime"))
             assert connection.scalar(text("SELECT count(*) FROM jobs")) == 0
+            assert (
+                connection.scalar(
+                    text("SELECT count(*) FROM w2_commit_operations WHERE id = :operation_id"),
+                    {"operation_id": operation_id},
+                )
+                == 1
+            )
 
     with migrated_engine.connect() as connection:
         with connection.begin():
@@ -122,6 +148,9 @@ def test_worker_and_lookup_roles_receive_only_their_operational_rls_access(
             with pytest.raises(DBAPIError):
                 with connection.begin_nested():
                     connection.execute(text("SELECT id FROM outbox_messages"))
+            with pytest.raises(DBAPIError):
+                with connection.begin_nested():
+                    connection.execute(text("SELECT id FROM w2_commit_operations"))
 
     with migrated_engine.connect() as connection:
         with connection.begin():
@@ -141,6 +170,17 @@ def test_worker_and_lookup_roles_receive_only_their_operational_rls_access(
                 {"outbox_id": outbox_id},
             )
             assert status == "PUBLISHING"
+            connection.execute(
+                text(
+                    "UPDATE w2_commit_operations SET state = 'PREPARED', "
+                    "operation_revision = 2 WHERE id = :operation_id"
+                ),
+                {"operation_id": operation_id},
+            )
+            assert connection.scalar(
+                text("SELECT state FROM w2_commit_operations WHERE id = :operation_id"),
+                {"operation_id": operation_id},
+            ) == "PREPARED"
             # The migration history test intentionally downgrades below the revision
             # that introduced PUBLISHING.  Do not leave this fixture row in a state
             # that could not have existed at that historical revision.
