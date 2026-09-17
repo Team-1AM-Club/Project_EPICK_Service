@@ -68,3 +68,7 @@ schemas, test evidence, endpoints, and decisions still requiring W2/W4 agreement
 The [additional W2 reply and W4 agreement request](docs/w3-additional-reply-2026-09-16.md)
 adds the knowledge DTO, typed reference consumer, ACK redelivery tests, and W1 private
 deletion proposal. W4 team acceptance and actual service integration remain pending.
+# W3 → W1 Core Decision 추가 인계
+
+2026-09-18 후보 계약·생산 모듈: [정본 문서](docs/w3-w1-core-decision-handoff-2026-09-18.md).
+W1 미채택·queue 미연결이며 기존 C01과 별도 계약이다.

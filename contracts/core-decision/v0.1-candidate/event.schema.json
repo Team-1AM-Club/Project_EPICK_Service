@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "job_id": {
+      "format": "uuid",
+      "title": "Job Id",
+      "type": "string"
+    },
+    "company_id": {
+      "format": "uuid",
+      "title": "Company Id",
+      "type": "string"
+    },
+    "source_id": {
+      "format": "uuid",
+      "title": "Source Id",
+      "type": "string"
+    },
+    "analysis_input_version": {
+      "maxLength": 64,
+      "minLength": 1,
+      "pattern": "\\S",
+      "title": "Analysis Input Version",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "w3.private.core-decision/0.1-candidate",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "message_type": {
+      "const": "w3.private.w1.core-decision",
+      "title": "Message Type",
+      "type": "string"
+    },
+    "message_id": {
+      "format": "uuid",
+      "title": "Message Id",
+      "type": "string"
+    },
+    "occurred_at": {
+      "format": "date-time",
+      "title": "Occurred At",
+      "type": "string"
+    },
+    "visibility_scope": {
+      "const": "PRIVATE",
+      "title": "Visibility Scope",
+      "type": "string"
+    },
+    "producer": {
+      "const": "w3",
+      "title": "Producer",
+      "type": "string"
+    },
+    "decision_scope": {
+      "const": "COMPANY_KNOWLEDGE",
+      "title": "Decision Scope",
+      "type": "string"
+    },
+    "decision_owner": {
+      "const": "W3",
+      "title": "Decision Owner",
+      "type": "string"
+    },
+    "question_version_id": {
+      "title": "Question Version Id",
+      "type": "null"
+    },
+    "decision_version": {
+      "minimum": 1,
+      "title": "Decision Version",
+      "type": "integer"
+    },
+    "is_core": {
+      "title": "Is Core",
+      "type": "boolean"
+    },
+    "decision_code": {
+      "enum": [
+        "CORE_REQUIRED",
+        "NON_CORE_OPTIONAL"
+      ],
+      "title": "Decision Code",
+      "type": "string"
+    },
+    "reason_code": {
+      "pattern": "^[A-Z][A-Z0-9_]{0,63}$",
+      "title": "Reason Code",
+      "type": "string"
+    }
+  },
+  "required": [
+    "job_id",
+    "company_id",
+    "source_id",
+    "analysis_input_version",
+    "schema_version",
+    "message_type",
+    "message_id",
+    "occurred_at",
+    "visibility_scope",
+    "producer",
+    "decision_scope",
+    "decision_owner",
+    "question_version_id",
+    "decision_version",
+    "is_core",
+    "decision_code",
+    "reason_code"
+  ],
+  "title": "CoreDecisionEvent",
+  "type": "object",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "decision_code": {
+            "const": "CORE_REQUIRED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "is_core": {
+            "const": true
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "is_core": {
+            "const": false
+          }
+        }
+      }
+    }
+  ]
+}

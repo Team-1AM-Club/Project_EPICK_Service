@@ -16,6 +16,7 @@ jobs:
       - run: uv run --locked ruff format --check src tests scripts
       - run: uv run --locked python scripts/export_restriction_contract.py --check
       - run: uv run --locked python scripts/export_c01_contract.py --check
+      - run: uv run --locked python scripts/export_core_decision_contract.py --check
       - run: uv run --locked pytest -q
       - run: uv run --locked python scripts/restriction_smoke.py --output-dir .runtime/ci-smoke
       - run: uv run --locked python scripts/c01_smoke.py --output-dir .runtime/c01-ci-smoke

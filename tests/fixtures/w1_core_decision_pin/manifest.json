@@ -1,0 +1,14 @@
+{
+  "repository": "https://github.com/Team-1AM-Club/Project_EPICK_Service",
+  "commit": "afec08a9602132e5e433b523b0b6804850440524",
+  "files": {
+    "core_decision_binding.py": {
+      "source_path": "backend/app/runtime/core_decision_binding.py",
+      "sha256": "d7989cc7d0a1f29c6ee4383e8e5037a07def4f04e36921bd9880a99417a9afdc"
+    },
+    "private-w2-command-dispatch.schema.json": {
+      "source_path": "backend/contracts/w1/v1/private-w2-command-dispatch.schema.json",
+      "sha256": "10527bd6c976bc05005c2954bd0735289fbda0d99344862544367ed84a4a70e7"
+    }
+  }
+}
