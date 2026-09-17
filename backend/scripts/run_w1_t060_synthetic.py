@@ -415,18 +415,27 @@ def _get_w2_command(
         return command
 
 
+def _drain_relay_clean(*, context: str) -> dict[str, object]:
+    result = _run_child("relay-drain")
+    if (
+        int(result.get("published", 0)) < 1
+        or result.get("retry_scheduled") != 0
+        or result.get("failed_final") != 0
+    ):
+        raise T060ScenarioError(
+            f"{context}: claimed={result.get('claimed', 0)}, "
+            f"published={result.get('published', 0)}, "
+            f"retry_scheduled={result.get('retry_scheduled', 0)}, "
+            f"failed_final={result.get('failed_final', 0)}, "
+            f"stale_completion={result.get('stale_completion', 0)}"
+        )
+    return result
+
+
 def _dispatch_job(
     *, config: T060Configuration, seed_factory: sessionmaker[Session], seeded: SeededJob
 ) -> JobCommand:
-    relay = _run_child("relay-drain")
-    if (
-        int(relay.get("published", 0)) < 1
-        or relay.get("retry_scheduled") != 0
-        or relay.get("failed_final") != 0
-    ):
-        raise T060ScenarioError(
-            "relay restart did not cleanly publish the synthetic execution and pending commands"
-        )
+    _drain_relay_clean(context="execution relay did not publish cleanly")
     for _ in range(10):
         worker = _run_child("job-once")
         with seed_factory() as session:
@@ -438,6 +447,10 @@ def _dispatch_job(
     else:
         raise T060ScenarioError("restarted Job worker did not claim the expected execution")
     command = _get_w2_command(session_factory=seed_factory, job_id=seeded.job_id)
+    # A synthetic result must not overtake the W2 command's broker publication.
+    # Otherwise the result consumes the DB command while its outbox is still
+    # PENDING, and the next relay correctly rejects that stale outbox.
+    _drain_relay_clean(context="W2 command relay did not publish cleanly")
     with seed_factory() as session:
         job = session.get(Job, seeded.job_id)
         if job is None or job.status != "RUNNING" or job.active_lease_id is None:
@@ -548,6 +561,7 @@ def _prove_relay_and_duplicate_result(
             raise T060ScenarioError("duplicate execution created more than one W2 command")
 
     command = _get_w2_command(session_factory=seed_factory, job_id=seeded.job_id)
+    _drain_relay_clean(context="restart scenario W2 command relay did not publish cleanly")
     message_id = uuid5(NAMESPACE_URL, f"{config.run_id}:duplicate-result")
     envelope = _result_envelope(command=command, message_id=message_id)
     _send_result(config=config, envelope=envelope)

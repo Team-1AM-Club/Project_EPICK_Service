@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from uuid import uuid4
 
 from sqlalchemy.orm import configure_mappers
@@ -76,3 +77,53 @@ def test_t060_result_fixture_keeps_command_binding_and_checkpoint_optional() -> 
         "w2/v1/source-collection.result.schema.json",
         "RESULT_SCHEMA_INVALID",
     )
+
+
+def test_dispatch_publishes_w2_command_before_a_synthetic_result_can_run(monkeypatch) -> None:
+    runner = _load_runner()
+    calls: list[str] = []
+    relay_status = {
+        "status": "ok",
+        "claimed": 1,
+        "published": 1,
+        "retry_scheduled": 0,
+        "failed_final": 0,
+        "stale_completion": 0,
+    }
+
+    def fake_child(phase: str, **_kwargs):
+        calls.append(phase)
+        if phase == "relay-drain":
+            return dict(relay_status)
+        return {"status": "ok", "received": 1, "acknowledged": 1}
+
+    running_job = SimpleNamespace(status="RUNNING", active_lease_id=uuid4())
+
+    class FakeSession:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def get(self, _model, _identity):
+            return running_job
+
+    command = object()
+    monkeypatch.setattr(runner, "_run_child", fake_child)
+    monkeypatch.setattr(runner, "_get_w2_command", lambda **_kwargs: command)
+    seeded = runner.SeededJob(
+        owner_id=uuid4(),
+        job_id=uuid4(),
+        execution_command_id=uuid4(),
+        execution_outbox_id=uuid4(),
+    )
+
+    returned = runner._dispatch_job(
+        config=object(),
+        seed_factory=FakeSession,
+        seeded=seeded,
+    )
+
+    assert returned is command
+    assert calls == ["relay-drain", "job-once", "relay-drain"]
