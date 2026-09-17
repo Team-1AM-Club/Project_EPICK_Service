@@ -1,0 +1,30 @@
+{
+  "schema_version": "w1.private.w2-direct-source-registration-dispatch.v1",
+  "message_id": "40000000-0000-4000-8000-000000000001",
+  "message_type": "w1.private.w2.direct-source-registration.v1",
+  "producer": "w1",
+  "occurred_at": "2026-09-17T02:00:00Z",
+  "visibility_scope": "PRIVATE",
+  "payload_schema_version": "w2.collection.v1",
+  "payload": {},
+  "lookup_request": {
+    "schema_version": "w1.private.command-lookup.v1",
+    "command_id": "40000000-0000-4000-8000-000000000001",
+    "execution_fence": 1,
+    "owner_deletion_epoch": 0
+  },
+  "direct_source_registration_pin": {
+    "registration_decision_id": "41000000-0000-4000-8000-000000000001",
+    "decision_scope": "DIRECT_SOURCE_REGISTRATION",
+    "company_id": "40000000-0000-4000-8000-000000000004",
+    "question_version_id": null,
+    "source_id": "40000000-0000-4000-8000-000000000005",
+    "registration_input_version": "direct:40000000-0000-4000-8000-000000000005:1",
+    "decision_version": 1,
+    "is_core": true,
+    "decision_code": "NON_CORE_OPTIONAL",
+    "decision_owner": "W1",
+    "reason_code": "DIRECT_REGISTRATION_REQUESTED",
+    "purpose": "DIRECT_SOURCE_REGISTRATION"
+  }
+}

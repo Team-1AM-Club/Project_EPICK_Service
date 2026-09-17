@@ -7,9 +7,11 @@ processes never run Alembic during startup.
 2. Set `MIGRATION_DATABASE_URL` to a dedicated migration login. Set
    `DATABASE_URL` separately for the runtime login; do not reuse the migration
    URL for API or workers.
-3. As an RDS administrator, apply `runtime_roles.sql` and assign the production
-   login principals to the NOLOGIN group roles. Verify only the migration
-   principal can create schema objects.
+3. As an RDS administrator, apply the current `runtime_roles.sql` **before**
+   Alembic. This release requires `epick_worker` and `epick_lookup` to exist
+   because migration `022_w1_runtime_relay_access` adds scoped RLS policies for
+   those groups. Assign production login principals to the NOLOGIN group roles.
+   Verify only the migration principal can create schema objects.
 4. Run the read-only preflight before migration:
 
    ```powershell
@@ -36,9 +38,10 @@ processes never run Alembic during startup.
    itself even when that release has no Alembic revision.
 
 7. Run the migration preflight again with `--require-head`, then start runtime
-   processes with only `DATABASE_URL` configured. The API, worker, and deletion
-   logins must be separate LOGIN principals inheriting `epick_runtime`,
-   `epick_worker`, and `epick_deleter`, respectively.
+   processes with only their dedicated DB URL configured. The API, worker,
+   lookup adapter, and deletion logins must be separate LOGIN principals
+   inheriting `epick_runtime`, `epick_worker`, `epick_lookup`, and
+   `epick_deleter`, respectively.
 
 The preflight confirms revision, PostgreSQL version, and group-role privileges.
 RDS backup/restore verification remains an operator-owned AWS control; its

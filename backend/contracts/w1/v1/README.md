@@ -6,8 +6,9 @@
 
 ## 1. W1 → W2 dispatch 및 lookup
 
-W1이 W2에 전달하는 단일 실행 단위는
-`private-w2-command-dispatch.schema.json`이다.
+W1이 W2에 전달하는 Core 분석 실행 단위는
+`private-w2-command-dispatch.schema.json`이다. 분석 없는 단독 Source 등록은
+Core Decision의 의미를 빌리지 않고, 아래 §1.1의 별도 계약을 사용한다.
 
 - `message_type`은 `w1.private.w2.collection-command.v1`이고 producer는 `w1`이다.
 - `payload_schema_version`은 `w2.collection.v1`이며 `payload`는 W2 소유
@@ -17,6 +18,37 @@ W1이 W2에 전달하는 단일 실행 단위는
 - W2는 실행 시작·재개 전마다 `POST /internal/v1/job-commands/lookup`으로
   `lookup_request`를 그대로 제출한다. `AVAILABLE`가 아닌 결과에서는 외부 fetch,
   저장, 재개를 해서는 안 된다.
+- SQS send 성공과 relay의 `PENDING → ENQUEUED` DB 표기는 원자적으로 묶일 수 없다.
+  따라서 W2가 방금 받은 동일 `command_id`를 lookup할 때에는, W1이 현재
+  Job/lease/fence/epoch를 모두 검증한 범위에서 `PENDING` command도 `AVAILABLE`로
+  응답할 수 있다. 이는 새 command를 임의로 조회할 수 있게 하는 예외가 아니다.
+
+### 1.1 W1 단독 Source 등록 dispatch
+
+분석이 없는 Source 등록은
+`private-w2-direct-source-registration-dispatch.schema.json`을 사용한다.
+
+- `message_type`은 `w1.private.w2.direct-source-registration.v1`이고 producer는 `w1`이다.
+- `direct_source_registration_pin`은 `DIRECT_SOURCE_REGISTRATION` scope,
+  `decision_owner: "W1"`, `is_core: false`, `decision_code: "NON_CORE_OPTIONAL"`,
+  `purpose: "DIRECT_SOURCE_REGISTRATION"`을 모두 고정한다. `question_version_id`는
+  반드시 `null`이다.
+- pin의 `registration_input_version`은 W1이 생성해
+  `analysis_source_decisions.analysis_input_version`에 저장하는 opaque 불변 값이다.
+  pin의 `decision_version`은 W2 payload의 `input_version`,
+  `core_source_decision.decision_revision`,
+  `core_source_decision.analysis_input_version`에 같은 양의 integer로 결속된다.
+- W1 내부 `DirectSourceRegistrationService`만 이 pin과 `SOURCE_REGISTRATION` Job,
+  `JobSourceLink`, `AnalysisSourceDecision`, 초기 execution command를 한 transaction에서
+  만든다. client와 W2는 이 private 필드를 전달하거나 변경할 수 없다.
+- W1 worker는 DB의 W1 decision·Source link·input version이 pin과 모두 일치할 때만
+  dispatch한다. `SOURCE_COLLECTION` 같은 분석 Job이 이 non-core 예외를 사용하거나
+  pin의 core/owner/scope/version을 변경하면 W2 Outbox를 만들지 않고 Job을
+  `WAITING_USER`로 전환한다.
+
+두 dispatch 모두 `message_id == payload.command_id`, 동일한 lookup request, canonical
+fence/epoch 규칙을 공유한다. W2는 둘 중 어느 경우에도 lookup이 `AVAILABLE`이 아닐 때
+외부 fetch·저장·재개를 해서는 안 된다.
 
 lookup request와 W2 payload의 `execution_fence`는 표현만 다르다.
 
@@ -24,6 +56,17 @@ lookup request와 W2 payload의 `execution_fence`는 표현만 다르다.
 - W2 payload의 `execution_fence`: 그 값을 선행 0·부호 없이 10진 문자열로 렌더한
   값이다. 예: integer `1` ↔ string `"1"`.
 - `command_id`와 `owner_deletion_epoch`는 양쪽 값이 정확히 같아야 한다.
+
+### 1.1 W1 내부 Job execution dispatch
+
+`private-job-dispatch.schema.json`은 W1 outbox relay가 W1 execution queue에만 보내는
+참조 메시지다. W2/W3/W4와 공유하는 payload가 아니다.
+
+- `message_id`와 `command_id`는 항상 같은 UUID다. SQS Standard 재전달도 같은 값을 유지한다.
+- body에는 owner ID, command payload, 원문, token을 넣지 않는다. worker는 수신 뒤 canonical
+  `JobCommand`와 `Job`을 PostgreSQL에서 다시 읽고 fence·deletion epoch를 확인한다.
+- `payload_ref`는 private Outbox UUID이며 디버그 상관관계용이다. payload 자체를 전달하거나
+  읽을 권한을 부여하지 않는다.
 
 `private-command-lookup-response.schema.json`의 semantic response는 모두 HTTP 200으로
 돌려준다. `AVAILABLE`만 `command`를 포함한다. `NOT_FOUND`, `STALE_FENCE`,

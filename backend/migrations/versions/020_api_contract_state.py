@@ -26,7 +26,9 @@ def upgrade() -> None:
     # Runs created before the API distinguished synthetic data had no origin
     # marker. They were persisted by Engine-facing flows, so ENGINE is the only
     # non-misleading backward-compatible value.
-    op.execute("UPDATE recommendation_runs SET result_origin = 'ENGINE' WHERE result_origin IS NULL")
+    op.execute(
+        "UPDATE recommendation_runs SET result_origin = 'ENGINE' WHERE result_origin IS NULL"
+    )
     op.alter_column(
         "recommendation_runs",
         "result_origin",

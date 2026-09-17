@@ -52,6 +52,13 @@ def api_migrated_engine() -> Iterator[Engine]:
                 connection.execute(text(f'CREATE DATABASE "{database_name}"'))
     finally:
         admin_engine.dispose()
+    role_template = backend_root / "infra" / "postgres" / "runtime_roles.sql"
+    role_engine = create_engine(settings.test_database_url)
+    try:
+        with role_engine.begin() as connection:
+            connection.execute(text(role_template.read_text(encoding="utf-8")))
+    finally:
+        role_engine.dispose()
     config = Config(str(backend_root / "alembic.ini"))
     config.set_main_option("sqlalchemy.url", settings.test_database_url)
     command.upgrade(config, "head")

@@ -1,0 +1,876 @@
+from __future__ import annotations
+
+import json
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from uuid import UUID, uuid4
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import Engine, create_engine, event, select, text
+from sqlalchemy.orm import Session, sessionmaker
+
+from app.models.identity import User
+from app.models.jobs import Job, JobCommand, JobExecutionLease, JobRequiredAction, OutboxMessage
+from app.models.lifecycle_operations import JobCheckpoint
+from app.models.sources import AnalysisSourceDecision, JobSourceLink, Source
+from app.runtime.lookup_adapter import LookupRequest, _lookup_command, create_lookup_app
+from app.runtime.outbox_relay import OutboxRelay, QueueUrlRegistry
+from app.runtime.sqs import InMemorySqsPort
+from app.runtime.workers import CollectionResultWorker, JobWorker
+from app.services.application_workspace import ApplicationWorkspaceService
+from app.services.direct_source_registration import DirectSourceRegistrationService
+from app.services.jobs import JobService
+
+EXECUTION_QUEUE_URL = "https://sqs.ap-northeast-2.amazonaws.com/123/w1-execution"
+W2_COMMAND_QUEUE_URL = "https://sqs.ap-northeast-2.amazonaws.com/123/w2-command"
+W2_RESULT_QUEUE_URL = "https://sqs.ap-northeast-2.amazonaws.com/123/w2-result"
+BACKEND_ROOT = Path(__file__).parents[3]
+RUNTIME_PRIVILEGES_SQL = BACKEND_ROOT / "infra" / "postgres" / "runtime_privileges.sql"
+
+
+@pytest.fixture(autouse=True)
+def clean_runtime_worker_tables(migrated_engine: Engine) -> None:
+    with migrated_engine.begin() as connection:
+        connection.execute(text("TRUNCATE users CASCADE"))
+        connection.execute(text("TRUNCATE companies CASCADE"))
+    yield
+
+
+def _factory(migrated_engine: Engine) -> sessionmaker:
+    return sessionmaker(bind=migrated_engine, autoflush=False, expire_on_commit=False)
+
+
+def _seed_dispatchable_job(
+    db_session: Session,
+    *,
+    key: str,
+    include_core_pin: bool = True,
+) -> tuple[UUID, UUID, UUID, UUID]:
+    owner = User(display_name=f"Runtime worker {key}", locale="ko-KR", timezone="Asia/Seoul")
+    db_session.add(owner)
+    db_session.flush()
+    company = ApplicationWorkspaceService(db_session).create_company(
+        legal_name=f"EPICK {key}", display_name=f"EPICK {key}"
+    )
+    source = Source(
+        company_id=company.id,
+        source_type="CAREERS",
+        canonical_url=f"https://example.test/{key}",
+        canonical_url_hash=f"hash-{key}",
+        url_normalization_version="v1",
+        policy_version="policy-v1",
+        policy_checked_at=datetime.now(UTC),
+    )
+    db_session.add(source)
+    db_session.flush()
+    decision = AnalysisSourceDecision(
+        decision_scope="COMPANY_KNOWLEDGE",
+        company_id=company.id,
+        question_version_id=None,
+        source_id=source.id,
+        source_version_id=None,
+        analysis_input_version="company-input:v1",
+        decision_version=1,
+        decision_code="CORE_REQUIRED",
+        decision_owner="W3",
+        reason_code="REQUESTED_ANALYSIS_REQUIRED",
+    )
+    db_session.add(decision)
+    accepted = JobService(db_session).accept_job(
+        owner_user_id=owner.id,
+        job_type="SOURCE_COLLECTION",
+        idempotency_key=f"runtime-{key}",
+        request_hash=f"runtime-{key}",
+        analysis_input_version="company-input:v1",
+    )
+    assert accepted.command is not None
+    assert accepted.outbox_message is not None
+    db_session.flush()
+    db_session.add(
+        JobSourceLink(
+            job_id=accepted.job.id,
+            owner_user_id=owner.id,
+            source_id=source.id,
+            source_version_id=None,
+            command_id=None,
+            purpose_ref="SOURCE_COLLECTION",
+            analysis_input_version="company-input:v1",
+        )
+    )
+    accepted.command.analysis_source_decision_id = decision.id
+    if include_core_pin:
+        accepted.command.payload = {
+            "command_type": "EXECUTE_JOB",
+            "core_decision_pin": {
+                "origin_message_id": str(uuid4()),
+                "decision_id": str(decision.id),
+                "decision_scope": "COMPANY_KNOWLEDGE",
+                "company_id": str(company.id),
+                "question_version_id": None,
+                "source_id": str(source.id),
+                "analysis_input_version": "company-input:v1",
+                "decision_version": 1,
+                "is_core": True,
+                "decision_code": "CORE_REQUIRED",
+                "reason_code": "REQUESTED_ANALYSIS_REQUIRED",
+            },
+        }
+    db_session.flush()
+    return owner.id, accepted.job.id, accepted.command.id, accepted.outbox_message.id
+
+
+def _seed_direct_source_registration(
+    db_session: Session,
+    *,
+    key: str,
+) -> tuple[UUID, UUID, UUID, UUID, UUID]:
+    owner = User(display_name=f"Direct registration {key}", locale="ko-KR", timezone="Asia/Seoul")
+    db_session.add(owner)
+    db_session.flush()
+    company = ApplicationWorkspaceService(db_session).create_company(
+        legal_name=f"Direct EPICK {key}", display_name=f"Direct EPICK {key}"
+    )
+    source = Source(
+        company_id=company.id,
+        source_type="CAREERS",
+        canonical_url=f"https://example.test/direct/{key}",
+        canonical_url_hash=f"direct-hash-{key}",
+        url_normalization_version="v1",
+        policy_version="policy-v1",
+        policy_checked_at=datetime.now(UTC),
+    )
+    db_session.add(source)
+    db_session.flush()
+    accepted = DirectSourceRegistrationService(db_session).accept(
+        owner_user_id=owner.id,
+        company_id=company.id,
+        source_id=source.id,
+        idempotency_key=f"direct-registration-{key}",
+        request_hash=f"direct-registration-{key}",
+    )
+    assert accepted.command.id is not None
+    assert accepted.job.id is not None
+    db_session.flush()
+    return owner.id, accepted.job.id, accepted.command.id, source.id, accepted.decision.id
+
+
+def _relay(migrated_engine: Engine, sqs: InMemorySqsPort) -> OutboxRelay:
+    return OutboxRelay(
+        session_factory=_factory(migrated_engine),
+        sqs=sqs,
+        queues=QueueUrlRegistry(
+            w1_execution_queue_url=EXECUTION_QUEUE_URL,
+            w2_collection_command_queue_url=W2_COMMAND_QUEUE_URL,
+        ),
+        relay_id="runtime-worker-test-relay",
+    )
+
+
+def _run_execution_to_w2_dispatch(
+    migrated_engine: Engine,
+    db_session: Session,
+    *,
+    key: str,
+) -> tuple[InMemorySqsPort, UUID, UUID]:
+    _, job_id, _, _ = _seed_dispatchable_job(db_session, key=key)
+    db_session.commit()
+    relay_sqs = InMemorySqsPort()
+    assert _relay(migrated_engine, relay_sqs).drain_once(limit=10).published == 1
+    execution_body = relay_sqs.sent_messages[0].body
+    worker_sqs = InMemorySqsPort()
+    worker_sqs.inject_message(queue_url=EXECUTION_QUEUE_URL, body=execution_body)
+    worker = JobWorker(
+        session_factory=_factory(migrated_engine),
+        sqs=worker_sqs,
+        execution_queue_url=EXECUTION_QUEUE_URL,
+        worker_id="runtime-worker-test",
+    )
+    result = worker.drain_once()
+    assert result.acknowledged == 1
+    assert result.retry_scheduled == 0
+    assert worker_sqs.visibility_extensions
+    db_session.expire_all()
+    w2_command = db_session.scalar(
+        select(JobCommand)
+        .where(JobCommand.job_id == job_id, JobCommand.command_type == "W2_SOURCE_COLLECTION")
+        .limit(1)
+    )
+    assert w2_command is not None
+    return relay_sqs, job_id, w2_command.id
+
+
+def _run_direct_registration_to_w2_dispatch(
+    migrated_engine: Engine,
+    db_session: Session,
+    *,
+    key: str,
+) -> tuple[InMemorySqsPort, UUID, UUID]:
+    _, job_id, _, _, _ = _seed_direct_source_registration(db_session, key=key)
+    db_session.commit()
+    relay_sqs = InMemorySqsPort()
+    assert _relay(migrated_engine, relay_sqs).drain_once(limit=10).published == 1
+    worker_sqs = InMemorySqsPort()
+    worker_sqs.inject_message(queue_url=EXECUTION_QUEUE_URL, body=relay_sqs.sent_messages[0].body)
+    worker = JobWorker(
+        session_factory=_factory(migrated_engine),
+        sqs=worker_sqs,
+        execution_queue_url=EXECUTION_QUEUE_URL,
+        worker_id="direct-registration-test-worker",
+    )
+    result = worker.drain_once()
+    assert result.acknowledged == 1
+    assert result.retry_scheduled == 0
+    db_session.expire_all()
+    w2_command = db_session.scalar(
+        select(JobCommand)
+        .where(
+            JobCommand.job_id == job_id,
+            JobCommand.command_type == "W2_DIRECT_SOURCE_REGISTRATION",
+        )
+        .limit(1)
+    )
+    assert w2_command is not None
+    return relay_sqs, job_id, w2_command.id
+
+
+def _w2_result_envelope(
+    *, command: JobCommand, message_id: UUID | None = None
+) -> dict[str, object]:
+    w2_payload = command.payload["w2_command"]
+    assert isinstance(w2_payload, dict)
+    return {
+        "schema_version": "w1.private.v1",
+        "message_id": str(message_id or uuid4()),
+        "message_type": "w2.collection.result.v1",
+        "producer": "w2",
+        "occurred_at": "2026-09-16T01:00:00Z",
+        "visibility_scope": "PRIVATE",
+        "channel": "w1.private.w2.collection-result.v1",
+        "payload": {
+            "schema_version": "w2.collection.v1",
+            "command_id": str(command.id),
+            "job_id": str(command.job_id),
+            "input_version": w2_payload["input_version"],
+            "result_version": 1,
+            "successful_source_refs": [],
+            "failures": [],
+            "completion_kind": "complete",
+            "resume_stage": None,
+            "checkpoint_ref": None,
+            "retry_not_before": None,
+            "message_ko": "수집을 완료했습니다.",
+            "source_id": w2_payload["source_id"],
+            "policy_revision": 1,
+            "required_actions": [],
+        },
+    }
+
+
+def _lookup_headers() -> dict[str, str]:
+    return {
+        "Authorization": "Bearer test-token",
+        "X-EPICK-Service-Principal": "w2",
+    }
+
+
+@pytest.mark.postgres
+def test_job_worker_creates_one_w2_outbox_and_lookup_uses_only_private_adapter(
+    migrated_engine: Engine,
+    db_session: Session,
+) -> None:
+    relay_sqs, job_id, w2_command_id = _run_execution_to_w2_dispatch(
+        migrated_engine, db_session, key="dispatch"
+    )
+    result = _relay(migrated_engine, relay_sqs).drain_once(limit=10)
+    assert result.published == 1
+    w2_delivery = json.loads(relay_sqs.sent_messages[-1].body)
+    assert w2_delivery["message_type"] == "w1.private.w2.collection-command.v1"
+    assert w2_delivery["message_id"] == w2_delivery["payload"]["command_id"] == str(w2_command_id)
+    assert "lease_id" not in w2_delivery
+    assert "token" not in w2_delivery
+
+    db_session.expire_all()
+    job = db_session.get(Job, job_id)
+    command = db_session.get(JobCommand, w2_command_id)
+    assert job is not None and job.status == "RUNNING" and job.active_lease_id is not None
+    assert command is not None and command.status == "ENQUEUED"
+
+    lookup = TestClient(
+        create_lookup_app(
+            session_factory=_factory(migrated_engine),
+            expected_bearer_token="test-token",
+        )
+    )
+    body = {
+        "schema_version": "w1.private.command-lookup.v1",
+        "command_id": str(w2_command_id),
+        "execution_fence": command.execution_fence,
+        "owner_deletion_epoch": command.owner_deletion_epoch,
+    }
+    unauthenticated = lookup.post("/internal/v1/job-commands/lookup", json=body)
+    assert unauthenticated.status_code == 401
+    assert unauthenticated.json()["code"] == "UNAUTHENTICATED_SERVICE_PRINCIPAL"
+    forbidden = lookup.post(
+        "/internal/v1/job-commands/lookup",
+        json=body,
+        headers={
+            "Authorization": "Bearer test-token",
+            "X-EPICK-Service-Principal": "w3",
+        },
+    )
+    assert forbidden.status_code == 403
+    available = lookup.post(
+        "/internal/v1/job-commands/lookup",
+        json=body,
+        headers=_lookup_headers(),
+    )
+    assert available.status_code == 200
+    assert available.json()["status"] == "AVAILABLE"
+    assert available.json()["command"]["command_id"] == str(w2_command_id)
+
+
+@pytest.mark.postgres
+def test_direct_source_registration_uses_its_own_w1_dispatch_and_lookup_contract(
+    migrated_engine: Engine,
+    db_session: Session,
+) -> None:
+    relay_sqs, job_id, w2_command_id = _run_direct_registration_to_w2_dispatch(
+        migrated_engine, db_session, key="normal"
+    )
+    assert _relay(migrated_engine, relay_sqs).drain_once(limit=10).published == 1
+    delivery = json.loads(relay_sqs.sent_messages[-1].body)
+    assert delivery["message_type"] == "w1.private.w2.direct-source-registration.v1"
+    assert delivery["message_id"] == delivery["payload"]["command_id"] == str(w2_command_id)
+    pin = delivery["direct_source_registration_pin"]
+    payload = delivery["payload"]
+    assert pin["decision_scope"] == "DIRECT_SOURCE_REGISTRATION"
+    assert pin["is_core"] is False
+    assert pin["decision_owner"] == "W1"
+    assert payload["company_id"] == pin["company_id"]
+    assert payload["source_id"] == pin["source_id"]
+    assert payload["input_version"] == pin["decision_version"]
+    assert payload["core_source_decision"] == {
+        "is_core": False,
+        "decided_by": "W1",
+        "rationale": pin["reason_code"],
+        "decision_revision": pin["decision_version"],
+        "analysis_input_version": pin["decision_version"],
+    }
+
+    db_session.expire_all()
+    command = db_session.get(JobCommand, w2_command_id)
+    job = db_session.get(Job, job_id)
+    assert command is not None and job is not None
+    lookup = TestClient(
+        create_lookup_app(
+            session_factory=_factory(migrated_engine),
+            expected_bearer_token="test-token",
+        )
+    )
+    available = lookup.post(
+        "/internal/v1/job-commands/lookup",
+        json={
+            "schema_version": "w1.private.command-lookup.v1",
+            "command_id": str(command.id),
+            "execution_fence": command.execution_fence,
+            "owner_deletion_epoch": command.owner_deletion_epoch,
+        },
+        headers=_lookup_headers(),
+    )
+    assert available.status_code == 200
+    assert available.json()["status"] == "AVAILABLE"
+    assert available.json()["command"] == payload
+
+
+@pytest.mark.postgres
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("is_core", True),
+        ("decision_owner", "W2"),
+        ("decision_scope", "COMPANY_KNOWLEDGE"),
+    ],
+)
+def test_ct13_rejects_client_or_w2_injected_direct_registration_pin_values_before_w2_dispatch(
+    migrated_engine: Engine,
+    db_session: Session,
+    field: str,
+    value: object,
+) -> None:
+    _, job_id, command_id, _, _ = _seed_direct_source_registration(db_session, key="injected")
+    command = db_session.get(JobCommand, command_id)
+    assert command is not None
+    payload = dict(command.payload)
+    pin = dict(payload["direct_source_registration_pin"])
+    pin[field] = value
+    payload["direct_source_registration_pin"] = pin
+    command.payload = payload
+    db_session.commit()
+
+    relay_sqs = InMemorySqsPort()
+    assert _relay(migrated_engine, relay_sqs).drain_once(limit=10).published == 1
+    worker_sqs = InMemorySqsPort()
+    worker_sqs.inject_message(queue_url=EXECUTION_QUEUE_URL, body=relay_sqs.sent_messages[0].body)
+    worker = JobWorker(
+        session_factory=_factory(migrated_engine),
+        sqs=worker_sqs,
+        execution_queue_url=EXECUTION_QUEUE_URL,
+        worker_id="direct-registration-test-worker",
+    )
+    assert worker.drain_once().acknowledged == 1
+    db_session.expire_all()
+    job = db_session.get(Job, job_id)
+    assert job is not None and job.status == "WAITING_USER" and job.active_lease_id is None
+    assert db_session.scalar(
+        select(JobCommand).where(
+            JobCommand.job_id == job_id,
+            JobCommand.command_type == "W2_DIRECT_SOURCE_REGISTRATION",
+        )
+    ) is None
+
+
+@pytest.mark.postgres
+def test_ct13_rejects_direct_registration_exception_on_an_analysis_job(
+    migrated_engine: Engine,
+    db_session: Session,
+) -> None:
+    _, job_id, command_id, _, _ = _seed_direct_source_registration(db_session, key="analysis")
+    job = db_session.get(Job, job_id)
+    assert job is not None
+    job.job_type = "SOURCE_COLLECTION"
+    db_session.commit()
+
+    relay_sqs = InMemorySqsPort()
+    assert _relay(migrated_engine, relay_sqs).drain_once(limit=10).published == 1
+    worker_sqs = InMemorySqsPort()
+    worker_sqs.inject_message(queue_url=EXECUTION_QUEUE_URL, body=relay_sqs.sent_messages[0].body)
+    worker = JobWorker(
+        session_factory=_factory(migrated_engine),
+        sqs=worker_sqs,
+        execution_queue_url=EXECUTION_QUEUE_URL,
+        worker_id="direct-registration-test-worker",
+    )
+    assert worker.drain_once().acknowledged == 1
+    db_session.expire_all()
+    job = db_session.get(Job, job_id)
+    assert job is not None and job.status == "WAITING_USER" and job.active_lease_id is None
+    assert db_session.scalar(
+        select(JobCommand).where(
+            JobCommand.job_id == job_id,
+            JobCommand.command_type == "W2_DIRECT_SOURCE_REGISTRATION",
+        )
+    ) is None
+
+
+@pytest.mark.postgres
+def test_w2_result_is_not_lost_between_broker_send_and_relay_publish_mark(
+    migrated_engine: Engine,
+    db_session: Session,
+) -> None:
+    relay_sqs, job_id, w2_command_id = _run_execution_to_w2_dispatch(
+        migrated_engine, db_session, key="post-send-race"
+    )
+    relay = _relay(migrated_engine, relay_sqs)
+    batch = relay.claim_due(limit=10)
+    assert len(batch.claims) == 1
+    claim = batch.claims[0]
+    # Simulate the broker accepting the command before the relay starts its post-send DB commit.
+    relay_sqs.send_message(
+        queue_url=claim.queue_url,
+        body=claim.body,
+        message_attributes=claim.message_attributes,
+    )
+    db_session.expire_all()
+    command = db_session.get(JobCommand, w2_command_id)
+    assert command is not None and command.status == "PENDING"
+
+    lookup = TestClient(
+        create_lookup_app(
+            session_factory=_factory(migrated_engine),
+            expected_bearer_token="test-token",
+        )
+    )
+    available = lookup.post(
+        "/internal/v1/job-commands/lookup",
+        json={
+            "schema_version": "w1.private.command-lookup.v1",
+            "command_id": str(command.id),
+            "execution_fence": command.execution_fence,
+            "owner_deletion_epoch": command.owner_deletion_epoch,
+        },
+        headers=_lookup_headers(),
+    )
+    assert available.status_code == 200
+    assert available.json()["status"] == "AVAILABLE"
+
+    result_sqs = InMemorySqsPort()
+    result_sqs.inject_message(
+        queue_url=W2_RESULT_QUEUE_URL,
+        body=json.dumps(_w2_result_envelope(command=command)),
+    )
+    result_worker = CollectionResultWorker(
+        session_factory=_factory(migrated_engine),
+        sqs=result_sqs,
+        result_queue_url=W2_RESULT_QUEUE_URL,
+    )
+    assert result_worker.drain_once().acknowledged == 1
+    assert relay._mark_published(claim=claim)
+
+    db_session.expire_all()
+    job = db_session.get(Job, job_id)
+    command = db_session.get(JobCommand, w2_command_id)
+    outbox = db_session.get(OutboxMessage, claim.outbox_id)
+    assert job is not None and job.status == "SUCCEEDED" and job.active_lease_id is None
+    assert command is not None and command.status == "CONSUMED"
+    assert outbox is not None and outbox.status == "PUBLISHED"
+
+
+@pytest.mark.postgres
+def test_lookup_returns_every_semantic_status_without_exposing_private_command_on_errors(
+    migrated_engine: Engine,
+    db_session: Session,
+) -> None:
+    relay_sqs, _, w2_command_id = _run_execution_to_w2_dispatch(
+        migrated_engine, db_session, key="lookup-status"
+    )
+    assert _relay(migrated_engine, relay_sqs).drain_once(limit=10).published == 1
+    db_session.expire_all()
+    command = db_session.get(JobCommand, w2_command_id)
+    assert command is not None
+    job = db_session.get(Job, command.job_id)
+    owner = db_session.get(User, command.owner_user_id)
+    assert job is not None and owner is not None
+    lookup = TestClient(
+        create_lookup_app(
+            session_factory=_factory(migrated_engine),
+            expected_bearer_token="test-token",
+        )
+    )
+
+    def request(*, fence: int = command.execution_fence, epoch: int = command.owner_deletion_epoch):
+        return lookup.post(
+            "/internal/v1/job-commands/lookup",
+            json={
+                "schema_version": "w1.private.command-lookup.v1",
+                "command_id": str(command.id),
+                "execution_fence": fence,
+                "owner_deletion_epoch": epoch,
+            },
+            headers=_lookup_headers(),
+        )
+
+    assert request(fence=command.execution_fence + 1).json()["status"] == "STALE_FENCE"
+    assert (
+        request(epoch=command.owner_deletion_epoch + 1).json()["status"]
+        == "STALE_DELETION_EPOCH"
+    )
+    assert request().json()["status"] == "AVAILABLE"
+
+    command.status = "INVALIDATED"
+    db_session.commit()
+    assert request().json()["status"] == "INVALIDATED"
+    command.status = "CONSUMED"
+    db_session.commit()
+    assert request().json()["status"] == "EXPIRED"
+    owner.account_status = "DELETED"
+    db_session.commit()
+    assert request().json()["status"] == "DELETED"
+    not_found = lookup.post(
+        "/internal/v1/job-commands/lookup",
+        json={
+            "schema_version": "w1.private.command-lookup.v1",
+            "command_id": str(uuid4()),
+            "execution_fence": 1,
+            "owner_deletion_epoch": 0,
+        },
+        headers=_lookup_headers(),
+    )
+    assert not_found.status_code == 200
+    assert not_found.json()["status"] == "NOT_FOUND"
+    invalid_request = lookup.post(
+        "/internal/v1/job-commands/lookup",
+        json={"schema_version": "wrong"},
+        headers=_lookup_headers(),
+    )
+    assert invalid_request.status_code == 422
+    assert invalid_request.json()["code"] == "INVALID_LOOKUP_REQUEST"
+    assert "command" not in invalid_request.json()
+
+
+@pytest.mark.postgres
+def test_lookup_adapter_works_with_the_real_column_limited_lookup_role(
+    migrated_engine: Engine,
+    db_session: Session,
+) -> None:
+    relay_sqs, _, w2_command_id = _run_execution_to_w2_dispatch(
+        migrated_engine, db_session, key="lookup-role"
+    )
+    assert _relay(migrated_engine, relay_sqs).drain_once(limit=10).published == 1
+    db_session.expire_all()
+    command = db_session.get(JobCommand, w2_command_id)
+    assert command is not None
+    with migrated_engine.begin() as connection:
+        connection.execute(text(RUNTIME_PRIVILEGES_SQL.read_text(encoding="utf-8")))
+
+    lookup_engine = create_engine(
+        migrated_engine.url.render_as_string(hide_password=False),
+        pool_size=1,
+        max_overflow=0,
+    )
+    lookup_sessions = sessionmaker(
+        bind=lookup_engine,
+        autoflush=False,
+        expire_on_commit=False,
+    )
+
+    @event.listens_for(lookup_engine, "checkout")
+    def set_lookup_role(dbapi_connection, connection_record, connection_proxy) -> None:
+        del connection_record, connection_proxy
+        with dbapi_connection.cursor() as cursor:
+            cursor.execute("SET ROLE epick_lookup")
+
+    try:
+        request = LookupRequest(
+            schema_version="w1.private.command-lookup.v1",
+            command_id=command.id,
+            execution_fence=command.execution_fence,
+            owner_deletion_epoch=command.owner_deletion_epoch,
+        )
+        with lookup_sessions.begin() as session:
+            assert _lookup_command(session=session, request=request).status == "AVAILABLE"
+        lookup = TestClient(
+            create_lookup_app(
+                session_factory=lookup_sessions,
+                expected_bearer_token="test-token",
+            )
+        )
+        response = lookup.post(
+            "/internal/v1/job-commands/lookup",
+            json={
+                "schema_version": "w1.private.command-lookup.v1",
+                "command_id": str(command.id),
+                "execution_fence": command.execution_fence,
+                "owner_deletion_epoch": command.owner_deletion_epoch,
+            },
+            headers=_lookup_headers(),
+        )
+    finally:
+        lookup_engine.dispose()
+    assert response.status_code == 200
+    assert response.json()["status"] == "AVAILABLE"
+
+
+@pytest.mark.postgres
+def test_missing_core_pin_blocks_without_creating_w2_dispatch(
+    migrated_engine: Engine,
+    db_session: Session,
+) -> None:
+    _, job_id, _, _ = _seed_dispatchable_job(db_session, key="missing-pin", include_core_pin=False)
+    db_session.commit()
+    relay_sqs = InMemorySqsPort()
+    assert _relay(migrated_engine, relay_sqs).drain_once(limit=10).published == 1
+    worker_sqs = InMemorySqsPort()
+    worker_sqs.inject_message(queue_url=EXECUTION_QUEUE_URL, body=relay_sqs.sent_messages[0].body)
+    worker = JobWorker(
+        session_factory=_factory(migrated_engine),
+        sqs=worker_sqs,
+        execution_queue_url=EXECUTION_QUEUE_URL,
+        worker_id="runtime-worker-test",
+    )
+    assert worker.drain_once().acknowledged == 1
+    db_session.expire_all()
+    job = db_session.get(Job, job_id)
+    assert job is not None and job.status == "WAITING_USER" and job.active_lease_id is None
+    assert db_session.scalar(
+        select(JobRequiredAction).where(
+            JobRequiredAction.job_id == job_id,
+            JobRequiredAction.action_code == "CORE_DECISION_REQUIRED",
+        )
+    )
+    assert db_session.scalar(
+        select(OutboxMessage).where(
+            OutboxMessage.message_type == "w1.private.w2.collection-command.v1"
+        )
+    ) is None
+
+
+@pytest.mark.postgres
+def test_job_worker_leaves_the_fourth_owner_execution_for_sqs_redelivery(
+    migrated_engine: Engine,
+    db_session: Session,
+) -> None:
+    owner = User(display_name="Four slot owner", locale="ko-KR", timezone="Asia/Seoul")
+    db_session.add(owner)
+    db_session.flush()
+    service = JobService(db_session)
+    accepted = []
+    for sequence in range(4):
+        acceptance = service.accept_job(
+            owner_user_id=owner.id,
+            job_type="SOURCE_COLLECTION",
+            idempotency_key=f"four-slot-{sequence}",
+            request_hash=f"four-slot-{sequence}",
+        )
+        service.mark_dispatch_enqueued(owner_user_id=owner.id, job_id=acceptance.job.id)
+        accepted.append(acceptance)
+    for acceptance in accepted[:3]:
+        assert service.claim_execution(owner_user_id=owner.id, job_id=acceptance.job.id) is not None
+    fourth = accepted[3]
+    assert fourth.command is not None and fourth.outbox_message is not None
+    db_session.commit()
+    delivery_body = {
+        "schema_version": "1.0",
+        "message_id": str(fourth.command.id),
+        "command_id": str(fourth.command.id),
+        "job_id": str(fourth.job.id),
+        "execution_fence": fourth.command.execution_fence,
+        "owner_deletion_epoch": fourth.command.owner_deletion_epoch,
+        "issued_at": "2026-09-16T01:00:00Z",
+        "payload_ref": str(fourth.outbox_message.id),
+    }
+    sqs = InMemorySqsPort()
+    sqs.inject_message(queue_url=EXECUTION_QUEUE_URL, body=json.dumps(delivery_body))
+    worker = JobWorker(
+        session_factory=_factory(migrated_engine),
+        sqs=sqs,
+        execution_queue_url=EXECUTION_QUEUE_URL,
+        worker_id="runtime-worker-test",
+    )
+    run = worker.drain_once()
+    assert run.received == run.retry_scheduled == 1
+    assert run.acknowledged == 0
+    db_session.expire_all()
+    job = db_session.get(Job, fourth.job.id)
+    assert job is not None and job.status == "QUEUED" and job.active_lease_id is None
+
+
+@pytest.mark.postgres
+def test_result_worker_applies_once_and_late_cancel_result_only_releases_the_slot(
+    migrated_engine: Engine,
+    db_session: Session,
+) -> None:
+    relay_sqs, job_id, w2_command_id = _run_execution_to_w2_dispatch(
+        migrated_engine, db_session, key="result"
+    )
+    assert _relay(migrated_engine, relay_sqs).drain_once(limit=10).published == 1
+    db_session.expire_all()
+    command = db_session.get(JobCommand, w2_command_id)
+    assert command is not None
+    result_message_id = uuid4()
+    envelope = _w2_result_envelope(command=command, message_id=result_message_id)
+    result_sqs = InMemorySqsPort()
+    result_sqs.inject_message(queue_url=W2_RESULT_QUEUE_URL, body=json.dumps(envelope))
+    worker = CollectionResultWorker(
+        session_factory=_factory(migrated_engine),
+        sqs=result_sqs,
+        result_queue_url=W2_RESULT_QUEUE_URL,
+    )
+    assert worker.drain_once().acknowledged == 1
+    db_session.expire_all()
+    job = db_session.get(Job, job_id)
+    assert job is not None and job.status == "SUCCEEDED" and job.active_lease_id is None
+    assert db_session.get(JobCommand, w2_command_id).status == "CONSUMED"
+
+    result_sqs.inject_message(queue_url=W2_RESULT_QUEUE_URL, body=json.dumps(envelope))
+    duplicate = worker.drain_once()
+    assert duplicate.duplicate == duplicate.acknowledged == 1
+
+
+@pytest.mark.postgres
+def test_late_w2_result_after_cancel_is_discarded_but_confirms_slot_release(
+    migrated_engine: Engine,
+    db_session: Session,
+) -> None:
+    relay_sqs, job_id, w2_command_id = _run_execution_to_w2_dispatch(
+        migrated_engine, db_session, key="cancel-race"
+    )
+    assert _relay(migrated_engine, relay_sqs).drain_once(limit=10).published == 1
+    db_session.expire_all()
+    job = db_session.get(Job, job_id)
+    command = db_session.get(JobCommand, w2_command_id)
+    assert job is not None and command is not None
+    JobService(db_session).request_cancellation(owner_user_id=job.owner_user_id, job_id=job.id)
+    db_session.commit()
+    result_sqs = InMemorySqsPort()
+    result_sqs.inject_message(
+        queue_url=W2_RESULT_QUEUE_URL,
+        body=json.dumps(_w2_result_envelope(command=command)),
+    )
+    result_worker = CollectionResultWorker(
+        session_factory=_factory(migrated_engine),
+        sqs=result_sqs,
+        result_queue_url=W2_RESULT_QUEUE_URL,
+    )
+    result = result_worker.drain_once()
+    assert result.acknowledged == result.stale_discarded == 1
+    db_session.expire_all()
+    job = db_session.get(Job, job_id)
+    assert job is not None and job.status == "CANCELLED" and job.active_lease_id is None
+
+
+@pytest.mark.postgres
+def test_partial_w2_result_appends_an_immutable_checkpoint_before_retry_transition(
+    migrated_engine: Engine,
+    db_session: Session,
+) -> None:
+    relay_sqs, job_id, w2_command_id = _run_execution_to_w2_dispatch(
+        migrated_engine, db_session, key="checkpoint"
+    )
+    assert _relay(migrated_engine, relay_sqs).drain_once(limit=10).published == 1
+    db_session.expire_all()
+    command = db_session.get(JobCommand, w2_command_id)
+    assert command is not None
+    envelope = _w2_result_envelope(command=command)
+    payload = envelope["payload"]
+    assert isinstance(payload, dict)
+    payload["completion_kind"] = "partial"
+    payload["resume_stage"] = "fetch"
+    payload["checkpoint_ref"] = "fetch:checkpoint-0001"
+    result_sqs = InMemorySqsPort()
+    result_sqs.inject_message(queue_url=W2_RESULT_QUEUE_URL, body=json.dumps(envelope))
+    result_worker = CollectionResultWorker(
+        session_factory=_factory(migrated_engine),
+        sqs=result_sqs,
+        result_queue_url=W2_RESULT_QUEUE_URL,
+    )
+    assert result_worker.drain_once().acknowledged == 1
+    db_session.expire_all()
+    checkpoint = db_session.scalar(
+        select(JobCheckpoint).where(JobCheckpoint.job_id == job_id).limit(1)
+    )
+    job = db_session.get(Job, job_id)
+    assert checkpoint is not None
+    assert checkpoint.checkpoint_revision == 1
+    assert checkpoint.resume_stage == "fetch"
+    assert checkpoint.state_ref == "fetch:checkpoint-0001"
+    assert job is not None and job.status == "FAILED_RETRYABLE" and job.active_lease_id is None
+
+
+@pytest.mark.postgres
+def test_expired_lease_fences_late_w2_result_and_opens_retry(
+    migrated_engine: Engine,
+    db_session: Session,
+) -> None:
+    _, job_id, _ = _run_execution_to_w2_dispatch(migrated_engine, db_session, key="expired")
+    db_session.expire_all()
+    lease = db_session.scalar(
+        select(JobExecutionLease).where(JobExecutionLease.job_id == job_id).limit(1)
+    )
+    assert lease is not None
+    lease.heartbeat_at = datetime.now(UTC) - timedelta(hours=1)
+    db_session.commit()
+    worker = JobWorker(
+        session_factory=_factory(migrated_engine),
+        sqs=InMemorySqsPort(),
+        execution_queue_url=EXECUTION_QUEUE_URL,
+        worker_id="runtime-worker-test",
+        visibility_timeout_seconds=120,
+        lease_heartbeat_seconds=60,
+    )
+    assert worker.recover_expired_leases() == 1
+    db_session.expire_all()
+    job = db_session.get(Job, job_id)
+    assert job is not None and job.status == "FAILED_RETRYABLE"
+    assert job.execution_fence == 2
+    assert job.active_lease_id is None

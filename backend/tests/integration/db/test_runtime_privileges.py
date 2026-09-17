@@ -28,6 +28,30 @@ def _has_table_privilege(
         )
 
 
+def _has_column_privilege(
+    engine: Engine,
+    role_name: str,
+    table_name: str,
+    column_name: str,
+    privilege: str,
+) -> bool:
+    with engine.connect() as connection:
+        return bool(
+            connection.execute(
+                text(
+                    "SELECT has_column_privilege("
+                    ":role_name, :table_name, :column_name, :privilege)"
+                ),
+                {
+                    "role_name": role_name,
+                    "table_name": f"public.{table_name}",
+                    "column_name": column_name,
+                    "privilege": privilege,
+                },
+            ).scalar_one()
+        )
+
+
 def test_runtime_privilege_manifest_is_role_scoped_and_deny_by_default(
     migrated_engine: Engine,
 ) -> None:
@@ -62,6 +86,17 @@ def test_runtime_privilege_manifest_is_role_scoped_and_deny_by_default(
         assert _has_table_privilege(migrated_engine, "epick_worker", "sources", "INSERT")
         assert not _has_table_privilege(migrated_engine, "epick_worker", "users", "UPDATE")
 
+        assert _has_column_privilege(
+            migrated_engine, "epick_lookup", "job_commands", "payload", "SELECT"
+        )
+        assert _has_column_privilege(
+            migrated_engine, "epick_lookup", "jobs", "execution_fence", "SELECT"
+        )
+        assert not _has_table_privilege(migrated_engine, "epick_lookup", "jobs", "UPDATE")
+        assert not _has_table_privilege(
+            migrated_engine, "epick_lookup", "outbox_messages", "SELECT"
+        )
+
         assert _has_table_privilege(migrated_engine, "epick_deleter", "deletion_requests", "UPDATE")
         assert _has_table_privilege(migrated_engine, "epick_deleter", "users", "DELETE")
         assert not _has_table_privilege(migrated_engine, "epick_deleter", "sources", "DELETE")
@@ -69,6 +104,12 @@ def test_runtime_privilege_manifest_is_role_scoped_and_deny_by_default(
         assert not _has_table_privilege(
             migrated_engine,
             "epick_runtime",
+            "runtime_privilege_default_probe",
+            "SELECT",
+        )
+        assert not _has_table_privilege(
+            migrated_engine,
+            "epick_lookup",
             "runtime_privilege_default_probe",
             "SELECT",
         )

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w1/v1/private-job-dispatch.schema.json",
+  "title": "EPICK W1 private Job execution dispatch v1",
+  "description": "A protected W1 execution-queue reference. It carries no owner identity or command payload; the worker must reread canonical state from PostgreSQL.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "message_id",
+    "command_id",
+    "job_id",
+    "execution_fence",
+    "owner_deletion_epoch",
+    "issued_at",
+    "payload_ref"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "message_id": { "type": "string", "format": "uuid" },
+    "command_id": { "type": "string", "format": "uuid" },
+    "job_id": { "type": "string", "format": "uuid" },
+    "execution_fence": { "type": "integer", "minimum": 1 },
+    "owner_deletion_epoch": { "type": "integer", "minimum": 0 },
+    "issued_at": { "type": "string", "format": "date-time" },
+    "payload_ref": { "type": "string", "format": "uuid" }
+  }
+}

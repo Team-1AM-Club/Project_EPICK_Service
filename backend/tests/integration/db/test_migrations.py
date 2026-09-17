@@ -15,6 +15,7 @@ from app.core.config import settings
 
 BACKEND_ROOT = Path(__file__).parents[3]
 DATABASE_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+RUNTIME_ROLE_TEMPLATE_SQL = BACKEND_ROOT / "infra" / "postgres" / "runtime_roles.sql"
 
 
 def _admin_database_url(database_url: str) -> tuple[str, str]:
@@ -40,6 +41,13 @@ def alembic_config() -> Config:
                 connection.execute(text(f'CREATE DATABASE "{database_name}"'))
     finally:
         admin_engine.dispose()
+
+    role_engine = create_engine(settings.test_database_url)
+    try:
+        with role_engine.begin() as connection:
+            connection.execute(text(RUNTIME_ROLE_TEMPLATE_SQL.read_text(encoding="utf-8")))
+    finally:
+        role_engine.dispose()
 
     config = Config(str(BACKEND_ROOT / "alembic.ini"))
     config.set_main_option("sqlalchemy.url", settings.test_database_url)
