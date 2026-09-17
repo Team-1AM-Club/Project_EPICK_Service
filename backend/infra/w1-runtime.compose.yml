@@ -1,6 +1,6 @@
-# This file intentionally contains no public API service.  Public API deployment
-# continues to use its API-only environment, while every service below receives the
-# worker-only environment file selected by W1_RUNTIME_ENV_FILE.
+# This file intentionally contains no public API service. Public API deployment
+# continues to use its API-only environment. Queue workers receive W1_RUNTIME_ENV_FILE;
+# the protected lookup listener receives the narrower W1_LOOKUP_ENV_FILE instead.
 #
 # W1-only startup:
 #   docker compose -f w1-runtime.compose.yml --profile w1-control up -d
@@ -12,10 +12,39 @@
 # endpoint and its consumer/producer deployment is jointly prepared:
 #   docker compose -f w1-runtime.compose.yml --profile w2-result up -d
 #
+# M1 protected lookup startup. The port is loopback-only for host-local/SSM smoke;
+# it is not a W2-reachable endpoint until the later private network binding is approved:
+#   docker compose -f w1-runtime.compose.yml --profile w1-lookup up -d
+#
 # `RDS_CA_BUNDLE_PATH` is a host-only setting.  It must name the CA bundle on
 # the Worker EC2 host (for staging: /opt/epick/certs/global-bundle.pem); it is
 # never written into the worker env file or exposed to the public API.
 services:
+  w1-protected-lookup:
+    image: ${BACKEND_IMAGE:?set BACKEND_IMAGE to the immutable backend image reference}
+    env_file:
+      - ${W1_LOOKUP_ENV_FILE:?set W1_LOOKUP_ENV_FILE to the lookup-only env file}
+    command: ["python", "scripts/run_lookup_adapter.py"]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    expose:
+      - "8080"
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - type: bind
+        source: ${RDS_CA_BUNDLE_PATH:?set RDS_CA_BUNDLE_PATH to the host RDS CA bundle}
+        target: /run/epick/rds-ca.pem
+        read_only: true
+        bind:
+          create_host_path: false
+    security_opt:
+      - no-new-privileges:true
+    profiles: ["w1-lookup"]
+
   w1-commit-gate-recovery:
     image: ${BACKEND_IMAGE:?set BACKEND_IMAGE to the immutable backend image reference}
     env_file:
