@@ -110,6 +110,11 @@ TO epick_runtime;
 -- derivations, and projections. The worker can read the inputs it needs, but
 -- does not receive interactive identity/settings mutation permissions.
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO epick_worker;
+-- PostgreSQL requires UPDATE privilege on at least one column when SELECT uses
+-- a row-locking clause.  W1 locks the owner row while validating account status
+-- and deletion_epoch, but never mutates identity state.  Limit the capability
+-- to the non-authoritative timestamp column instead of granting table UPDATE.
+GRANT UPDATE (updated_at) ON TABLE users TO epick_worker;
 GRANT SELECT, INSERT, UPDATE ON TABLE
     jobs,
     job_input_refs,

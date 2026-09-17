@@ -84,7 +84,14 @@ def test_runtime_privilege_manifest_is_role_scoped_and_deny_by_default(
 
         assert _has_table_privilege(migrated_engine, "epick_worker", "jobs", "UPDATE")
         assert _has_table_privilege(migrated_engine, "epick_worker", "sources", "INSERT")
+        assert _has_table_privilege(migrated_engine, "epick_worker", "users", "SELECT")
         assert not _has_table_privilege(migrated_engine, "epick_worker", "users", "UPDATE")
+        assert _has_column_privilege(
+            migrated_engine, "epick_worker", "users", "updated_at", "UPDATE"
+        )
+        assert not _has_column_privilege(
+            migrated_engine, "epick_worker", "users", "account_status", "UPDATE"
+        )
 
         assert _has_column_privilege(
             migrated_engine, "epick_lookup", "job_commands", "payload", "SELECT"

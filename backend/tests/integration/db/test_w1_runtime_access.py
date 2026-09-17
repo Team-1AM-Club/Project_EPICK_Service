@@ -110,7 +110,9 @@ def _seed_private_command(migrated_engine: Engine) -> tuple[UUID, UUID, UUID, UU
 def test_worker_and_lookup_roles_receive_only_their_operational_rls_access(
     migrated_engine: Engine,
 ) -> None:
-    _, job_id, command_id, outbox_id, operation_id = _seed_private_command(migrated_engine)
+    owner_id, job_id, command_id, outbox_id, operation_id = _seed_private_command(
+        migrated_engine
+    )
 
     with migrated_engine.connect() as connection:
         with connection.begin():
@@ -155,6 +157,16 @@ def test_worker_and_lookup_roles_receive_only_their_operational_rls_access(
     with migrated_engine.connect() as connection:
         with connection.begin():
             connection.execute(text("SET LOCAL ROLE epick_worker"))
+            assert connection.scalar(
+                text("SELECT id FROM users WHERE id = :owner_id FOR UPDATE"),
+                {"owner_id": owner_id},
+            ) == owner_id
+            with pytest.raises(DBAPIError):
+                with connection.begin_nested():
+                    connection.execute(
+                        text("UPDATE users SET updated_at = now() WHERE id = :owner_id"),
+                        {"owner_id": owner_id},
+                    )
             connection.execute(
                 text(
                     "UPDATE outbox_messages SET "

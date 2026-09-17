@@ -26,6 +26,7 @@ PRIVILEGE_EXPECTATIONS = (
     ("epick_runtime", "sources", "INSERT", False),
     ("epick_worker", "jobs", "UPDATE", True),
     ("epick_worker", "sources", "INSERT", True),
+    ("epick_worker", "users", "SELECT", True),
     ("epick_worker", "users", "UPDATE", False),
     ("epick_lookup", "jobs", "UPDATE", False),
     ("epick_lookup", "outbox_messages", "SELECT", False),
@@ -35,6 +36,8 @@ PRIVILEGE_EXPECTATIONS = (
 )
 
 COLUMN_PRIVILEGE_EXPECTATIONS = (
+    ("epick_worker", "users", "updated_at", "UPDATE", True),
+    ("epick_worker", "users", "account_status", "UPDATE", False),
     ("epick_lookup", "users", "deletion_epoch", "SELECT", True),
     ("epick_lookup", "jobs", "execution_fence", "SELECT", True),
     ("epick_lookup", "job_commands", "payload", "SELECT", True),

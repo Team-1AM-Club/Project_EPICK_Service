@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine, create_engine, event, select, text
+from sqlalchemy import Engine, create_engine, event, func, select, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.models.identity import User
@@ -233,6 +233,67 @@ def _run_direct_registration_to_w2_dispatch(
     )
     assert w2_command is not None
     return relay_sqs, job_id, w2_command.id
+
+
+@pytest.mark.postgres
+def test_worker_role_can_relay_claim_and_dispatch_with_owner_row_lock(
+    migrated_engine: Engine,
+    db_session: Session,
+) -> None:
+    """Exercise the real T059 failure path under epick_worker, not the DB owner."""
+
+    with migrated_engine.begin() as connection:
+        connection.execute(text(RUNTIME_PRIVILEGES_SQL.read_text(encoding="utf-8")))
+
+    _, job_id, _, _ = _seed_dispatchable_job(db_session, key="worker-role-lock")
+    db_session.commit()
+
+    worker_engine = create_engine(migrated_engine.url, pool_pre_ping=True)
+
+    @event.listens_for(worker_engine, "begin")
+    def _set_worker_role(connection) -> None:
+        connection.exec_driver_sql("SET LOCAL ROLE epick_worker")
+
+    worker_factory = sessionmaker(
+        bind=worker_engine,
+        autoflush=False,
+        expire_on_commit=False,
+    )
+    sqs = InMemorySqsPort()
+    try:
+        relay_result = OutboxRelay(
+            session_factory=worker_factory,
+            sqs=sqs,
+            queues=QueueUrlRegistry(
+                w1_execution_queue_url=EXECUTION_QUEUE_URL,
+                w2_collection_command_queue_url=W2_COMMAND_QUEUE_URL,
+            ),
+            relay_id="worker-role-lock-relay",
+        ).drain_once(limit=1)
+        assert relay_result.published == 1
+
+        execution_body = sqs.sent_messages[0].body
+        sqs.inject_message(queue_url=EXECUTION_QUEUE_URL, body=execution_body)
+        result = JobWorker(
+            session_factory=worker_factory,
+            sqs=sqs,
+            execution_queue_url=EXECUTION_QUEUE_URL,
+            worker_id="worker-role-lock-worker",
+        ).drain_once(max_messages=1)
+
+        assert result.acknowledged == 1
+        assert result.retry_scheduled == 0
+        with migrated_engine.connect() as connection:
+            assert connection.scalar(
+                select(func.count())
+                .select_from(JobCommand)
+                .where(
+                    JobCommand.job_id == job_id,
+                    JobCommand.command_type == "W2_SOURCE_COLLECTION",
+                )
+            ) == 1
+    finally:
+        worker_engine.dispose()
 
 
 def _w2_result_envelope(
