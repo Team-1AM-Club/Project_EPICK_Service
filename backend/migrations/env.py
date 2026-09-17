@@ -22,6 +22,7 @@ from app.models import (  # noqa: F401
     question_analysis,
     recommendations,
     sources,
+    w2_commit_operations,
 )
 
 config = context.config

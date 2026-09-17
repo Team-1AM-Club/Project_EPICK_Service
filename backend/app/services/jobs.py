@@ -19,6 +19,7 @@ from app.models.jobs import (
 from app.repo.identity import IdentityRepository
 from app.repo.jobs import JobRepository
 from app.services.idempotency import IdempotencyService
+from app.services.w2_commit_gate import W2CommitGateService
 
 
 class JobError(Exception):
@@ -193,7 +194,17 @@ class JobService:
         return lease
 
     def request_cancellation(self, *, owner_user_id: UUID, job_id: UUID) -> Job:
+        # This must occur before the JobCommand can be invalidated below.  The
+        # commit-gate service takes User -> Job -> W2 command -> operation locks
+        # and writes ABORT into this same transaction.
+        W2CommitGateService(self.session).abort_open_operations_for_cancellation(
+            owner_user_id=owner_user_id,
+            job_id=job_id,
+        )
         job = self._require_job_for_update(owner_user_id=owner_user_id, job_id=job_id)
+        if job.status in {"SUCCEEDED", "FAILED_FINAL", "CANCELLED", "CANCEL_REQUESTED"}:
+            self.session.flush()
+            return job
         self._request_cancellation_for_job(job)
         self.session.flush()
         return job
@@ -217,6 +228,13 @@ class JobService:
         the caller's existing transaction.
         """
 
+        if action_code == "STOP":
+            # See ``request_cancellation``.  Do this before this method takes
+            # the Job row lock, preserving the common commit-gate lock order.
+            W2CommitGateService(self.session).abort_open_operations_for_cancellation(
+                owner_user_id=owner_user_id,
+                job_id=job_id,
+            )
         owner = self.repository.get_owner_for_update(owner_user_id=owner_user_id)
         if owner is None:
             raise JobNotFoundError("job owner does not exist")
@@ -499,6 +517,20 @@ class JobService:
         self.session.flush()
         return recorded
 
+    def update_inbox_receipt_outcome(
+        self, *, consumer_name: str, event_id: UUID, outcome_code: str
+    ) -> None:
+        """Finish an inbox receipt reserved before a state-changing consumer action."""
+
+        self._require_nonempty(consumer_name, "consumer name")
+        self._require_nonempty(outcome_code, "outcome code")
+        self.repository.update_inbox_receipt_outcome(
+            consumer_name=consumer_name,
+            event_id=event_id,
+            outcome_code=outcome_code,
+        )
+        self.session.flush()
+
     def invalidate_for_owner_deletion(
         self, *, owner_user_id: UUID, job_id: UUID, owner_deletion_epoch: int
     ) -> Job:
@@ -661,7 +693,10 @@ class JobService:
         if command is None or command.status in {"CONSUMED", "INVALIDATED", "FAILED"}:
             return
         command.status = "INVALIDATED"
-        outbox_message = self.repository.get_latest_outbox_message(command_id=command.id)
+        # A W2 ABORT/PURGE control message is deliberately created before the
+        # source command is invalidated.  It must remain dispatchable; only the
+        # source-command's own dispatch record is invalidated here.
+        outbox_message = self.repository.get_latest_dispatch_outbox_message(command_id=command.id)
         if outbox_message is not None and outbox_message.status == "PENDING":
             outbox_message.status = "FAILED"
 

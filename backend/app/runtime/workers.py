@@ -36,11 +36,16 @@ from app.services.direct_source_registration import (
     DIRECT_SOURCE_REGISTRATION_SCOPE,
 )
 from app.services.jobs import JobService
+from app.services.w2_commit_gate import (
+    W2CommitGateError,
+    W2CommitGateService,
+)
 
 _EXECUTION_MESSAGE_TYPE = "job.command.dispatch"
 _W2_COMMAND_MESSAGE_TYPE = "w1.private.w2.collection-command.v1"
 _W2_DIRECT_SOURCE_REGISTRATION_MESSAGE_TYPE = "w1.private.w2.direct-source-registration.v1"
 _W2_RESULT_CONSUMER = "w1.collection-result"
+_W2_COMMIT_READY_CONSUMER = "w1.collection-commit-ready"
 _W2_RESULT_MESSAGE_TYPE = "w2.collection.result.v1"
 _W2_RESULT_CHANNEL = "w1.private.w2.collection-result.v1"
 _MAX_SQS_BATCH_SIZE = 10
@@ -68,6 +73,36 @@ class _DeliveryOutcome:
     rejected_schema: bool = False
     duplicate: bool = False
     lease_id: UUID | None = None
+
+
+@dataclass(frozen=True)
+class CommitReadyCollectionResult:
+    """W1-normalized staged-result identity for the future W2 adapter.
+
+    This is deliberately not a W2 wire DTO.  W2 owns the canonical ACK and
+    staged-result schemas; its adapter can call this boundary only after those
+    artifacts are supplied and validated.  The fields here are exactly the
+    immutable values W1 must re-check under the durable commit-gate locks.
+    """
+
+    message_id: UUID
+    owner_user_id: UUID
+    job_id: UUID
+    command_id: UUID
+    execution_lease_id: UUID
+    execution_fence: int
+    owner_deletion_epoch: int
+    result_digest: str
+
+
+@dataclass(frozen=True)
+class CommitReadyApplicationResult:
+    """Outcome of W1's pre-visibility COMMIT_READY boundary."""
+
+    outcome_code: str
+    operation_id: UUID | None = None
+    operation_revision: int | None = None
+    prepare_outbox_id: UUID | None = None
 
 
 def _contract_validator(relative_path: str) -> Draft202012Validator:
@@ -894,6 +929,51 @@ class CollectionResultWorker:
                 event_id=message_id,
                 outcome_code=outcome_code,
             )
+
+    def accept_commit_ready(
+        self, *, staged_result: CommitReadyCollectionResult
+    ) -> CommitReadyApplicationResult:
+        """Create W1's PREPARE operation and outbox atomically.
+
+        The current W2 ``source-collection.result`` schema deliberately has no
+        COMMIT_READY variant, so the raw SQS result consumer above must not
+        guess one.  A later W2-owned adapter validates its canonical artifact,
+        normalizes it to ``CommitReadyCollectionResult``, then uses this method.
+        Until then this is exercised by the W1 fake-gate integration harness.
+        """
+
+        with self._session_factory.begin() as session:
+            try:
+                acceptance = W2CommitGateService(session).create_prepare_operation_with_outbox(
+                    owner_user_id=staged_result.owner_user_id,
+                    job_id=staged_result.job_id,
+                    command_id=staged_result.command_id,
+                    execution_fence=staged_result.execution_fence,
+                    owner_deletion_epoch=staged_result.owner_deletion_epoch,
+                    execution_lease_id=staged_result.execution_lease_id,
+                    result_digest=staged_result.result_digest,
+                )
+            except W2CommitGateError:
+                outcome = CommitReadyApplicationResult(outcome_code="STALE_REJECTED")
+            else:
+                outcome = CommitReadyApplicationResult(
+                    outcome_code="PREPARE_CREATED" if acceptance.created else "PREPARE_PENDING",
+                    operation_id=acceptance.operation.id,
+                    operation_revision=acceptance.operation.operation_revision,
+                    prepare_outbox_id=(
+                        acceptance.prepare_outbox.id
+                        if acceptance.prepare_outbox is not None
+                        else None
+                    ),
+                )
+            recorded = JobService(session).record_inbox_receipt(
+                consumer_name=_W2_COMMIT_READY_CONSUMER,
+                event_id=staged_result.message_id,
+                outcome_code=outcome.outcome_code,
+            )
+            if not recorded:
+                return CommitReadyApplicationResult(outcome_code="DUPLICATE")
+            return outcome
 
     def _apply_result(
         self, *, session: Session, result: dict[str, object]

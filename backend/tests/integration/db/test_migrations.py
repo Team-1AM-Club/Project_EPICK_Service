@@ -8,6 +8,7 @@ from uuid import uuid4
 import pytest
 from alembic import command
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.exc import IntegrityError, OperationalError
 
@@ -16,6 +17,13 @@ from app.core.config import settings
 BACKEND_ROOT = Path(__file__).parents[3]
 DATABASE_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 RUNTIME_ROLE_TEMPLATE_SQL = BACKEND_ROOT / "infra" / "postgres" / "runtime_roles.sql"
+
+
+def test_current_migration_head_includes_w2_commit_gate() -> None:
+    """Keep the durable W2 commit gate in the declared forward-only chain."""
+
+    config = Config(str(BACKEND_ROOT / "alembic.ini"))
+    assert ScriptDirectory.from_config(config).get_current_head() == "024_w2_commit_gate"
 
 
 def _admin_database_url(database_url: str) -> tuple[str, str]:

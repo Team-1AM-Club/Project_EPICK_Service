@@ -43,6 +43,14 @@
     "required_crawler_commit": "0865ecdfe4748dad5679bc82b9f7386dc663675e",
     "status": "VERIFIED_WITH_PINNED_LOCAL_CRAWLER_HEAD"
   },
+  "pending_w2_commit_gate_adoption": {
+    "status": "W2_CANONICAL_ACK_NOT_YET_SUPPLIED",
+    "artifact_authority": "W2",
+    "required_artifact": "source-collection.commit-gate-ack.schema.json and matching fixtures",
+    "required_binding": "operation_id, operation_revision, action, command_id, job_id, execution_fence, owner_deletion_epoch, purge_owner_deletion_epoch(for PURGE), result_digest, outcome",
+    "w1_command_schema": "../w1/v1/private-w2-commit-gate.schema.json",
+    "completion_boundary": "W1-R2-03 remains PARTIAL until W2 supplies and pins the canonical ACK Schema, private staging state transition, and joint CT15 evidence."
+  },
   "public_source_event_compatibility": {
     "status": "PENDING_W1_W3_CONSUMER_COMPATIBILITY",
     "direct_consumers": ["W1", "W3"],

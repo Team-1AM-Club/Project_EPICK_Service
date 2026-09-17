@@ -890,6 +890,7 @@ def test_job_worker_leaves_the_fourth_owner_execution_for_sqs_redelivery(
 
 
 @pytest.mark.postgres
+@pytest.mark.w1_isolated_commit_gate
 def test_result_worker_applies_once_and_late_cancel_result_only_releases_the_slot(
     migrated_engine: Engine,
     db_session: Session,
@@ -922,6 +923,7 @@ def test_result_worker_applies_once_and_late_cancel_result_only_releases_the_slo
 
 
 @pytest.mark.postgres
+@pytest.mark.w1_isolated_commit_gate
 def test_late_w2_result_after_cancel_is_discarded_but_confirms_slot_release(
     migrated_engine: Engine,
     db_session: Session,

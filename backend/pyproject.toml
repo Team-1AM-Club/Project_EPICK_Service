@@ -34,6 +34,8 @@ addopts = "-ra --strict-markers"
 testpaths = ["tests"]
 markers = [
     "postgres: requires an isolated PostgreSQL test database",
+    "w1_isolated_commit_gate: W1-owned commit-gate proof using isolated PostgreSQL and in-memory queue adapters",
+    "w1_w2_commit_gate_e2e: requires W2 canonical ACK, private staging adapter, and a jointly provisioned E2E environment",
 ]
 
 [tool.coverage.run]

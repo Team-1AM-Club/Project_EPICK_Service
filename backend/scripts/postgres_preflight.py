@@ -29,6 +29,12 @@ ROLE_NAMES = (
     "epick_deleter",
 )
 RUNTIME_ROLE_NAMES = ROLE_NAMES[1:]
+RUNTIME_TABLE_PRIVILEGES = {
+    "epick_runtime": ("SELECT", "INSERT", "UPDATE"),
+    "epick_worker": ("SELECT", "INSERT", "UPDATE"),
+    "epick_deleter": ("SELECT", "INSERT", "UPDATE"),
+}
+_COMMIT_GATE_TABLE = "public.w2_commit_operations"
 
 
 def _parse_args() -> argparse.Namespace:
@@ -117,6 +123,44 @@ def _verify_roles(connection: object) -> None:
         )
 
 
+def _verify_runtime_table_privileges(connection: object) -> None:
+    table_exists = connection.execute(
+        text("SELECT to_regclass(:table_name) IS NOT NULL"),
+        {"table_name": _COMMIT_GATE_TABLE},
+    ).scalar_one()
+    if not table_exists:
+        raise SystemExit(
+            "migration head is missing w2_commit_operations; "
+            "run alembic upgrade before head preflight"
+        )
+
+    missing_privileges = []
+    for role_name, privileges in RUNTIME_TABLE_PRIVILEGES.items():
+        for privilege in privileges:
+            granted = connection.execute(
+                text("SELECT has_table_privilege(:role_name, :table_name, :privilege)"),
+                {
+                    "role_name": role_name,
+                    "table_name": _COMMIT_GATE_TABLE,
+                    "privilege": privilege,
+                },
+            ).scalar_one()
+            if not granted:
+                missing_privileges.append(f"{role_name}:{privilege}")
+    if missing_privileges:
+        raise SystemExit(
+            "runtime privilege manifest has not been reapplied for w2_commit_operations: "
+            + ", ".join(missing_privileges)
+        )
+
+    lookup_can_select = connection.execute(
+        text("SELECT has_table_privilege('epick_lookup', :table_name, 'SELECT')"),
+        {"table_name": _COMMIT_GATE_TABLE},
+    ).scalar_one()
+    if lookup_can_select:
+        raise SystemExit("epick_lookup must not receive w2_commit_operations access")
+
+
 def main() -> None:
     args = _parse_args()
     _require_backup_evidence(args.backup_confirmed_at)
@@ -141,6 +185,8 @@ def main() -> None:
             )
             current_revision = _read_current_revision(connection)
             _verify_roles(connection)
+            if current_revision == target_revision:
+                _verify_runtime_table_privileges(connection)
     finally:
         engine.dispose()
 

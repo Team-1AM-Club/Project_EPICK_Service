@@ -94,6 +94,18 @@ class DeletionRepository:
             )
         )
 
+    def list_active_job_ids(self, *, owner_user_id: UUID) -> list[UUID]:
+        """Read stable Job identifiers before each W2 ordered lock acquisition."""
+
+        terminal_statuses = ("SUCCEEDED", "FAILED_FINAL", "CANCELLED")
+        return list(
+            self.session.scalars(
+                select(Job.id)
+                .where(Job.owner_user_id == owner_user_id, Job.status.not_in(terminal_statuses))
+                .order_by(Job.created_at, Job.id)
+            )
+        )
+
     def get_open_auth_sessions_for_update(self, *, owner_user_id: UUID) -> list[AuthSession]:
         return list(
             self.session.scalars(

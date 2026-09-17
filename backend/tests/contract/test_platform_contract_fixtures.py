@@ -129,6 +129,22 @@ def _private_message_errors(contract_root: Path, message: dict[str, Any]) -> lis
             "fixtures/v1/w1/private-w2-direct-source-registration-dispatch.json",
         ),
         (
+            "w1/v1/private-w2-commit-gate.schema.json",
+            "fixtures/v1/w1/private-w2-commit-gate-prepare.json",
+        ),
+        (
+            "w1/v1/private-w2-commit-gate.schema.json",
+            "fixtures/v1/w1/private-w2-commit-gate-finalize.json",
+        ),
+        (
+            "w1/v1/private-w2-commit-gate.schema.json",
+            "fixtures/v1/w1/private-w2-commit-gate-abort.json",
+        ),
+        (
+            "w1/v1/private-w2-commit-gate.schema.json",
+            "fixtures/v1/w1/private-w2-commit-gate-purge.json",
+        ),
+        (
             "w1/v1/private-error.schema.json",
             "fixtures/v1/w1/private-error-unauthenticated.json",
         ),
@@ -486,3 +502,8 @@ def test_w2_import_is_pinned_to_the_observed_runtime_contract(contract_root: Pat
     )
     assert parser_verification["required_crawler_commit"] == manifest["source_commit"]
     assert parser_verification["status"] == "VERIFIED_WITH_PINNED_LOCAL_CRAWLER_HEAD"
+
+    pending_commit_gate = manifest["pending_w2_commit_gate_adoption"]
+    assert pending_commit_gate["status"] == "W2_CANONICAL_ACK_NOT_YET_SUPPLIED"
+    assert pending_commit_gate["artifact_authority"] == "W2"
+    assert pending_commit_gate["w1_command_schema"] == "../w1/v1/private-w2-commit-gate.schema.json"

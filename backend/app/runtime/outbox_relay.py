@@ -20,6 +20,7 @@ from app.models.jobs import (
     OwnerExecutionSlot,
 )
 from app.models.sources import AnalysisSourceDecision, JobSourceLink
+from app.models.w2_commit_operations import W2CommitOperation
 from app.runtime.core_decision_binding import (
     CoreDecisionBindingError,
     validate_database_core_binding,
@@ -29,6 +30,7 @@ from app.runtime.sqs import SqsFinalDeliveryError, SqsPort, SqsRetryableError
 _PRIVATE_DISPATCH_MESSAGE_TYPE = "job.command.dispatch"
 _W2_COLLECTION_COMMAND_MESSAGE_TYPE = "w1.private.w2.collection-command.v1"
 _W2_DIRECT_SOURCE_REGISTRATION_MESSAGE_TYPE = "w1.private.w2.direct-source-registration.v1"
+_W2_COMMIT_GATE_MESSAGE_TYPE = "w1.private.w2.commit-gate.v1"
 _W1_EXECUTION_QUEUE = "w1_execution"
 _W2_COLLECTION_COMMAND_QUEUE = "w2_collection_command"
 _MAX_SQS_BODY_BYTES = 16 * 1024
@@ -73,6 +75,10 @@ class QueueUrlRegistry:
         _W2_DIRECT_SOURCE_REGISTRATION_MESSAGE_TYPE: QueueRoute(
             logical_key=_W2_COLLECTION_COMMAND_QUEUE,
             message_type=_W2_DIRECT_SOURCE_REGISTRATION_MESSAGE_TYPE,
+        ),
+        _W2_COMMIT_GATE_MESSAGE_TYPE: QueueRoute(
+            logical_key=_W2_COLLECTION_COMMAND_QUEUE,
+            message_type=_W2_COMMIT_GATE_MESSAGE_TYPE,
         ),
     }
 
@@ -164,6 +170,21 @@ def _private_w2_direct_source_registration_dispatch_validator() -> Draft202012Va
         / "w1"
         / "v1"
         / "private-w2-direct-source-registration-dispatch.schema.json"
+    )
+    with schema_path.open(encoding="utf-8") as stream:
+        schema = json.load(stream)
+    Draft202012Validator.check_schema(schema)
+    return Draft202012Validator(schema, format_checker=FormatChecker())
+
+
+@lru_cache(maxsize=1)
+def _private_w2_commit_gate_validator() -> Draft202012Validator:
+    schema_path = (
+        Path(__file__).resolve().parents[2]
+        / "contracts"
+        / "w1"
+        / "v1"
+        / "private-w2-commit-gate.schema.json"
     )
     with schema_path.open(encoding="utf-8") as stream:
         schema = json.load(stream)
@@ -321,7 +342,11 @@ class OutboxRelay:
                         message_attributes={
                             "epick_message_type": message.message_type,
                             "epick_schema_version": message.schema_version,
-                            "epick_message_id": str(command.id),
+                            "epick_message_id": str(
+                                message.id
+                                if message.message_type == _W2_COMMIT_GATE_MESSAGE_TYPE
+                                else command.id
+                            ),
                             "epick_command_id": str(command.id),
                             "epick_job_id": str(job.id),
                         },
@@ -363,7 +388,6 @@ class OutboxRelay:
             or message.owner_user_id is None
             or message.execution_fence is None
             or message.owner_deletion_epoch is None
-            or message.schema_version != "1.0"
         ):
             raise OutboxPayloadError("OUTBOX_PRIVATE_REFERENCE_INVALID")
         command = session.scalar(
@@ -377,10 +401,22 @@ class OutboxRelay:
             or command.owner_user_id != message.owner_user_id
             or command.execution_fence != message.execution_fence
             or command.owner_deletion_epoch != message.owner_deletion_epoch
-            or command.command_schema_version != message.schema_version
             or job.owner_user_id != message.owner_user_id
         ):
             raise OutboxPayloadError("OUTBOX_CANONICAL_REFERENCE_MISMATCH")
+        if message.message_type == _W2_COMMIT_GATE_MESSAGE_TYPE:
+            self._validate_commit_gate_message(
+                session=session,
+                message=message,
+                command=command,
+                job=job,
+            )
+            return command, job
+        if (
+            message.schema_version != "1.0"
+            or command.command_schema_version != message.schema_version
+        ):
+            raise OutboxPayloadError("OUTBOX_PRIVATE_REFERENCE_INVALID")
         payload = message.payload
         expected_payload = {
             "command_id": str(command.id),
@@ -404,6 +440,67 @@ class OutboxRelay:
         if command.status != "PENDING":
             raise OutboxPayloadError("OUTBOX_COMMAND_NOT_PENDING")
         return command, job
+
+    @staticmethod
+    def _validate_commit_gate_message(
+        *, session: Session, message: OutboxMessage, command: JobCommand, job: Job
+    ) -> None:
+        payload = message.payload
+        if (
+            message.schema_version != _W2_COMMIT_GATE_MESSAGE_TYPE
+            or message.aggregate_type != "W2_COMMIT_OPERATION"
+            or message.aggregate_id is None
+            or not isinstance(payload, dict)
+            or list(_private_w2_commit_gate_validator().iter_errors(payload))
+        ):
+            raise OutboxPayloadError("OUTBOX_COMMIT_GATE_PAYLOAD_INVALID")
+        operation = session.scalar(
+            select(W2CommitOperation)
+            .where(W2CommitOperation.id == message.aggregate_id)
+            .with_for_update()
+        )
+        if operation is None:
+            raise OutboxPayloadError("OUTBOX_COMMIT_GATE_OPERATION_NOT_FOUND")
+        expected_state_by_action = {
+            "PREPARE": "PREPARE_PENDING",
+            "FINALIZE": "FINALIZE_PENDING",
+            "ABORT": "ABORT_PENDING",
+            "PURGE": "PURGE_PENDING",
+        }
+        action = payload.get("action")
+        if (
+            action not in expected_state_by_action
+            or operation.state != expected_state_by_action[action]
+            or message.aggregate_revision != operation.operation_revision
+            or payload.get("message_id") != str(message.id)
+            or payload.get("operation_id") != str(operation.id)
+            or payload.get("operation_revision") != operation.operation_revision
+            or payload.get("command_id") != str(command.id)
+            or payload.get("job_id") != str(job.id)
+            or payload.get("authenticated_owner_ref") != str(job.owner_user_id)
+            or payload.get("execution_fence") != command.execution_fence
+            or payload.get("owner_deletion_epoch") != command.owner_deletion_epoch
+            or payload.get("result_digest") != operation.result_digest
+            or (
+                action == "PURGE"
+                and payload.get("purge_owner_deletion_epoch")
+                != operation.purge_owner_deletion_epoch
+            )
+            or (
+                action != "PURGE"
+                and "purge_owner_deletion_epoch" in payload
+            )
+            # ABORT/PURGE are deliberately emitted after a W1 cancellation or
+            # deletion fence.  Their original W2 command may therefore already
+            # be INVALIDATED/CONSUMED, unlike PREPARE/FINALIZE.
+            or command.status
+            not in (
+                {"PENDING", "ENQUEUED"}
+                if action in {"PREPARE", "FINALIZE"}
+                else {"PENDING", "ENQUEUED", "CLAIMED", "CONSUMED", "INVALIDATED"}
+            )
+        ):
+            raise OutboxPayloadError("OUTBOX_COMMIT_GATE_BINDING_MISMATCH")
 
     @staticmethod
     def _validate_command_payload(
@@ -533,6 +630,8 @@ class OutboxRelay:
         job: Job,
         issued_at: datetime,
     ) -> str:
+        if message.message_type == _W2_COMMIT_GATE_MESSAGE_TYPE:
+            return OutboxRelay._serialize_private_w2_commit_gate(message=message)
         if message.message_type == _W2_COLLECTION_COMMAND_MESSAGE_TYPE:
             return OutboxRelay._serialize_private_w2_command_dispatch(
                 message=message,
@@ -562,6 +661,20 @@ class OutboxRelay:
         if dispatch["message_id"] != dispatch["command_id"]:
             raise OutboxPayloadError("OUTBOX_MESSAGE_COMMAND_MISMATCH")
         body = json.dumps(dispatch, ensure_ascii=False, separators=(",", ":"))
+        if len(body.encode("utf-8")) > _MAX_SQS_BODY_BYTES:
+            raise OutboxPayloadError("OUTBOX_DISPATCH_TOO_LARGE")
+        return body
+
+    @staticmethod
+    def _serialize_private_w2_commit_gate(*, message: OutboxMessage) -> str:
+        payload = message.payload
+        if (
+            not isinstance(payload, dict)
+            or list(_private_w2_commit_gate_validator().iter_errors(payload))
+            or payload.get("message_id") != str(message.id)
+        ):
+            raise OutboxPayloadError("OUTBOX_COMMIT_GATE_PAYLOAD_INVALID")
+        body = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
         if len(body.encode("utf-8")) > _MAX_SQS_BODY_BYTES:
             raise OutboxPayloadError("OUTBOX_DISPATCH_TOO_LARGE")
         return body

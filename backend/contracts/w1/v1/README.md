@@ -57,7 +57,38 @@ lookup request와 W2 payload의 `execution_fence`는 표현만 다르다.
   값이다. 예: integer `1` ↔ string `"1"`.
 - `command_id`와 `owner_deletion_epoch`는 양쪽 값이 정확히 같아야 한다.
 
-### 1.1 W1 내부 Job execution dispatch
+### 1.2 W2 private commit gate
+
+`private-w2-commit-gate.schema.json`은 collection command 또는 lookup을 대체하지 않는다.
+W2가 collection result를 private staging에 보관한 뒤, W1이 현재 command/fence/deletion
+epoch를 transaction에서 재검증해 발행하는 별도 가시화 제어 command다.
+
+- `message_type`과 `schema_version`은 모두 `w1.private.w2.commit-gate.v1`이고 producer는
+  `w1`이다. `message_id`는 W2의 delivery deduplication key다.
+- immutable binding은 `operation_id`, `command_id`, `job_id`, `authenticated_owner_ref`,
+  `execution_fence`, `owner_deletion_epoch`, `result_digest`다. action이 바뀌어도 이 값은
+  바꾸지 않는다.
+- `PURGE`에는 불변 `owner_deletion_epoch`와 별도로 더 큰
+  `purge_owner_deletion_epoch`가 필수다. 전자는 W2 staging result가 생성된 원래 epoch이고,
+  후자는 그 owner의 삭제가 확정된 epoch다. 이 둘을 하나의 가변 필드로 합치면 늦은
+  FINALIZE replay를 판별할 수 없으므로 절대로 대체하지 않는다.
+- `operation_revision`은 W1이 state를 바꿀 때 단조 증가한다. W2는 현재보다 낮은
+  revision의 `FINALIZE`/`ABORT`/`PURGE`를 적용하면 안 된다.
+- `PREPARE`는 비가시 staging을 준비 상태로만 전이한다. `FINALIZE`만 private visibility를
+  허용한다. 취소가 먼저 확정되면 `ABORT`, owner deletion이 W1 committed result 뒤에
+  확정되면 `PURGE`를 사용한다.
+- 이 command는 owner-scoped private staging/cache/derived result만 대상으로 한다. W2는
+  `sources`, `source_versions`, evidence 등 공용 canonical Source를 삭제·변경할 권한이
+  없다.
+- lookup `AVAILABLE`은 작업을 시작·재개할 수 있는 사전 currentness 확인일 뿐, W2 private
+  결과의 commit 또는 재노출 권한이 아니다. commit-gate의 `FINALIZE` 전에는 어떤 사용자
+  가시 projection도 만들면 안 된다.
+
+W2 → W1 ACK Schema와 W2 local staging transaction은 W2 소유 artifact다. W1은 W2가
+canonical Schema·fixture·commit SHA를 제공하고 채택할 때까지 이를 backend 소유 정본으로
+표기하거나 W1-R2-03 전체 완료를 선언하지 않는다.
+
+### 1.3 W1 내부 Job execution dispatch
 
 `private-job-dispatch.schema.json`은 W1 outbox relay가 W1 execution queue에만 보내는
 참조 메시지다. W2/W3/W4와 공유하는 payload가 아니다.

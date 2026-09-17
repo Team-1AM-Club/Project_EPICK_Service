@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import pytest
@@ -7,11 +8,14 @@ from sqlalchemy import Engine, select, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
+from app.models.application_workspace import Company
 from app.models.deletion import DeletionTarget
 from app.models.experience import Episode
 from app.models.identity import User
 from app.models.jobs import OutboxMessage
 from app.models.privacy_controls import AnalyticsEvent, SensitivityFinding
+from app.models.sources import Source
+from app.models.w2_commit_operations import W2CommitOperation
 from app.services.deletion import (
     DeletionOrchestrationService,
     StaleDeletionAcknowledgementError,
@@ -19,6 +23,7 @@ from app.services.deletion import (
 from app.services.experience import ExperienceService
 from app.services.jobs import JobService
 from app.services.privacy_controls import PrivacyControlsService
+from app.services.w2_commit_gate import W2CommitGateService
 
 
 @pytest.fixture(autouse=True)
@@ -240,3 +245,69 @@ def test_deletion_requires_all_current_store_acks_and_fences_active_jobs(
     assert request.status == "COMPLETED"
     assert request.completed_at is not None
     assert all(target.status == "ACKNOWLEDGED" and target.ack_epoch == 1 for target in targets)
+
+
+@pytest.mark.w1_isolated_commit_gate
+def test_deletion_with_commit_operation_keeps_public_source_and_other_owner_unchanged(
+    db_session: Session,
+) -> None:
+    """A private deletion creates only owner-scoped targets and an ABORT gate command."""
+
+    owner = _create_owner(db_session, "Commit gate deletion owner")
+    other_owner = _create_owner(db_session, "Unaffected owner")
+    company = Company(legal_name="Public source company", display_name="Public source company")
+    db_session.add(company)
+    db_session.flush()
+    source = Source(
+        company_id=company.id,
+        source_type="OFFICIAL",
+        canonical_url="https://public.example/delete-safety",
+        canonical_url_hash="delete-safety-source",
+        url_normalization_version="v1",
+        policy_version="policy-v1",
+        policy_checked_at=datetime.now(UTC),
+    )
+    db_session.add(source)
+
+    jobs = JobService(db_session)
+    accepted = jobs.accept_job(
+        owner_user_id=owner.id,
+        job_type="SOURCE_COLLECTION",
+        idempotency_key="commit-gate-delete-job",
+        request_hash="g" * 64,
+        analysis_input_version="analysis-v1",
+    )
+    assert accepted.command is not None
+    operation = W2CommitGateService(db_session).create_prepare_operation(
+        owner_user_id=owner.id,
+        job_id=accepted.job.id,
+        command_id=accepted.command.id,
+        execution_fence=accepted.job.execution_fence,
+        owner_deletion_epoch=accepted.job.owner_deletion_epoch,
+        result_digest="sha256:" + "b" * 64,
+    )
+
+    deletion = DeletionOrchestrationService(db_session)
+    preview = deletion.create_account_deletion_preview(
+        owner_user_id=owner.id,
+        preview_token="commit-gate-private-target-token",
+    )
+    request = deletion.confirm_and_start_account_deletion(
+        owner_user_id=owner.id,
+        deletion_request_id=preview.request.id,
+        preview_token=preview.preview_token,
+    )
+    targets = list(
+        db_session.scalars(
+            select(DeletionTarget).where(DeletionTarget.deletion_request_id == request.id)
+        )
+    )
+    db_session.commit()
+
+    stored_operation = db_session.get(W2CommitOperation, operation.id)
+    assert stored_operation is not None
+    assert (stored_operation.state, stored_operation.operation_revision) == ("ABORT_PENDING", 2)
+    assert all(target.resource_type == "OWNER_PRIVATE_SCOPE" for target in targets)
+    assert all(target.resource_id == owner.id for target in targets)
+    assert db_session.get(Source, source.id) is not None
+    assert db_session.get(User, other_owner.id).deletion_epoch == 0
