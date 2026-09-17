@@ -1,9 +1,9 @@
 {
-  "contract_status": "PRIVATE_CONTRACT_ADOPTED_PUBLIC_SOURCE_EVENT_COMPATIBILITY_PENDING",
+  "contract_status": "PRIVATE_CONTRACT_ADOPTED_W2_RESULT_RUNTIME_VERIFIED_PUBLIC_SOURCE_EVENT_COMPATIBILITY_PENDING",
   "artifact_authority": "W2",
-  "source_commit": null,
-  "source_commit_status": "NOT_PROVIDED_WITH_W2_ARTIFACT_PACKAGE",
-  "derivation": "Static artifacts and fixtures were supplied by W2. SHA-256 pins preserve their exact bytes; they do not introduce a backend-owned DTO.",
+  "source_commit": "0865ecdfe4748dad5679bc82b9f7386dc663675e",
+  "source_commit_status": "VERIFIED_LOCAL_W2_CRAWLER_HEAD_FOR_COLLECTION_RESULT",
+  "derivation": "Static artifacts and fixtures were supplied by W2. The CollectionResult mirror was reconciled against the W2 Pydantic parser at source_commit; SHA-256 pins preserve the adopted bytes and do not introduce a backend-owned DTO.",
   "declared_runtime_schema_versions": [
     "w2.collection.v1",
     "w2.source.v1"
@@ -14,7 +14,7 @@
       "scope": "private W1-W2 command"
     },
     "source-collection.result.schema.json": {
-      "sha256": "007ed86658b627d9a81e0c6539a50272350c9e184e1322eafa5c60b27e840429",
+      "sha256": "3ffc6187595b084b84a9365a09002b6035637cd5890645e22caf3979408f66ad",
       "scope": "private W2-W1 result"
     },
     "source-event-payload.schema.json": {
@@ -26,7 +26,8 @@
     "source-collection-command.json": "351100a6e07cebeb2fc9b23ab1ccb7303652b08b1c9de2cdd4c46f4713f2d154",
     "source-collection-result-complete.json": "2c91e4d66410bf50c6bb3dcc2661779f4846f1934fa9fe02ba8274b9a51eadbd",
     "source-collection-result-failure.json": "124a19ea95ecae16b1944e6fceefc4531a941d3c1119908b0ba6d46c051f3c16",
-    "source-collection-result-partial.json": "fa82e140dcff7af159eafd56cbfe7de7581934cf32ba0e70dbe182874262953c",
+    "source-collection-result-partial.json": "84b35ca2d363588d0a50d6a6836897ea6aa84a73ebac5c3eb4725dbe71448c3c",
+    "source-collection-result-policy-failure.json": "a401ace339aba5e892ef33ff2aacedab0511d1379cf6c1908b27bd8d0ed4c312",
     "source-event-observation-changed.json": "030f39005f7bcf6ae96fc5a0d3a4eabad32d9fd88053d54d94af7e1cddd6b141",
     "source-event-restriction-changed.json": "79f59482a3ab8b89bdd4eff4c862eab90ab7de1514dbe25d047231d32bbe910c",
     "source-event-version-available.json": "85d9fcde994011d1e5481509c8fc0146d5b7ffbbb02a15f22a222b769ae7a51d",
@@ -35,6 +36,13 @@
     "invalid-source-event-transport-fields.json": "4aaab1a380658c7f5742c769d5718b6593c1791fad1f1b98d523c97eb71d93df"
   },
   "runtime_invariant_authority": "W2 Pydantic model validators and the W2 contract test suite remain authoritative for cross-field constraints not expressible in JSON Schema.",
+  "runtime_parser_verification": {
+    "scope": "source-collection.result.schema.json and the four source-collection result fixtures",
+    "crawler_source": "src/epick_engine/source_collection/contracts.py:CollectionResult",
+    "verification_script": "backend/scripts/verify_w2_collection_result_contract.py",
+    "required_crawler_commit": "0865ecdfe4748dad5679bc82b9f7386dc663675e",
+    "status": "VERIFIED_WITH_PINNED_LOCAL_CRAWLER_HEAD"
+  },
   "public_source_event_compatibility": {
     "status": "PENDING_W1_W3_CONSUMER_COMPATIBILITY",
     "direct_consumers": ["W1", "W3"],

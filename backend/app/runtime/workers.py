@@ -23,6 +23,10 @@ from app.models.jobs import (
 )
 from app.models.lifecycle_operations import JobCheckpoint
 from app.models.sources import AnalysisSourceDecision, JobSourceLink
+from app.runtime.core_decision_binding import (
+    CoreDecisionBindingError,
+    validate_database_core_binding,
+)
 from app.runtime.sqs import ReceivedSqsMessage, SqsPort, SqsRetryableError
 from app.services.direct_source_registration import (
     DIRECT_SOURCE_REGISTRATION_DECISION_CODE,
@@ -364,9 +368,9 @@ class JobWorker:
             self._block_for_core_decision(session=session, job=job, lease=lease)
             return False
 
-        # W2 owns an integer input field.  W1's immutable command sequence is its canonical
-        # monotonic transport revision, while `analysis_input_version` remains the opaque pin.
-        input_version = execution_command.command_sequence
+        # D-04 fixes all W2 integer decision versions to the immutable decision revision.  W1's
+        # command sequence remains an internal ordering value only.
+        input_version = decision_version
         w2_command_id = uuid4()
         w2_payload: dict[str, object] = {
             "schema_version": "w2.collection.v1",
@@ -381,7 +385,7 @@ class JobWorker:
             "purpose_ref": str(source_link.id),
             "core_source_decision": {
                 "is_core": True,
-                "decided_by": "w3",
+                "decided_by": decision.decision_owner,
                 "rationale": reason_code,
                 "decision_revision": decision_version,
                 "analysis_input_version": input_version,
@@ -390,6 +394,17 @@ class JobWorker:
             "policy_revision": None,
             "owner_deletion_epoch": job.owner_deletion_epoch,
         }
+        try:
+            validate_database_core_binding(
+                decision=decision,
+                pin=pin,
+                w2_command=w2_payload,
+                job_analysis_input_version=job.analysis_input_version,
+                source_link=source_link,
+            )
+        except CoreDecisionBindingError:
+            self._block_for_core_decision(session=session, job=job, lease=lease)
+            return False
         _validate(
             w2_payload,
             "w2/v1/source-collection.command.schema.json",
@@ -650,6 +665,7 @@ class JobWorker:
             owner_deletion_epoch=job.owner_deletion_epoch,
             status="WAITING_USER",
             action_code="CORE_DECISION_REQUIRED",
+            context_code="CORE_DECISION_BINDING_MISMATCH",
         )
 
     def heartbeat(self, *, lease_id: UUID) -> bool:

@@ -18,7 +18,7 @@
     "execution_fence": "1",
     "purpose_ref": "10000000-0000-4000-8000-000000000006",
     "core_source_decision": {
-      "is_core": true,
+      "is_core": false,
       "decided_by": "W3",
       "rationale": "REQUESTED_ANALYSIS_REQUIRED",
       "decision_revision": 1,

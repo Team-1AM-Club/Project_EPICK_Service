@@ -118,6 +118,25 @@ W1은 검증된 Core Decision만 pin하고, `private-w2-command-dispatch`의
 `DUPLICATE`, 같은 scope·대상·source·analysis input의 낮거나 이미 적용된 decision
 version은 `STALE_DISCARDED`로 처리한다.
 
+### 3.1 Core pin과 W2 command 결속
+
+Core dispatch에서 `JobCommand.payload.w2_command`가 유일한 canonical W2 command다.
+Outbox dispatch의 `payload`와 lookup의 `AVAILABLE.command`는 이 저장값을 새로 만들거나
+보정하지 않고 그대로 사용한다. transport metadata를 제외한 세 command object는 동일해야
+한다.
+
+| Core pin / DB 정본 | W2 command 필드 | 규칙 |
+| --- | --- | --- |
+| `source_id` | `source_id` | 정확히 같아야 한다. |
+| `decision_scope` + DB `decision_owner` | `core_source_decision.decided_by` | `COMPANY_KNOWLEDGE → W3`, `QUESTION_MATCHING → W4`의 대문자 owner를 정확히 사용한다. |
+| `is_core=true`, `decision_code=CORE_REQUIRED` | `core_source_decision.is_core=true` | 하나라도 다르면 command를 보정하지 않고 거부한다. |
+| `decision_version` | `input_version`, `core_source_decision.decision_revision`, `core_source_decision.analysis_input_version` | 세 정수는 모두 같은 양의 `decision_version`이다. W1 `command_sequence`는 이 값의 대체값이 아니다. |
+| `reason_code` | `core_source_decision.rationale` | 정확히 같아야 한다. |
+
+Job Worker와 relay는 DB decision까지 포함해 이 결속을 검사한 뒤에만 W2 command를
+생성·publish한다. lookup은 저장된 pin과 command의 pure 결속을 다시 확인한다. 어느
+경계에서든 불일치하면 W2 command를 수정하지 않고 send/`AVAILABLE`을 차단한다.
+
 ## 4. Public retry 호환성
 
 사용자 retry의 canonical 진입점은

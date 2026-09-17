@@ -19,6 +19,11 @@ from app.models.jobs import (
     OutboxMessage,
     OwnerExecutionSlot,
 )
+from app.models.sources import AnalysisSourceDecision, JobSourceLink
+from app.runtime.core_decision_binding import (
+    CoreDecisionBindingError,
+    validate_database_core_binding,
+)
 from app.runtime.sqs import SqsFinalDeliveryError, SqsPort, SqsRetryableError
 
 _PRIVATE_DISPATCH_MESSAGE_TYPE = "job.command.dispatch"
@@ -390,8 +395,10 @@ class OutboxRelay:
         ):
             raise OutboxPayloadError("OUTBOX_PRIVATE_PAYLOAD_INVALID")
         self._validate_command_payload(
+            session=session,
             message=message,
             command=command,
+            job=job,
             outbox_payload=payload,
         )
         if command.status != "PENDING":
@@ -401,8 +408,10 @@ class OutboxRelay:
     @staticmethod
     def _validate_command_payload(
         *,
+        session: Session,
         message: OutboxMessage,
         command: JobCommand,
+        job: Job,
         outbox_payload: object,
     ) -> None:
         if not isinstance(outbox_payload, dict):
@@ -484,6 +493,35 @@ class OutboxRelay:
                 raise OutboxPayloadError("OUTBOX_W2_COMMAND_PAYLOAD_INVALID")
             if list(_w2_collection_command_validator().iter_errors(w2_command)):
                 raise OutboxPayloadError("OUTBOX_W2_COMMAND_SCHEMA_INVALID")
+            if not is_direct_registration:
+                if command.analysis_source_decision_id is None:
+                    raise OutboxPayloadError("OUTBOX_W2_DECISION_BINDING_MISMATCH")
+                decision = session.scalar(
+                    select(AnalysisSourceDecision)
+                    .where(AnalysisSourceDecision.id == command.analysis_source_decision_id)
+                    .with_for_update()
+                )
+                source_link = session.scalar(
+                    select(JobSourceLink)
+                    .where(
+                        JobSourceLink.job_id == job.id,
+                        JobSourceLink.owner_user_id == job.owner_user_id,
+                        JobSourceLink.command_id == command.id,
+                    )
+                    .with_for_update()
+                )
+                if decision is None:
+                    raise OutboxPayloadError("OUTBOX_W2_DECISION_BINDING_MISMATCH")
+                try:
+                    validate_database_core_binding(
+                        decision=decision,
+                        pin=dispatch_pin,
+                        w2_command=w2_command,
+                        job_analysis_input_version=job.analysis_input_version,
+                        source_link=source_link,
+                    )
+                except CoreDecisionBindingError as error:
+                    raise OutboxPayloadError("OUTBOX_W2_DECISION_BINDING_MISMATCH") from error
             return
         raise OutboxPayloadError("OUTBOX_ROUTE_UNKNOWN")
 

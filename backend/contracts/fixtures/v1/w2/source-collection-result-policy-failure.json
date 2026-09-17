@@ -1,0 +1,26 @@
+{
+  "schema_version": "w2.collection.v1",
+  "command_id": "10000000-0000-4000-8000-000000000001",
+  "job_id": "10000000-0000-4000-8000-000000000002",
+  "input_version": 1,
+  "result_version": 4,
+  "successful_source_refs": [],
+  "failures": [
+    {
+      "source_id": "10000000-0000-4000-8000-000000000005",
+      "stage": "policy",
+      "code": "SOURCE_POLICY_BLOCKED",
+      "missing_sections": [],
+      "impact": "정책 판정 전에 수집을 시작할 수 없습니다.",
+      "core_decision_revision": 1
+    }
+  ],
+  "completion_kind": "none",
+  "resume_stage": "policy",
+  "checkpoint_ref": null,
+  "retry_not_before": null,
+  "message_ko": "정책 판정 전 실패로 수집을 시작하지 않았습니다.",
+  "source_id": "10000000-0000-4000-8000-000000000005",
+  "policy_revision": null,
+  "required_actions": []
+}
