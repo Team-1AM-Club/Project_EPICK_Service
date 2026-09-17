@@ -19,6 +19,7 @@ from app.runtime.outbox_relay import OutboxRelay, QueueUrlRegistry
 from app.runtime.sqs import InMemorySqsPort
 from app.runtime.workers import CollectionResultWorker, JobWorker
 from app.services.application_workspace import ApplicationWorkspaceService
+from app.services.direct_source_registration import DirectSourceRegistrationService
 from app.services.jobs import JobService
 
 EXECUTION_QUEUE_URL = "https://sqs.ap-northeast-2.amazonaws.com/123/w1-execution"
@@ -119,6 +120,41 @@ def _seed_dispatchable_job(
     return owner.id, accepted.job.id, accepted.command.id, accepted.outbox_message.id
 
 
+def _seed_direct_source_registration(
+    db_session: Session,
+    *,
+    key: str,
+) -> tuple[UUID, UUID, UUID, UUID, UUID]:
+    owner = User(display_name=f"Direct registration {key}", locale="ko-KR", timezone="Asia/Seoul")
+    db_session.add(owner)
+    db_session.flush()
+    company = ApplicationWorkspaceService(db_session).create_company(
+        legal_name=f"Direct EPICK {key}", display_name=f"Direct EPICK {key}"
+    )
+    source = Source(
+        company_id=company.id,
+        source_type="CAREERS",
+        canonical_url=f"https://example.test/direct/{key}",
+        canonical_url_hash=f"direct-hash-{key}",
+        url_normalization_version="v1",
+        policy_version="policy-v1",
+        policy_checked_at=datetime.now(UTC),
+    )
+    db_session.add(source)
+    db_session.flush()
+    accepted = DirectSourceRegistrationService(db_session).accept(
+        owner_user_id=owner.id,
+        company_id=company.id,
+        source_id=source.id,
+        idempotency_key=f"direct-registration-{key}",
+        request_hash=f"direct-registration-{key}",
+    )
+    assert accepted.command.id is not None
+    assert accepted.job.id is not None
+    db_session.flush()
+    return owner.id, accepted.job.id, accepted.command.id, source.id, accepted.decision.id
+
+
 def _relay(migrated_engine: Engine, sqs: InMemorySqsPort) -> OutboxRelay:
     return OutboxRelay(
         session_factory=_factory(migrated_engine),
@@ -158,6 +194,40 @@ def _run_execution_to_w2_dispatch(
     w2_command = db_session.scalar(
         select(JobCommand)
         .where(JobCommand.job_id == job_id, JobCommand.command_type == "W2_SOURCE_COLLECTION")
+        .limit(1)
+    )
+    assert w2_command is not None
+    return relay_sqs, job_id, w2_command.id
+
+
+def _run_direct_registration_to_w2_dispatch(
+    migrated_engine: Engine,
+    db_session: Session,
+    *,
+    key: str,
+) -> tuple[InMemorySqsPort, UUID, UUID]:
+    _, job_id, _, _, _ = _seed_direct_source_registration(db_session, key=key)
+    db_session.commit()
+    relay_sqs = InMemorySqsPort()
+    assert _relay(migrated_engine, relay_sqs).drain_once(limit=10).published == 1
+    worker_sqs = InMemorySqsPort()
+    worker_sqs.inject_message(queue_url=EXECUTION_QUEUE_URL, body=relay_sqs.sent_messages[0].body)
+    worker = JobWorker(
+        session_factory=_factory(migrated_engine),
+        sqs=worker_sqs,
+        execution_queue_url=EXECUTION_QUEUE_URL,
+        worker_id="direct-registration-test-worker",
+    )
+    result = worker.drain_once()
+    assert result.acknowledged == 1
+    assert result.retry_scheduled == 0
+    db_session.expire_all()
+    w2_command = db_session.scalar(
+        select(JobCommand)
+        .where(
+            JobCommand.job_id == job_id,
+            JobCommand.command_type == "W2_DIRECT_SOURCE_REGISTRATION",
+        )
         .limit(1)
     )
     assert w2_command is not None
@@ -258,6 +328,139 @@ def test_job_worker_creates_one_w2_outbox_and_lookup_uses_only_private_adapter(
     assert available.status_code == 200
     assert available.json()["status"] == "AVAILABLE"
     assert available.json()["command"]["command_id"] == str(w2_command_id)
+
+
+@pytest.mark.postgres
+def test_direct_source_registration_uses_its_own_w1_dispatch_and_lookup_contract(
+    migrated_engine: Engine,
+    db_session: Session,
+) -> None:
+    relay_sqs, job_id, w2_command_id = _run_direct_registration_to_w2_dispatch(
+        migrated_engine, db_session, key="normal"
+    )
+    assert _relay(migrated_engine, relay_sqs).drain_once(limit=10).published == 1
+    delivery = json.loads(relay_sqs.sent_messages[-1].body)
+    assert delivery["message_type"] == "w1.private.w2.direct-source-registration.v1"
+    assert delivery["message_id"] == delivery["payload"]["command_id"] == str(w2_command_id)
+    pin = delivery["direct_source_registration_pin"]
+    payload = delivery["payload"]
+    assert pin["decision_scope"] == "DIRECT_SOURCE_REGISTRATION"
+    assert pin["is_core"] is False
+    assert pin["decision_owner"] == "W1"
+    assert payload["company_id"] == pin["company_id"]
+    assert payload["source_id"] == pin["source_id"]
+    assert payload["input_version"] == pin["decision_version"]
+    assert payload["core_source_decision"] == {
+        "is_core": False,
+        "decided_by": "W1",
+        "rationale": pin["reason_code"],
+        "decision_revision": pin["decision_version"],
+        "analysis_input_version": pin["decision_version"],
+    }
+
+    db_session.expire_all()
+    command = db_session.get(JobCommand, w2_command_id)
+    job = db_session.get(Job, job_id)
+    assert command is not None and job is not None
+    lookup = TestClient(
+        create_lookup_app(
+            session_factory=_factory(migrated_engine),
+            expected_bearer_token="test-token",
+        )
+    )
+    available = lookup.post(
+        "/internal/v1/job-commands/lookup",
+        json={
+            "schema_version": "w1.private.command-lookup.v1",
+            "command_id": str(command.id),
+            "execution_fence": command.execution_fence,
+            "owner_deletion_epoch": command.owner_deletion_epoch,
+        },
+        headers=_lookup_headers(),
+    )
+    assert available.status_code == 200
+    assert available.json()["status"] == "AVAILABLE"
+    assert available.json()["command"] == payload
+
+
+@pytest.mark.postgres
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("is_core", True),
+        ("decision_owner", "W2"),
+        ("decision_scope", "COMPANY_KNOWLEDGE"),
+    ],
+)
+def test_ct13_rejects_client_or_w2_injected_direct_registration_pin_values_before_w2_dispatch(
+    migrated_engine: Engine,
+    db_session: Session,
+    field: str,
+    value: object,
+) -> None:
+    _, job_id, command_id, _, _ = _seed_direct_source_registration(db_session, key="injected")
+    command = db_session.get(JobCommand, command_id)
+    assert command is not None
+    payload = dict(command.payload)
+    pin = dict(payload["direct_source_registration_pin"])
+    pin[field] = value
+    payload["direct_source_registration_pin"] = pin
+    command.payload = payload
+    db_session.commit()
+
+    relay_sqs = InMemorySqsPort()
+    assert _relay(migrated_engine, relay_sqs).drain_once(limit=10).published == 1
+    worker_sqs = InMemorySqsPort()
+    worker_sqs.inject_message(queue_url=EXECUTION_QUEUE_URL, body=relay_sqs.sent_messages[0].body)
+    worker = JobWorker(
+        session_factory=_factory(migrated_engine),
+        sqs=worker_sqs,
+        execution_queue_url=EXECUTION_QUEUE_URL,
+        worker_id="direct-registration-test-worker",
+    )
+    assert worker.drain_once().acknowledged == 1
+    db_session.expire_all()
+    job = db_session.get(Job, job_id)
+    assert job is not None and job.status == "WAITING_USER" and job.active_lease_id is None
+    assert db_session.scalar(
+        select(JobCommand).where(
+            JobCommand.job_id == job_id,
+            JobCommand.command_type == "W2_DIRECT_SOURCE_REGISTRATION",
+        )
+    ) is None
+
+
+@pytest.mark.postgres
+def test_ct13_rejects_direct_registration_exception_on_an_analysis_job(
+    migrated_engine: Engine,
+    db_session: Session,
+) -> None:
+    _, job_id, command_id, _, _ = _seed_direct_source_registration(db_session, key="analysis")
+    job = db_session.get(Job, job_id)
+    assert job is not None
+    job.job_type = "SOURCE_COLLECTION"
+    db_session.commit()
+
+    relay_sqs = InMemorySqsPort()
+    assert _relay(migrated_engine, relay_sqs).drain_once(limit=10).published == 1
+    worker_sqs = InMemorySqsPort()
+    worker_sqs.inject_message(queue_url=EXECUTION_QUEUE_URL, body=relay_sqs.sent_messages[0].body)
+    worker = JobWorker(
+        session_factory=_factory(migrated_engine),
+        sqs=worker_sqs,
+        execution_queue_url=EXECUTION_QUEUE_URL,
+        worker_id="direct-registration-test-worker",
+    )
+    assert worker.drain_once().acknowledged == 1
+    db_session.expire_all()
+    job = db_session.get(Job, job_id)
+    assert job is not None and job.status == "WAITING_USER" and job.active_lease_id is None
+    assert db_session.scalar(
+        select(JobCommand).where(
+            JobCommand.job_id == job_id,
+            JobCommand.command_type == "W2_DIRECT_SOURCE_REGISTRATION",
+        )
+    ) is None
 
 
 @pytest.mark.postgres

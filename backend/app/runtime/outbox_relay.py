@@ -23,6 +23,7 @@ from app.runtime.sqs import SqsFinalDeliveryError, SqsPort, SqsRetryableError
 
 _PRIVATE_DISPATCH_MESSAGE_TYPE = "job.command.dispatch"
 _W2_COLLECTION_COMMAND_MESSAGE_TYPE = "w1.private.w2.collection-command.v1"
+_W2_DIRECT_SOURCE_REGISTRATION_MESSAGE_TYPE = "w1.private.w2.direct-source-registration.v1"
 _W1_EXECUTION_QUEUE = "w1_execution"
 _W2_COLLECTION_COMMAND_QUEUE = "w2_collection_command"
 _MAX_SQS_BODY_BYTES = 16 * 1024
@@ -63,6 +64,10 @@ class QueueUrlRegistry:
         _W2_COLLECTION_COMMAND_MESSAGE_TYPE: QueueRoute(
             logical_key=_W2_COLLECTION_COMMAND_QUEUE,
             message_type=_W2_COLLECTION_COMMAND_MESSAGE_TYPE,
+        ),
+        _W2_DIRECT_SOURCE_REGISTRATION_MESSAGE_TYPE: QueueRoute(
+            logical_key=_W2_COLLECTION_COMMAND_QUEUE,
+            message_type=_W2_DIRECT_SOURCE_REGISTRATION_MESSAGE_TYPE,
         ),
     }
 
@@ -139,6 +144,21 @@ def _private_w2_command_dispatch_validator() -> Draft202012Validator:
         / "w1"
         / "v1"
         / "private-w2-command-dispatch.schema.json"
+    )
+    with schema_path.open(encoding="utf-8") as stream:
+        schema = json.load(stream)
+    Draft202012Validator.check_schema(schema)
+    return Draft202012Validator(schema, format_checker=FormatChecker())
+
+
+@lru_cache(maxsize=1)
+def _private_w2_direct_source_registration_dispatch_validator() -> Draft202012Validator:
+    schema_path = (
+        Path(__file__).resolve().parents[2]
+        / "contracts"
+        / "w1"
+        / "v1"
+        / "private-w2-direct-source-registration-dispatch.schema.json"
     )
     with schema_path.open(encoding="utf-8") as stream:
         schema = json.load(stream)
@@ -394,6 +414,18 @@ class OutboxRelay:
         ):
             raise OutboxPayloadError("OUTBOX_COMMAND_PAYLOAD_INVALID")
         if message.message_type == _PRIVATE_DISPATCH_MESSAGE_TYPE:
+            is_direct_registration = (
+                command.command_type == "EXECUTE_JOB"
+                and command_payload.get("dispatch_kind") == "DIRECT_SOURCE_REGISTRATION"
+            )
+            if is_direct_registration:
+                if set(command_payload) != {
+                    "command_type",
+                    "dispatch_kind",
+                    "direct_source_registration_pin",
+                } or not isinstance(command_payload.get("direct_source_registration_pin"), dict):
+                    raise OutboxPayloadError("OUTBOX_COMMAND_PAYLOAD_INVALID")
+                return
             if set(command_payload).difference(
                 {"command_type", "checkpoint_id", "core_decision_pin"}
             ):
@@ -410,14 +442,30 @@ class OutboxRelay:
                 except ValueError as error:
                     raise OutboxPayloadError("OUTBOX_CHECKPOINT_REFERENCE_INVALID") from error
             return
-        if message.message_type == _W2_COLLECTION_COMMAND_MESSAGE_TYPE:
-            if command.command_type != "W2_SOURCE_COLLECTION":
+        if message.message_type in {
+            _W2_COLLECTION_COMMAND_MESSAGE_TYPE,
+            _W2_DIRECT_SOURCE_REGISTRATION_MESSAGE_TYPE,
+        }:
+            is_direct_registration = (
+                message.message_type == _W2_DIRECT_SOURCE_REGISTRATION_MESSAGE_TYPE
+            )
+            expected_command_type = (
+                "W2_DIRECT_SOURCE_REGISTRATION"
+                if is_direct_registration
+                else "W2_SOURCE_COLLECTION"
+            )
+            pin_key = (
+                "direct_source_registration_pin"
+                if is_direct_registration
+                else "core_decision_pin"
+            )
+            if command.command_type != expected_command_type:
                 raise OutboxPayloadError("OUTBOX_W2_COMMAND_TYPE_INVALID")
-            expected_keys = {"command_type", "w2_command", "core_decision_pin", "runtime"}
+            expected_keys = {"command_type", "w2_command", pin_key, "runtime"}
             if set(command_payload) != expected_keys:
                 raise OutboxPayloadError("OUTBOX_W2_COMMAND_PAYLOAD_INVALID")
             w2_command = command_payload["w2_command"]
-            dispatch_pin = command_payload["core_decision_pin"]
+            dispatch_pin = command_payload[pin_key]
             runtime = command_payload["runtime"]
             if (
                 not isinstance(w2_command, dict)
@@ -449,6 +497,12 @@ class OutboxRelay:
     ) -> str:
         if message.message_type == _W2_COLLECTION_COMMAND_MESSAGE_TYPE:
             return OutboxRelay._serialize_private_w2_command_dispatch(
+                message=message,
+                command=command,
+                issued_at=issued_at,
+            )
+        if message.message_type == _W2_DIRECT_SOURCE_REGISTRATION_MESSAGE_TYPE:
+            return OutboxRelay._serialize_private_w2_direct_source_registration_dispatch(
                 message=message,
                 command=command,
                 issued_at=issued_at,
@@ -514,6 +568,46 @@ class OutboxRelay:
             raise OutboxPayloadError("OUTBOX_W2_DISPATCH_TOO_LARGE")
         return body
 
+    @staticmethod
+    def _serialize_private_w2_direct_source_registration_dispatch(
+        *,
+        message: OutboxMessage,
+        command: JobCommand,
+        issued_at: datetime,
+    ) -> str:
+        command_payload = command.payload
+        if not isinstance(command_payload, dict):
+            raise OutboxPayloadError("OUTBOX_W2_COMMAND_PAYLOAD_INVALID")
+        w2_command = command_payload.get("w2_command")
+        direct_pin = command_payload.get("direct_source_registration_pin")
+        if not isinstance(w2_command, dict) or not isinstance(direct_pin, dict):
+            raise OutboxPayloadError("OUTBOX_W2_COMMAND_PAYLOAD_INVALID")
+        dispatch: dict[str, object] = {
+            "schema_version": "w1.private.w2-direct-source-registration-dispatch.v1",
+            "message_id": str(command.id),
+            "message_type": _W2_DIRECT_SOURCE_REGISTRATION_MESSAGE_TYPE,
+            "producer": "w1",
+            "occurred_at": issued_at.isoformat().replace("+00:00", "Z"),
+            "visibility_scope": "PRIVATE",
+            "payload_schema_version": "w2.collection.v1",
+            "payload": w2_command,
+            "lookup_request": {
+                "schema_version": "w1.private.command-lookup.v1",
+                "command_id": str(command.id),
+                "execution_fence": command.execution_fence,
+                "owner_deletion_epoch": command.owner_deletion_epoch,
+            },
+            "direct_source_registration_pin": direct_pin,
+        }
+        if list(_private_w2_direct_source_registration_dispatch_validator().iter_errors(dispatch)):
+            raise OutboxPayloadError("OUTBOX_W2_DIRECT_SOURCE_REGISTRATION_SCHEMA_INVALID")
+        if dispatch["message_id"] != w2_command.get("command_id"):
+            raise OutboxPayloadError("OUTBOX_W2_MESSAGE_COMMAND_MISMATCH")
+        body = json.dumps(dispatch, ensure_ascii=False, separators=(",", ":"))
+        if len(body.encode("utf-8")) > _MAX_SQS_BODY_BYTES:
+            raise OutboxPayloadError("OUTBOX_DISPATCH_TOO_LARGE")
+        return body
+
     def _mark_published(self, *, claim: RelayClaim) -> bool:
         with self._session_factory.begin() as session:
             message = self._get_current_claim_for_update(session=session, claim=claim)
@@ -537,7 +631,11 @@ class OutboxRelay:
                     job.dispatch_status = "ENQUEUED"
                     job.updated_at = now
                 elif (
-                    message.message_type == _W2_COLLECTION_COMMAND_MESSAGE_TYPE
+                    message.message_type
+                    in {
+                        _W2_COLLECTION_COMMAND_MESSAGE_TYPE,
+                        _W2_DIRECT_SOURCE_REGISTRATION_MESSAGE_TYPE,
+                    }
                     and job.status == "RUNNING"
                     and job.dispatch_status == "CLAIMED"
                     and job.active_lease_id is not None
@@ -652,7 +750,11 @@ class OutboxRelay:
             job.updated_at = now
             return
         if (
-            message.message_type == _W2_COLLECTION_COMMAND_MESSAGE_TYPE
+            message.message_type
+            in {
+                _W2_COLLECTION_COMMAND_MESSAGE_TYPE,
+                _W2_DIRECT_SOURCE_REGISTRATION_MESSAGE_TYPE,
+            }
             and job.status == "RUNNING"
             and job.active_lease_id is not None
         ):

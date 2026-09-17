@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w1/v1/private-w2-direct-source-registration-dispatch.schema.json",
+  "title": "EPICK W1 to W2 private direct Source registration dispatch v1",
+  "description": "A W1-owned non-core Source registration. It is deliberately separate from the W3/W4 core-decision wrapper. W2 must use command_id for deduplication and must call lookup_request before work starts or resumes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "message_id",
+    "message_type",
+    "producer",
+    "occurred_at",
+    "visibility_scope",
+    "payload_schema_version",
+    "payload",
+    "lookup_request",
+    "direct_source_registration_pin"
+  ],
+  "properties": {
+    "schema_version": { "const": "w1.private.w2-direct-source-registration-dispatch.v1" },
+    "message_id": { "type": "string", "format": "uuid" },
+    "message_type": { "const": "w1.private.w2.direct-source-registration.v1" },
+    "producer": { "const": "w1" },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "visibility_scope": { "const": "PRIVATE" },
+    "payload_schema_version": { "const": "w2.collection.v1" },
+    "payload": { "type": "object" },
+    "lookup_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "command_id", "execution_fence", "owner_deletion_epoch"],
+      "properties": {
+        "schema_version": { "const": "w1.private.command-lookup.v1" },
+        "command_id": { "type": "string", "format": "uuid" },
+        "execution_fence": { "type": "integer", "minimum": 1 },
+        "owner_deletion_epoch": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "direct_source_registration_pin": {
+      "description": "W1 creates every field. Client and W2 input never supplies or overwrites this pin.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "registration_decision_id",
+        "decision_scope",
+        "company_id",
+        "question_version_id",
+        "source_id",
+        "registration_input_version",
+        "decision_version",
+        "is_core",
+        "decision_code",
+        "decision_owner",
+        "reason_code",
+        "purpose"
+      ],
+      "properties": {
+        "registration_decision_id": { "type": "string", "format": "uuid" },
+        "decision_scope": { "const": "DIRECT_SOURCE_REGISTRATION" },
+        "company_id": { "type": "string", "format": "uuid" },
+        "question_version_id": { "type": "null" },
+        "source_id": { "type": "string", "format": "uuid" },
+        "registration_input_version": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "decision_version": { "type": "integer", "minimum": 1 },
+        "is_core": { "const": false },
+        "decision_code": { "const": "NON_CORE_OPTIONAL" },
+        "decision_owner": { "const": "W1" },
+        "reason_code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,63}$" },
+        "purpose": { "const": "DIRECT_SOURCE_REGISTRATION" }
+      }
+    }
+  }
+}

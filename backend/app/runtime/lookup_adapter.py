@@ -19,6 +19,7 @@ from app.models.jobs import Job, JobCommand
 
 _W2_SERVICE_PRINCIPAL = "w2"
 _LOOKUP_SCHEMA_VERSION = "w1.private.command-lookup.v1"
+_W2_COMMAND_TYPES = {"W2_SOURCE_COLLECTION", "W2_DIRECT_SOURCE_REGISTRATION"}
 
 
 class LookupRequest(BaseModel):
@@ -233,7 +234,7 @@ def _lookup_command(*, session: Session, request: LookupRequest) -> LookupRespon
     command_payload = command["payload"]
     w2_command = command_payload.get("w2_command") if isinstance(command_payload, dict) else None
     if (
-        command["command_type"] != "W2_SOURCE_COLLECTION"
+        command["command_type"] not in _W2_COMMAND_TYPES
         # Relay delivery is at-least-once: SQS can expose a W2 command after send succeeds but
         # before the relay commits its `PENDING -> ENQUEUED` bookkeeping.  A W2 caller can only
         # possess this opaque command ID after that send, so PENDING is still safe to validate

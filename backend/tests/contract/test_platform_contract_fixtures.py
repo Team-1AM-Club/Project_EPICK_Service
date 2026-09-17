@@ -125,6 +125,10 @@ def _private_message_errors(contract_root: Path, message: dict[str, Any]) -> lis
             "fixtures/v1/w1/private-w2-command-dispatch.json",
         ),
         (
+            "w1/v1/private-w2-direct-source-registration-dispatch.schema.json",
+            "fixtures/v1/w1/private-w2-direct-source-registration-dispatch.json",
+        ),
+        (
             "w1/v1/private-error.schema.json",
             "fixtures/v1/w1/private-error-unauthenticated.json",
         ),
@@ -291,6 +295,41 @@ def test_w1_dispatch_binds_the_w2_payload_to_the_exact_lookup_request(
         assert pin[field] == core_decision["payload"][field]
 
 
+def test_w1_direct_source_registration_dispatch_is_w1_owned_and_bound(
+    contract_root: Path,
+) -> None:
+    dispatch = _load(
+        contract_root / "fixtures/v1/w1/private-w2-direct-source-registration-dispatch.json"
+    )
+    payload = dispatch["payload"]
+    lookup_request = dispatch["lookup_request"]
+    pin = dispatch["direct_source_registration_pin"]
+
+    payload_validator = _validator(contract_root, "w2/v1/source-collection.command.schema.json")
+    lookup_validator = _validator(contract_root, "w1/v1/private-command-lookup-request.schema.json")
+    assert list(payload_validator.iter_errors(payload)) == []
+    assert list(lookup_validator.iter_errors(lookup_request)) == []
+    assert dispatch["message_id"] == payload["command_id"] == lookup_request["command_id"]
+    assert payload["company_id"] == pin["company_id"]
+    assert payload["source_id"] == pin["source_id"]
+    assert payload["execution_fence"] == str(lookup_request["execution_fence"])
+    assert payload["owner_deletion_epoch"] == lookup_request["owner_deletion_epoch"]
+    assert payload["input_version"] == pin["decision_version"]
+    assert payload["core_source_decision"] == {
+        "is_core": False,
+        "decided_by": "W1",
+        "rationale": pin["reason_code"],
+        "decision_revision": pin["decision_version"],
+        "analysis_input_version": pin["decision_version"],
+    }
+    assert pin["decision_scope"] == "DIRECT_SOURCE_REGISTRATION"
+    assert pin["question_version_id"] is None
+    assert pin["is_core"] is False
+    assert pin["decision_code"] == "NON_CORE_OPTIONAL"
+    assert pin["decision_owner"] == "W1"
+    assert pin["purpose"] == "DIRECT_SOURCE_REGISTRATION"
+
+
 def test_w1_private_result_deduplication_and_core_decision_scope_are_explicit(
     contract_root: Path,
 ) -> None:
@@ -360,6 +399,18 @@ def test_public_job_error_status_mapping_is_stable(contract_root: Path) -> None:
         (
             "w1/v1/core-source-decision.schema.json",
             "fixtures/v1/w1/invalid-core-source-decision-code.json",
+        ),
+        (
+            "w1/v1/private-w2-direct-source-registration-dispatch.schema.json",
+            "fixtures/v1/w1/invalid-private-w2-direct-source-registration-core-injected.json",
+        ),
+        (
+            "w1/v1/private-w2-direct-source-registration-dispatch.schema.json",
+            "fixtures/v1/w1/invalid-private-w2-direct-source-registration-owner-injected.json",
+        ),
+        (
+            "w1/v1/private-w2-direct-source-registration-dispatch.schema.json",
+            "fixtures/v1/w1/invalid-private-w2-direct-source-registration-scope-injected.json",
         ),
     ],
 )

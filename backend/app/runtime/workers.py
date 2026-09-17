@@ -24,10 +24,18 @@ from app.models.jobs import (
 from app.models.lifecycle_operations import JobCheckpoint
 from app.models.sources import AnalysisSourceDecision, JobSourceLink
 from app.runtime.sqs import ReceivedSqsMessage, SqsPort, SqsRetryableError
+from app.services.direct_source_registration import (
+    DIRECT_SOURCE_REGISTRATION_DECISION_CODE,
+    DIRECT_SOURCE_REGISTRATION_JOB_TYPE,
+    DIRECT_SOURCE_REGISTRATION_OWNER,
+    DIRECT_SOURCE_REGISTRATION_PURPOSE,
+    DIRECT_SOURCE_REGISTRATION_SCOPE,
+)
 from app.services.jobs import JobService
 
 _EXECUTION_MESSAGE_TYPE = "job.command.dispatch"
 _W2_COMMAND_MESSAGE_TYPE = "w1.private.w2.collection-command.v1"
+_W2_DIRECT_SOURCE_REGISTRATION_MESSAGE_TYPE = "w1.private.w2.direct-source-registration.v1"
 _W2_RESULT_CONSUMER = "w1.collection-result"
 _W2_RESULT_MESSAGE_TYPE = "w2.collection.result.v1"
 _W2_RESULT_CHANNEL = "w1.private.w2.collection-result.v1"
@@ -273,6 +281,21 @@ class JobWorker:
         lease: JobExecutionLease,
     ) -> bool:
         execution_payload = execution_command.payload
+        if (
+            isinstance(execution_payload, dict)
+            and execution_payload.get("dispatch_kind") == DIRECT_SOURCE_REGISTRATION_SCOPE
+        ):
+            # A W1 non-core registration is never an escape hatch for a normal analysis Job.
+            # The dedicated service is the only producer and uses SOURCE_REGISTRATION.
+            if job.job_type != DIRECT_SOURCE_REGISTRATION_JOB_TYPE:
+                self._block_for_core_decision(session=session, job=job, lease=lease)
+                return False
+            return self._create_direct_source_registration_dispatch_or_block(
+                session=session,
+                job=job,
+                execution_command=execution_command,
+                lease=lease,
+            )
         pin = (
             execution_payload.get("core_decision_pin")
             if isinstance(execution_payload, dict)
@@ -402,6 +425,169 @@ class JobWorker:
         session.add(
             OutboxMessage(
                 message_type=_W2_COMMAND_MESSAGE_TYPE,
+                schema_version="1.0",
+                visibility_scope="PRIVATE",
+                aggregate_type="JOB",
+                aggregate_id=job.id,
+                aggregate_revision=child_command.command_sequence,
+                command_id=child_command.id,
+                job_id=job.id,
+                owner_user_id=job.owner_user_id,
+                execution_fence=job.execution_fence,
+                owner_deletion_epoch=job.owner_deletion_epoch,
+                payload={
+                    "command_id": str(child_command.id),
+                    "job_id": str(job.id),
+                    "execution_fence": job.execution_fence,
+                    "owner_deletion_epoch": job.owner_deletion_epoch,
+                },
+            )
+        )
+        session.flush()
+        return True
+
+    def _create_direct_source_registration_dispatch_or_block(
+        self,
+        *,
+        session: Session,
+        job: Job,
+        execution_command: JobCommand,
+        lease: JobExecutionLease,
+    ) -> bool:
+        """Create W2 work only from the W1-owned direct-registration ledger pin."""
+
+        execution_payload = execution_command.payload
+        pin = (
+            execution_payload.get("direct_source_registration_pin")
+            if isinstance(execution_payload, dict)
+            else None
+        )
+        if not isinstance(pin, dict):
+            self._block_for_core_decision(session=session, job=job, lease=lease)
+            return False
+        try:
+            decision_id = UUID(str(pin["registration_decision_id"]))
+            company_id = UUID(str(pin["company_id"]))
+            source_id = UUID(str(pin["source_id"]))
+            registration_input_version = pin["registration_input_version"]
+            decision_version = int(pin["decision_version"])
+            reason_code = pin["reason_code"]
+            if (
+                pin.get("decision_scope") != DIRECT_SOURCE_REGISTRATION_SCOPE
+                or pin.get("question_version_id") is not None
+                or pin.get("is_core") is not False
+                or pin.get("decision_code") != DIRECT_SOURCE_REGISTRATION_DECISION_CODE
+                or pin.get("decision_owner") != DIRECT_SOURCE_REGISTRATION_OWNER
+                or pin.get("purpose") != DIRECT_SOURCE_REGISTRATION_PURPOSE
+                or not isinstance(registration_input_version, str)
+                or not registration_input_version
+                or decision_version < 1
+                or not isinstance(reason_code, str)
+                or not reason_code
+            ):
+                raise RuntimeContractError("DIRECT_SOURCE_REGISTRATION_PIN_INVALID")
+        except (KeyError, TypeError, ValueError, RuntimeContractError):
+            self._block_for_core_decision(session=session, job=job, lease=lease)
+            return False
+
+        if registration_input_version != job.analysis_input_version:
+            self._block_for_core_decision(session=session, job=job, lease=lease)
+            return False
+        decision = session.scalar(
+            select(AnalysisSourceDecision)
+            .where(AnalysisSourceDecision.id == decision_id)
+            .with_for_update()
+        )
+        if (
+            decision is None
+            or execution_command.analysis_source_decision_id != decision.id
+            or decision.decision_scope != DIRECT_SOURCE_REGISTRATION_SCOPE
+            or decision.company_id != company_id
+            or decision.question_version_id is not None
+            or decision.source_id != source_id
+            or decision.analysis_input_version != registration_input_version
+            or decision.decision_version != decision_version
+            or decision.decision_code != DIRECT_SOURCE_REGISTRATION_DECISION_CODE
+            or decision.decision_owner != DIRECT_SOURCE_REGISTRATION_OWNER
+            or decision.reason_code != reason_code
+        ):
+            self._block_for_core_decision(session=session, job=job, lease=lease)
+            return False
+        source_link = session.scalar(
+            select(JobSourceLink)
+            .where(
+                JobSourceLink.job_id == job.id,
+                JobSourceLink.owner_user_id == job.owner_user_id,
+                JobSourceLink.source_id == source_id,
+                JobSourceLink.purpose_ref == DIRECT_SOURCE_REGISTRATION_PURPOSE,
+            )
+            .order_by(JobSourceLink.created_at, JobSourceLink.id)
+            .limit(1)
+            .with_for_update()
+        )
+        if (
+            source_link is None
+            or source_link.command_id is not None
+            or source_link.analysis_input_version != registration_input_version
+        ):
+            self._block_for_core_decision(session=session, job=job, lease=lease)
+            return False
+
+        # D-04 maps the W1 decision revision to W2's integer transport input version.  The
+        # opaque registration_input_version is preserved only in the W1 decision and pin.
+        input_version = decision_version
+        w2_command_id = uuid4()
+        w2_payload: dict[str, object] = {
+            "schema_version": "w2.collection.v1",
+            "command_id": str(w2_command_id),
+            "job_id": str(job.id),
+            "authenticated_owner_ref": str(job.owner_user_id),
+            "project_ref": str(job.project_id) if job.project_id is not None else None,
+            "company_id": str(company_id),
+            "source_id": str(source_id),
+            "input_version": input_version,
+            "execution_fence": str(job.execution_fence),
+            "purpose_ref": str(source_link.id),
+            "core_source_decision": {
+                "is_core": False,
+                "decided_by": DIRECT_SOURCE_REGISTRATION_OWNER,
+                "rationale": reason_code,
+                "decision_revision": decision_version,
+                "analysis_input_version": input_version,
+            },
+            "resume_stage": self._resume_stage(session=session, job=job, command=execution_command),
+            "policy_revision": None,
+            "owner_deletion_epoch": job.owner_deletion_epoch,
+        }
+        _validate(
+            w2_payload,
+            "w2/v1/source-collection.command.schema.json",
+            "W2_DIRECT_SOURCE_REGISTRATION_COMMAND_SCHEMA_INVALID",
+        )
+        child_command = JobCommand(
+            id=w2_command_id,
+            job_id=job.id,
+            owner_user_id=job.owner_user_id,
+            command_type="W2_DIRECT_SOURCE_REGISTRATION",
+            command_schema_version="1.0",
+            command_sequence=execution_command.command_sequence + 1,
+            execution_fence=job.execution_fence,
+            owner_deletion_epoch=job.owner_deletion_epoch,
+            analysis_input_version=job.analysis_input_version,
+            analysis_source_decision_id=decision.id,
+            payload={
+                "command_type": "W2_DIRECT_SOURCE_REGISTRATION",
+                "w2_command": w2_payload,
+                "direct_source_registration_pin": pin,
+                "runtime": {"lease_id": str(lease.id), "input_version": input_version},
+            },
+        )
+        session.add(child_command)
+        session.flush()
+        source_link.command_id = child_command.id
+        session.add(
+            OutboxMessage(
+                message_type=_W2_DIRECT_SOURCE_REGISTRATION_MESSAGE_TYPE,
                 schema_version="1.0",
                 visibility_scope="PRIVATE",
                 aggregate_type="JOB",
@@ -712,7 +898,7 @@ class CollectionResultWorker:
             command.payload.get("w2_command") if isinstance(command.payload, dict) else None
         )
         if (
-            command.command_type != "W2_SOURCE_COLLECTION"
+            command.command_type not in {"W2_SOURCE_COLLECTION", "W2_DIRECT_SOURCE_REGISTRATION"}
             or not isinstance(runtime, dict)
             or not isinstance(w2_command, dict)
             or not isinstance(runtime.get("lease_id"), str)
