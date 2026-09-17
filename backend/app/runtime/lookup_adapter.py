@@ -16,6 +16,10 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.core.config import settings
 from app.models.identity import User
 from app.models.jobs import Job, JobCommand
+from app.runtime.core_decision_binding import (
+    CoreDecisionBindingError,
+    validate_core_pin_payload_binding,
+)
 
 _W2_SERVICE_PRINCIPAL = "w2"
 _LOOKUP_SCHEMA_VERSION = "w1.private.command-lookup.v1"
@@ -245,6 +249,22 @@ def _lookup_command(*, session: Session, request: LookupRequest) -> LookupRespon
         or not isinstance(w2_command, dict)
     ):
         return _semantic_response(request=request, status="EXPIRED", reason_code="COMMAND_EXPIRED")
+    if command["command_type"] == "W2_SOURCE_COLLECTION":
+        core_pin = command_payload.get("core_decision_pin")
+        if not isinstance(core_pin, dict):
+            return _semantic_response(
+                request=request,
+                status="EXPIRED",
+                reason_code="COMMAND_BINDING_INVALID",
+            )
+        try:
+            validate_core_pin_payload_binding(pin=core_pin, w2_command=w2_command)
+        except CoreDecisionBindingError:
+            return _semantic_response(
+                request=request,
+                status="EXPIRED",
+                reason_code="COMMAND_BINDING_INVALID",
+            )
     return LookupResponse(
         command_id=request.command_id,
         status="AVAILABLE",

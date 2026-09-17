@@ -14,15 +14,15 @@
     "project_ref": null,
     "company_id": "10000000-0000-4000-8000-000000000004",
     "source_id": "10000000-0000-4000-8000-000000000005",
-    "input_version": 1,
+    "input_version": 2,
     "execution_fence": "1",
     "purpose_ref": "10000000-0000-4000-8000-000000000006",
     "core_source_decision": {
       "is_core": true,
       "decided_by": "W3",
       "rationale": "REQUESTED_ANALYSIS_REQUIRED",
-      "decision_revision": 1,
-      "analysis_input_version": 1
+      "decision_revision": 2,
+      "analysis_input_version": 2
     },
     "resume_stage": "policy",
     "policy_revision": null,

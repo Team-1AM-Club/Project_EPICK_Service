@@ -19,7 +19,7 @@
     "purpose_ref": "10000000-0000-4000-8000-000000000006",
     "core_source_decision": {
       "is_core": true,
-      "decided_by": "W3",
+      "decided_by": "W4",
       "rationale": "REQUESTED_ANALYSIS_REQUIRED",
       "decision_revision": 1,
       "analysis_input_version": 1

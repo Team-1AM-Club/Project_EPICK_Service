@@ -370,6 +370,7 @@ class JobService:
         owner_deletion_epoch: int,
         status: str,
         action_code: str,
+        context_code: str | None = None,
         expected_input_version: str | None = None,
         expected_result_version: str | None = None,
     ) -> bool:
@@ -401,6 +402,7 @@ class JobService:
                 owner_user_id=owner_user_id,
                 action_code=action_code,
                 action_status="OPEN",
+                context_code=context_code,
                 expected_input_version=expected_input_version or job.analysis_input_version,
                 expected_result_version=expected_result_version,
             )

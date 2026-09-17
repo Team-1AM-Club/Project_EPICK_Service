@@ -204,6 +204,10 @@ def _private_message_errors(contract_root: Path, message: dict[str, Any]) -> lis
             "w2/v1/source-collection.result.schema.json",
             "fixtures/v1/w2/source-collection-result-failure.json",
         ),
+        (
+            "w2/v1/source-collection.result.schema.json",
+            "fixtures/v1/w2/source-collection-result-policy-failure.json",
+        ),
     ],
 )
 def test_versioned_contract_fixtures_match_their_schema(
@@ -453,12 +457,15 @@ def test_w2_import_is_pinned_to_the_observed_runtime_contract(contract_root: Pat
     manifest = _load(contract_root / "w2/v1/import-manifest.json")
 
     assert manifest["contract_status"] == (
-        "PRIVATE_CONTRACT_ADOPTED_PUBLIC_SOURCE_EVENT_COMPATIBILITY_PENDING"
+        "PRIVATE_CONTRACT_ADOPTED_W2_RESULT_RUNTIME_VERIFIED_"
+        "PUBLIC_SOURCE_EVENT_COMPATIBILITY_PENDING"
     )
     assert manifest["declared_runtime_schema_versions"] == ["w2.collection.v1", "w2.source.v1"]
     assert manifest["artifact_authority"] == "W2"
-    assert manifest["source_commit"] is None
-    assert manifest["source_commit_status"] == "NOT_PROVIDED_WITH_W2_ARTIFACT_PACKAGE"
+    assert manifest["source_commit"] == "0865ecdfe4748dad5679bc82b9f7386dc663675e"
+    assert manifest["source_commit_status"] == (
+        "VERIFIED_LOCAL_W2_CRAWLER_HEAD_FOR_COLLECTION_RESULT"
+    )
     assert set(manifest["artifacts"]) == {
         "source-collection.command.schema.json",
         "source-collection.result.schema.json",
@@ -472,3 +479,10 @@ def test_w2_import_is_pinned_to_the_observed_runtime_contract(contract_root: Pat
     for name, expected_sha256 in manifest["fixtures"].items():
         actual_sha256 = _canonical_contract_sha256(fixture_root / name)
         assert actual_sha256 == expected_sha256
+
+    parser_verification = manifest["runtime_parser_verification"]
+    assert parser_verification["crawler_source"] == (
+        "src/epick_engine/source_collection/contracts.py:CollectionResult"
+    )
+    assert parser_verification["required_crawler_commit"] == manifest["source_commit"]
+    assert parser_verification["status"] == "VERIFIED_WITH_PINNED_LOCAL_CRAWLER_HEAD"
