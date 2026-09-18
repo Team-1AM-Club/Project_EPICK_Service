@@ -19,11 +19,11 @@ DATABASE_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 RUNTIME_ROLE_TEMPLATE_SQL = BACKEND_ROOT / "infra" / "postgres" / "runtime_roles.sql"
 
 
-def test_current_migration_head_includes_w3_core_decision_inbound() -> None:
-    """Keep the W3 inbound persistence boundary in the forward-only chain."""
+def test_current_migration_head_includes_w2_staged_result_adoption() -> None:
+    """Keep the latest W1-owned persistence boundary in the forward-only chain."""
 
     config = Config(str(BACKEND_ROOT / "alembic.ini"))
-    assert ScriptDirectory.from_config(config).get_current_head() == "026_w3_core_decision_inbound"
+    assert ScriptDirectory.from_config(config).get_current_head() == "027_w2_staged_result_adoption"
 
 
 @pytest.mark.postgres
