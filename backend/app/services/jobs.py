@@ -274,7 +274,7 @@ class JobService:
                     raise JobTransitionError("the waiting Job has no analysis input version")
                 binding_history = CoreDecisionRepository(
                     self.session
-                ).list_core_bindings_for_job_for_update(
+                ).list_core_bindings_for_job(
                     job_id=job.id,
                     analysis_input_version=job.analysis_input_version,
                 )

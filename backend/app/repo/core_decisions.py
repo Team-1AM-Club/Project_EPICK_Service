@@ -42,22 +42,29 @@ class CoreDecisionRepository:
             select(Source).where(Source.id == source_id).with_for_update()
         )
 
-    def get_binding_by_origin_for_update(
+    def get_binding_by_origin(
         self, *, origin_message_id: UUID
     ) -> JobCoreDecisionBinding | None:
+        """Read an immutable binding after the owning Job row is locked.
+
+        Binding rows are append-only, so runtime roles intentionally have no
+        UPDATE privilege.  PostgreSQL treats ``SELECT ... FOR UPDATE`` as an
+        UPDATE-capable operation even when no row is changed.  The caller's
+        authoritative Job lock already serializes decisions for this Job.
+        """
         return self.session.scalar(
             select(JobCoreDecisionBinding)
             .where(JobCoreDecisionBinding.origin_message_id == origin_message_id)
-            .with_for_update()
         )
 
-    def get_current_binding_for_update(
+    def get_current_binding(
         self,
         *,
         job_id: UUID,
         source_id: UUID,
         analysis_input_version: str,
     ) -> JobCoreDecisionBinding | None:
+        """Read immutable decision history under the caller-held Job lock."""
         return self.session.scalar(
             select(JobCoreDecisionBinding)
             .where(
@@ -67,7 +74,6 @@ class CoreDecisionRepository:
             )
             .order_by(JobCoreDecisionBinding.decision_version.desc())
             .limit(1)
-            .with_for_update()
         )
 
     def get_binding_for_job_decision(
@@ -86,13 +92,13 @@ class CoreDecisionRepository:
             statement = statement.with_for_update()
         return self.session.scalar(statement)
 
-    def list_core_bindings_for_job_for_update(
+    def list_core_bindings_for_job(
         self,
         *,
         job_id: UUID,
         analysis_input_version: str,
     ) -> list[JobCoreDecisionBinding]:
-        """Return Core history ordered newest-first for source-scoped currentness checks."""
+        """Return immutable Core history after the owning Job row is locked."""
 
         return list(
             self.session.scalars(
@@ -108,7 +114,6 @@ class CoreDecisionRepository:
                     JobCoreDecisionBinding.created_at.desc(),
                     JobCoreDecisionBinding.id.desc(),
                 )
-                .with_for_update()
             )
         )
 

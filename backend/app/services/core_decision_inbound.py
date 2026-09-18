@@ -85,7 +85,7 @@ class CoreDecisionInboundService:
                     outcome=CoreDecisionReceiptOutcome.REJECTED_CONFLICT,
                     error_code="CORE_DECISION_MESSAGE_ID_CONFLICT",
                 )
-            binding = self.decisions.get_binding_by_origin_for_update(
+            binding = self.decisions.get_binding_by_origin(
                 origin_message_id=event.message_id
             )
             return self._receipt_from_row(
@@ -142,7 +142,7 @@ class CoreDecisionInboundService:
                 error_code="CORE_DECISION_BINDING_MISMATCH",
             )
 
-        current = self.decisions.get_current_binding_for_update(
+        current = self.decisions.get_current_binding(
             job_id=job.id,
             source_id=event.source_id,
             analysis_input_version=event.analysis_input_version,
