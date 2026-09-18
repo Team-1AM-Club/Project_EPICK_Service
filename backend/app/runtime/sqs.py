@@ -59,6 +59,14 @@ class SqsPort(Protocol):
     ) -> None:
         """Extend one in-flight delivery while the DB lease remains current."""
 
+    def get_queue_attributes(
+        self,
+        *,
+        queue_url: str,
+        attribute_names: Iterable[str],
+    ) -> dict[str, str]:
+        """Read queue metadata for mutation-free runtime preflight checks."""
+
 
 @dataclass(frozen=True)
 class SentSqsMessage:
@@ -77,6 +85,7 @@ class ReceivedSqsMessage:
     body: str
     message_attributes: dict[str, str]
     receive_count: int
+    sender_id: str | None = None
 
 
 @dataclass
@@ -85,6 +94,7 @@ class _InMemoryQueuedMessage:
     message_id: str
     body: str
     message_attributes: dict[str, str]
+    sender_id: str | None = None
     receipt_handle: str | None = None
     receive_count: int = 0
     visible: bool = True
@@ -127,6 +137,7 @@ class InMemorySqsPort:
         body: str,
         message_attributes: Mapping[str, str] | None = None,
         message_id: str | None = None,
+        sender_id: str | None = None,
     ) -> str:
         """Insert a test delivery.  It becomes visible on the next receive call."""
 
@@ -137,6 +148,7 @@ class InMemorySqsPort:
                 message_id=assigned_message_id,
                 body=body,
                 message_attributes=dict(message_attributes or {}),
+                sender_id=sender_id,
             )
         )
         return assigned_message_id
@@ -166,6 +178,7 @@ class InMemorySqsPort:
                     body=queued.body,
                     message_attributes=dict(queued.message_attributes),
                     receive_count=queued.receive_count,
+                    sender_id=queued.sender_id,
                 )
             )
             if len(deliveries) == max_messages:
@@ -202,6 +215,17 @@ class InMemorySqsPort:
 
         for queued in self._queued_messages:
             queued.visible = True
+
+    def get_queue_attributes(
+        self,
+        *,
+        queue_url: str,
+        attribute_names: Iterable[str],
+    ) -> dict[str, str]:
+        del attribute_names
+        return {
+            "QueueArn": f"arn:aws:sqs:ap-northeast-2:000000000000:{queue_url.rsplit('/', 1)[-1]}"
+        }
 
 
 class Boto3SqsPort:
@@ -268,7 +292,7 @@ class Boto3SqsPort:
                 MaxNumberOfMessages=max_messages,
                 VisibilityTimeout=visibility_timeout_seconds,
                 WaitTimeSeconds=wait_time_seconds,
-                AttributeNames=["ApproximateReceiveCount"],
+                MessageSystemAttributeNames=["ApproximateReceiveCount", "SenderId"],
                 MessageAttributeNames=["All"],
             )
         except Exception as error:
@@ -299,10 +323,14 @@ class Boto3SqsPort:
                         parsed_attributes[name] = string_value
             system_attributes = raw.get("Attributes", {})
             receive_count = 1
+            sender_id = None
             if isinstance(system_attributes, dict):
                 raw_count = system_attributes.get("ApproximateReceiveCount")
                 if isinstance(raw_count, str) and raw_count.isdigit():
                     receive_count = max(1, int(raw_count))
+                raw_sender_id = system_attributes.get("SenderId")
+                if isinstance(raw_sender_id, str) and raw_sender_id:
+                    sender_id = raw_sender_id
             deliveries.append(
                 ReceivedSqsMessage(
                     message_id=message_id,
@@ -310,6 +338,7 @@ class Boto3SqsPort:
                     body=body,
                     message_attributes=parsed_attributes,
                     receive_count=receive_count,
+                    sender_id=sender_id,
                 )
             )
         return deliveries
@@ -335,6 +364,27 @@ class Boto3SqsPort:
             )
         except Exception as error:
             raise self._classify_error(error) from error
+
+    def get_queue_attributes(
+        self,
+        *,
+        queue_url: str,
+        attribute_names: Iterable[str],
+    ) -> dict[str, str]:
+        try:
+            response = self._client.get_queue_attributes(
+                QueueUrl=queue_url,
+                AttributeNames=list(attribute_names),
+            )
+        except Exception as error:
+            raise self._classify_error(error) from error
+        attributes = response.get("Attributes")
+        if not isinstance(attributes, dict) or not all(
+            isinstance(name, str) and isinstance(value, str)
+            for name, value in attributes.items()
+        ):
+            raise SqsRetryableError("SQS_INVALID_ATTRIBUTES_RESPONSE")
+        return dict(attributes)
 
     @classmethod
     def _classify_error(cls, error: Exception) -> SqsDeliveryError:
