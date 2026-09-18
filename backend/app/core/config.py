@@ -39,6 +39,15 @@ class Settings(BaseSettings):
     w1_lease_heartbeat_seconds: int = 60
     w1_worker_poll_seconds: float = 2.0
     w1_w2_lookup_bearer: str | None = None
+    # W3 Core Decision is consumed only by the private W1 runtime. SenderId is
+    # SQS-authenticated system metadata; it is never accepted from the JSON body.
+    w3_core_decision_queue_url: str | None = None
+    w3_core_decision_dlq_url: str | None = None
+    w3_core_decision_expected_producer: str = "w3"
+    w3_core_decision_expected_sender_id: str | None = None
+    w3_core_decision_batch_size: int = 10
+    w3_core_decision_wait_seconds: int = 20
+    w3_core_decision_visibility_seconds: int = 120
 
     @property
     def w1_execution_queue_url(self) -> str | None:

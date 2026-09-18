@@ -12,6 +12,9 @@
 # endpoint and its consumer/producer deployment is jointly prepared:
 #   docker compose -f w1-runtime.compose.yml --profile w2-result up -d
 #
+# W3 Core Decision inbound uses a separate worker-only env file:
+#   docker compose -f w1-runtime.compose.yml --profile w3-core-decision up -d
+#
 # M1 protected lookup startup. The port is loopback-only for host-local/SSM smoke;
 # it is not a W2-reachable endpoint until the later private network binding is approved:
 #   docker compose -f w1-runtime.compose.yml --profile w1-lookup up -d
@@ -128,3 +131,24 @@ services:
     security_opt:
       - no-new-privileges:true
     profiles: ["w2-result"]
+
+  w3-core-decision-worker:
+    image: ${BACKEND_IMAGE:?set BACKEND_IMAGE to the immutable backend image reference}
+    env_file:
+      - ${W1_W3_CORE_DECISION_ENV_FILE:?set W1_W3_CORE_DECISION_ENV_FILE to the W3 inbound worker env file}
+    command: ["python", "scripts/run_w3_core_decision_worker.py"]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - type: bind
+        source: ${RDS_CA_BUNDLE_PATH:?set RDS_CA_BUNDLE_PATH to the host RDS CA bundle}
+        target: /run/epick/rds-ca.pem
+        read_only: true
+        bind:
+          create_host_path: false
+    security_opt:
+      - no-new-privileges:true
+    profiles: ["w3-core-decision"]

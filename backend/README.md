@@ -48,3 +48,38 @@ CI도 같은 경로를 API/contract와 PostgreSQL integration으로 나누어 �
 - 실제 W3 ACK 및 W2→W3 replay/gap/snapshot, Linux queue worker/egress 검증, OIDC issuer/JWKS/role
   mapping, 미식별 Company resolve는 별도 계약 또는 운영 Gate가 닫힌 뒤 adapter·migration·회귀 테스트를
   추가합니다.
+
+## W3 Core Decision private consumer
+
+이 consumer는 public API와 분리된 Worker EC2/컨테이너에서만 실행합니다. 별도 env 파일에는 다음 이름만
+배치하고 실제 URL·DB password·principal ID는 저장소에 기록하지 않습니다.
+
+```text
+WORKER_DATABASE_URL
+AWS_DEFAULT_REGION
+W3_CORE_DECISION_QUEUE_URL
+W3_CORE_DECISION_DLQ_URL
+W3_CORE_DECISION_EXPECTED_PRODUCER=w3
+W3_CORE_DECISION_EXPECTED_SENDER_ID
+W3_CORE_DECISION_BATCH_SIZE=10
+W3_CORE_DECISION_WAIT_SECONDS=20
+W3_CORE_DECISION_VISIBILITY_SECONDS=120
+```
+
+`W3_CORE_DECISION_EXPECTED_SENDER_ID`에는 SQS `SenderId`의 콜론 앞 stable role principal ID만 넣습니다.
+본문의 `producer` 값은 인증 근거로 사용하지 않습니다. W3 send role은 main queue의 `SendMessage`만,
+W1 worker role은 main queue의 `ReceiveMessage`, `DeleteMessage`, `ChangeMessageVisibility`,
+`GetQueueAttributes`와 DLQ의 `GetQueueAttributes`만 허용합니다. Queue policy도 W3 send role만 허용해야
+합니다. DB URL은 Secrets Manager에서 root-only env 파일로 전달하고 실제 값이나 Secret JSON을 출력하지
+않습니다.
+
+이미지 배포 전 무변경 preflight와 실행 명령은 다음과 같습니다.
+
+```bash
+python scripts/preflight_w1_core_decision_runtime.py
+docker compose -f infra/w1-runtime.compose.yml --profile w3-core-decision up -d
+```
+
+preflight는 DB read, main queue/DLQ 속성 접근, redrive target 일치와 principal 설정만 확인하며 메시지를
+수신·삭제·전송하지 않습니다. W1 isolated 검증 완료 후에도 실제 W3 relay 공동 시험 전 상태는
+`W1_ISOLATED_COMPLETE / JOINT_CT12_PENDING`입니다.
