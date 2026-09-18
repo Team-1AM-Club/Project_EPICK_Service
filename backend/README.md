@@ -91,3 +91,42 @@ database와 main queue/DLQ만 허용하며 `T043_EXECUTE_SYNTHETIC=YES`,
 role의 sender-role `sts:AssumeRole`은 실행 동안만 허용하고 즉시 제거합니다. sender role 자체는 main
 queue의 `sqs:SendMessage`만 가집니다. 이 isolated sender는 실제 W3 relay 또는 joint CT-12 완료를
 뜻하지 않습니다.
+
+## W2 private commit-gate inbound consumer
+
+W2의 staged-result와 ACK는 기존 `W2_COLLECTION_RESULT_QUEUE_URL`의 legacy result worker로 받지
+않습니다. Worker EC2 전용 root-only env 파일에 아래 이름만 넣고, Compose의
+`w2-commit-gate` profile로 별도 consumer를 실행합니다.
+
+```text
+WORKER_DATABASE_URL
+AWS_DEFAULT_REGION
+W2_COLLECTION_RESULT_QUEUE_URL
+W2_COMMIT_GATE_INBOUND_QUEUE_URL
+W2_COMMIT_GATE_INBOUND_DLQ_URL
+W2_COMMIT_GATE_EXPECTED_PRODUCER=w2
+W2_COMMIT_GATE_EXPECTED_SENDER_ID
+W2_COMMIT_GATE_BATCH_SIZE=10
+W2_COMMIT_GATE_WAIT_SECONDS=20
+W2_COMMIT_GATE_VISIBILITY_SECONDS=120
+```
+
+`W2_COMMIT_GATE_EXPECTED_SENDER_ID`에는 SQS system `SenderId`의 colon 앞 stable role
+principal ID만 설정합니다. W2 body의 `producer`는 contract check일 뿐 인증 근거가 아닙니다.
+W2 producer에는 main queue `sqs:SendMessage`만, W1 worker에는 main queue
+`ReceiveMessage`/`DeleteMessage`/`ChangeMessageVisibility`/`GetQueueAttributes`와 DLQ
+`GetQueueAttributes`만 부여합니다. `PurgeQueue`는 어느 정책에도 넣지 않습니다. Template은
+`infra/w2-commit-gate-queue-policy.template.json` 및
+`infra/w2-commit-gate-worker-policy.template.json`입니다.
+
+시작 전에는 메시지를 받거나 삭제하지 않는 preflight를 실행합니다.
+
+```bash
+python scripts/preflight_w1_w2_commit_gate_runtime.py
+docker compose -f infra/w1-runtime.compose.yml --profile w2-commit-gate up -d
+```
+
+`run_w1_w2_ct15_synthetic.py`는 joint CT15 전용 probe입니다. `YES` opt-in과 `ct15` 이름의
+폐기 가능한 DB/main/DLQ를 요구하고, 성공 delivery도 receipt별로만 delete합니다. W2 실제
+producer/consumer 및 private-store inspection hook이 배포되기 전에는 joint CT15 완료를 주장하지
+않습니다.

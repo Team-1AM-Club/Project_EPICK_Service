@@ -133,6 +133,34 @@ def _validate(value: dict[str, object], relative_path: str, code: str) -> None:
         raise RuntimeContractError(code)
 
 
+def validate_w2_commit_gate_wire_schema(
+    value: dict[str, object], *, message_type: str
+) -> None:
+    """Validate one pinned W2 proposal without widening the legacy result route.
+
+    The legacy ``w2.collection.result.v1`` union remains intentionally separate:
+    no commit-gate proposal is ever accepted by :class:`CollectionResultWorker`.
+    The dedicated inbound adapter selects one of these exact W2-owned schemas
+    before it asks the gate service to make a durable state change.
+    """
+
+    schema_by_message_type = {
+        "w2.private.staged-result.proposal.v1": (
+            "w2/v1/source-collection.staged-result.schema.json",
+            "W2_COMMIT_GATE_STAGED_SCHEMA_INVALID",
+        ),
+        "w2.private.commit-gate-ack.proposal.v1": (
+            "w2/v1/source-collection.commit-gate-ack.schema.json",
+            "W2_COMMIT_GATE_ACK_SCHEMA_INVALID",
+        ),
+    }
+    try:
+        relative_path, code = schema_by_message_type[message_type]
+    except KeyError as error:
+        raise RuntimeContractError("W2_COMMIT_GATE_MESSAGE_TYPE_UNSUPPORTED") from error
+    _validate(value, relative_path, code)
+
+
 def _bounded_message(value: object, *, fallback: str) -> str:
     if isinstance(value, str) and value.strip():
         return value[:1024]
@@ -1038,31 +1066,14 @@ class CollectionResultWorker:
             or lease.owner_deletion_epoch != command.owner_deletion_epoch
         ):
             return "STALE_DISCARDED", "LEASE_NOT_CURRENT"
-        checkpoint_ref = result.get("checkpoint_ref")
-        resume_stage = result.get("resume_stage")
-        if checkpoint_ref is not None:
-            if (
-                not isinstance(checkpoint_ref, str)
-                or not checkpoint_ref.strip()
-                or len(checkpoint_ref) > 512
-            ):
-                return "REJECTED_SCHEMA", "CHECKPOINT_REFERENCE_INVALID"
-            if not isinstance(resume_stage, str):
-                return "REJECTED_SCHEMA", "CHECKPOINT_STAGE_REQUIRED"
-            self._append_checkpoint(
-                session=session,
-                job=job,
-                checkpoint_ref=checkpoint_ref,
-                resume_stage=resume_stage,
-            )
-        self._apply_transition(
+        return apply_locked_collection_result(
             session=session,
+            owner=owner,
             job=job,
             command=command,
             lease=lease,
             result=result,
         )
-        return "APPLIED", None
 
     @staticmethod
     def _append_checkpoint(
@@ -1093,8 +1104,8 @@ class CollectionResultWorker:
             )
         )
 
+    @staticmethod
     def _apply_transition(
-        self,
         *,
         session: Session,
         job: Job,
@@ -1107,7 +1118,9 @@ class CollectionResultWorker:
         completeness = result["completion_kind"]
         now = datetime.now(UTC)
         if isinstance(required_actions, list) and required_actions:
-            self._release_lease(session=session, job=job, lease=lease, reason="WAITING_USER")
+            CollectionResultWorker._release_lease(
+                session=session, job=job, lease=lease, reason="WAITING_USER"
+            )
             job.status = "WAITING_USER"
             job.dispatch_status = "BLOCKED"
             job.retryable = False
@@ -1122,11 +1135,13 @@ class CollectionResultWorker:
                 )
             )
         elif isinstance(retry_not_before, str):
-            self._release_lease(session=session, job=job, lease=lease, reason="PAUSED_RATE_LIMIT")
+            CollectionResultWorker._release_lease(
+                session=session, job=job, lease=lease, reason="PAUSED_RATE_LIMIT"
+            )
             job.status = "PAUSED_RATE_LIMIT"
             job.dispatch_status = "BLOCKED"
             job.retryable = True
-            job.retry_after = self._parse_timestamp_or_none(retry_not_before)
+            job.retry_after = CollectionResultWorker._parse_timestamp_or_none(retry_not_before)
             session.add(
                 JobRequiredAction(
                     job_id=job.id,
@@ -1138,13 +1153,17 @@ class CollectionResultWorker:
                 )
             )
         elif completeness == "complete":
-            self._release_lease(session=session, job=job, lease=lease, reason="SUCCEEDED")
+            CollectionResultWorker._release_lease(
+                session=session, job=job, lease=lease, reason="SUCCEEDED"
+            )
             job.status = "SUCCEEDED"
             job.dispatch_status = "ENQUEUED"
             job.completed_at = now
             job.retryable = False
         else:
-            self._release_lease(session=session, job=job, lease=lease, reason="FAILED_RETRYABLE")
+            CollectionResultWorker._release_lease(
+                session=session, job=job, lease=lease, reason="FAILED_RETRYABLE"
+            )
             job.status = "FAILED_RETRYABLE"
             job.dispatch_status = "BLOCKED"
             job.retryable = True
@@ -1188,10 +1207,7 @@ class CollectionResultWorker:
 
     @staticmethod
     def _release_lease(
-        *, session: Session,
-        job: Job,
-        lease: JobExecutionLease,
-        reason: str,
+        *, session: Session, job: Job, lease: JobExecutionLease, reason: str
     ) -> None:
         slot = session.scalar(
             select(OwnerExecutionSlot)
@@ -1211,3 +1227,70 @@ class CollectionResultWorker:
         slot.claimed_at = None
         slot.updated_at = now
         job.active_lease_id = None
+
+
+def apply_locked_collection_result(
+    *,
+    session: Session,
+    owner: User | None,
+    job: Job,
+    command: JobCommand,
+    lease: JobExecutionLease,
+    result: dict[str, object],
+) -> tuple[str, str | None]:
+    """Apply a validated result while caller-owned Job/command/lease locks remain held.
+
+    This is deliberately the only concrete writer used by both the legacy
+    result worker and the staged gate finalizer. It does no ``SELECT ... FOR
+    UPDATE`` itself, so the gate finalizer cannot invert the documented W1
+    lock ordering.
+    """
+
+    runtime = command.payload.get("runtime") if isinstance(command.payload, dict) else None
+    w2_command = command.payload.get("w2_command") if isinstance(command.payload, dict) else None
+    if (
+        command.command_type not in {"W2_SOURCE_COLLECTION", "W2_DIRECT_SOURCE_REGISTRATION"}
+        or not isinstance(runtime, dict)
+        or not isinstance(w2_command, dict)
+        or not isinstance(runtime.get("input_version"), int)
+        or result.get("input_version") != runtime["input_version"]
+        or result.get("command_id") != str(command.id)
+        or result.get("job_id") != str(job.id)
+    ):
+        return "STALE_DISCARDED", "COMMAND_INPUT_MISMATCH"
+    if (
+        owner is None
+        or owner.account_status != "ACTIVE"
+        or owner.deletion_epoch != command.owner_deletion_epoch
+        or job.status != "RUNNING"
+        or job.active_lease_id != lease.id
+        or lease.released_at is not None
+        or lease.execution_fence != command.execution_fence
+        or lease.owner_deletion_epoch != command.owner_deletion_epoch
+    ):
+        return "STALE_DISCARDED", "EXECUTION_NOT_CURRENT"
+    checkpoint_ref = result.get("checkpoint_ref")
+    resume_stage = result.get("resume_stage")
+    if checkpoint_ref is not None:
+        if (
+            not isinstance(checkpoint_ref, str)
+            or not checkpoint_ref.strip()
+            or len(checkpoint_ref) > 512
+        ):
+            return "REJECTED_SCHEMA", "CHECKPOINT_REFERENCE_INVALID"
+        if not isinstance(resume_stage, str):
+            return "REJECTED_SCHEMA", "CHECKPOINT_STAGE_REQUIRED"
+        CollectionResultWorker._append_checkpoint(
+            session=session,
+            job=job,
+            checkpoint_ref=checkpoint_ref,
+            resume_stage=resume_stage,
+        )
+    CollectionResultWorker._apply_transition(
+        session=session,
+        job=job,
+        command=command,
+        lease=lease,
+        result=result,
+    )
+    return "APPLIED", None

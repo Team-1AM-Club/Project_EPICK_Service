@@ -18,7 +18,7 @@ from app.models.jobs import (
 )
 from app.repo.core_decisions import CoreDecisionRepository
 from app.repo.identity import IdentityRepository
-from app.repo.jobs import JobRepository
+from app.repo.jobs import InboxReceiptReservation, JobRepository
 from app.runtime.core_decision_binding import project_core_decision_pin
 from app.services.idempotency import IdempotencyService
 from app.services.w2_commit_gate import W2CommitGateService
@@ -561,6 +561,34 @@ class JobService:
         )
         self.session.flush()
         return recorded
+
+    def reserve_digest_aware_inbox_receipt(
+        self,
+        *,
+        consumer_name: str,
+        event_id: UUID,
+        outcome_code: str,
+        payload_digest: str,
+        producer_name: str,
+        schema_version: str,
+    ) -> InboxReceiptReservation:
+        """Reserve a delivery without confusing an ID conflict with replay."""
+
+        self._require_nonempty(consumer_name, "consumer name")
+        self._require_nonempty(outcome_code, "outcome code")
+        self._require_nonempty(payload_digest, "payload digest")
+        self._require_nonempty(producer_name, "producer name")
+        self._require_nonempty(schema_version, "schema version")
+        reservation = self.repository.reserve_digest_aware_inbox_receipt(
+            consumer_name=consumer_name,
+            event_id=event_id,
+            outcome_code=outcome_code,
+            payload_digest=payload_digest,
+            producer_name=producer_name,
+            schema_version=schema_version,
+        )
+        self.session.flush()
+        return reservation
 
     def update_inbox_receipt_outcome(
         self, *, consumer_name: str, event_id: UUID, outcome_code: str

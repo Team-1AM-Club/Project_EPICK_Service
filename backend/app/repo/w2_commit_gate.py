@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
@@ -7,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.models.identity import User
 from app.models.jobs import Job, JobCommand, JobExecutionLease, OutboxMessage, OwnerExecutionSlot
-from app.models.w2_commit_operations import W2CommitOperation
+from app.models.w2_commit_operations import W2CommitOperation, W2StagedResult
 
 
 class W2CommitGateRepository:
@@ -164,3 +165,44 @@ class W2CommitGateRepository:
 
     def add_operation(self, operation: W2CommitOperation) -> None:
         self.session.add(operation)
+
+    def get_staged_result_for_update(
+        self, *, operation_id: UUID, owner_user_id: UUID
+    ) -> W2StagedResult | None:
+        """Lock a staged body only after the owning operation is already locked.
+
+        The explicit owner predicate makes this accessor unusable as a
+        cross-owner payload lookup even if a caller accidentally obtains an
+        operation ID from another scope.
+        """
+
+        return self.session.scalar(
+            select(W2StagedResult)
+            .where(
+                W2StagedResult.operation_id == operation_id,
+                W2StagedResult.owner_user_id == owner_user_id,
+            )
+            .with_for_update()
+        )
+
+    def add_staged_result(self, staged_result: W2StagedResult) -> None:
+        self.session.add(staged_result)
+
+    def consume_staged_result(self, *, staged_result: W2StagedResult) -> None:
+        """Tombstone a successfully committed private result in the same transaction."""
+
+        now = datetime.now(UTC)
+        staged_result.result_payload = None
+        staged_result.payload_state = "CONSUMED"
+        staged_result.consumed_at = now
+        staged_result.cleared_at = now
+        staged_result.updated_at = now
+
+    def clear_staged_result(self, *, staged_result: W2StagedResult) -> None:
+        """Remove private JSON while retaining minimum replay-prevention metadata."""
+
+        now = datetime.now(UTC)
+        staged_result.result_payload = None
+        staged_result.payload_state = "CLEARED"
+        staged_result.cleared_at = now
+        staged_result.updated_at = now

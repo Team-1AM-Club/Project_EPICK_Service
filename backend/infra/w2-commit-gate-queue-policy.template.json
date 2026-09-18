@@ -1,0 +1,14 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowPinnedW2ProducerSendOnly",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "${W2_COMMIT_GATE_PRODUCER_ROLE_ARN}"
+      },
+      "Action": "sqs:SendMessage",
+      "Resource": "${W2_COMMIT_GATE_QUEUE_ARN}"
+    }
+  ]
+}

@@ -1,0 +1,135 @@
+{
+  "contract_status": "W2_UNADOPTED_PROPOSAL_QUEUE_DISCONNECTED",
+  "artifact_authority": "W2",
+  "w1_command_repository": "Team-1AM-Club/Project_EPICK_Service",
+  "w1_command_revision": "afec08a9602132e5e433b523b0b6804850440524",
+  "normalization": "UTF-8 with LF line endings",
+  "delivery_examples": "Each ACK fixture is an independent single-message scenario; no queue acceptance or normalized success mapping.",
+  "files": [
+    {
+      "file": "ack-abort-applied.json",
+      "expectation": "schema-valid/model-valid",
+      "sha256": "f81647ff51a151c4ea8aba539cf427fd59b1c930955a65e53205c84a2b114fc2"
+    },
+    {
+      "file": "ack-abort-duplicate.json",
+      "expectation": "schema-valid/model-valid",
+      "sha256": "ee726776d7c09174ab249a4e70f19407418e8332bbe291d6c055aa6900a11985"
+    },
+    {
+      "file": "ack-abort-rejected.json",
+      "expectation": "schema-valid/model-valid",
+      "sha256": "375f5fd39009b6db370136b1b627ea983022d3164f6794f4e4304cd7af5afabc"
+    },
+    {
+      "file": "ack-finalize-applied.json",
+      "expectation": "schema-valid/model-valid",
+      "sha256": "750f5139f5bd865d7fa009c7f07642f711dfb450de729b8cfe70f2e990c5cd97"
+    },
+    {
+      "file": "ack-finalize-duplicate.json",
+      "expectation": "schema-valid/model-valid",
+      "sha256": "afe3ac6a67c43ac8debac60b5fcf192a73c342d87360216a098bbb0a2cf8280d"
+    },
+    {
+      "file": "ack-finalize-rejected.json",
+      "expectation": "schema-valid/model-valid",
+      "sha256": "54e6eaa02071db5bd79a3ac0e8848f89192b965e5583d81aba9df624f41e8b4d"
+    },
+    {
+      "file": "ack-prepare-applied.json",
+      "expectation": "schema-valid/model-valid",
+      "sha256": "730e7057b32475287d557f688263fcb7e62c284e3898add0842fcbde1c54ddf4"
+    },
+    {
+      "file": "ack-prepare-duplicate.json",
+      "expectation": "schema-valid/model-valid",
+      "sha256": "4c40e3d3d6973053f93f236e4931e18f2ff790f10129669bb4a5bfd7d5b17092"
+    },
+    {
+      "file": "ack-prepare-rejected.json",
+      "expectation": "schema-valid/model-valid",
+      "sha256": "37bb9eee8dee44d69373f6bfe06e74aaab00ace5662c8adc11d667de98f27b75"
+    },
+    {
+      "file": "ack-purge-applied.json",
+      "expectation": "schema-valid/model-valid",
+      "sha256": "34c1f4ba21f8a49ef8f235d3aaeb503bc371ae81c228668ac33a9e58be11f725"
+    },
+    {
+      "file": "ack-purge-duplicate.json",
+      "expectation": "schema-valid/model-valid",
+      "sha256": "623ac5e5b607be642b336266fc61991945f9099ad6f111c969407d3e37cdc49e"
+    },
+    {
+      "file": "ack-purge-rejected.json",
+      "expectation": "schema-valid/model-valid",
+      "sha256": "b0c8348183c0628e36c79302987fa2334e7c6c7da90dcf508a8a43f61fe04de1"
+    },
+    {
+      "file": "digest-vector.json",
+      "expectation": "schema-valid/model-valid",
+      "sha256": "8cae7e73d841f81dcbdca85f9dad13fff6628673552e5c40dc70cb95a4a32ab0"
+    },
+    {
+      "file": "invalid-ack-bool-revision.json",
+      "expectation": "schema-reject/model-reject",
+      "sha256": "826f9085822c8bbd3543199421ab39cb9d37e72f291d18f0cddcd315ff18e06e"
+    },
+    {
+      "file": "invalid-ack-nonpurge-epoch-null.json",
+      "expectation": "schema-reject/model-reject",
+      "sha256": "e990c296a12a22f89378fa6ed255cdd624ffa0428162f6eb9a41e38eb380ef60"
+    },
+    {
+      "file": "invalid-ack-outcome.json",
+      "expectation": "schema-reject/model-reject",
+      "sha256": "fa899d72de4c5c4c77b9316ec3e991c002f58d01c2634715ca76d13de18414a1"
+    },
+    {
+      "file": "invalid-staged-digest.json",
+      "expectation": "schema-reject/model-reject",
+      "sha256": "aab6ed32e3940b496d553ecebffe9c61781a967751bd249a210e24f699ddf4cc"
+    },
+    {
+      "file": "invalid-staged-fence.json",
+      "expectation": "schema-reject/model-reject",
+      "sha256": "c9afcda04545bf6015a8bde5b188ac79d771d9dbf9b8ceef0862949e8ea00f8c"
+    },
+    {
+      "file": "invalid-staged-message-id.json",
+      "expectation": "schema-reject/model-reject",
+      "sha256": "fb91874ec861631cce0a58717ec999156bf1aa8f8dd9ab047e0abff20f9946cb"
+    },
+    {
+      "file": "semantic-invalid-ack-purge-epoch.json",
+      "expectation": "schema-valid/model-reject",
+      "sha256": "dde82b390042af2f4c86995bdfb0367b02558a1edcedf6c95fdf98910d07e507"
+    },
+    {
+      "file": "semantic-invalid-staged-binding.json",
+      "expectation": "schema-valid/model-reject",
+      "sha256": "06fb01f45f18282d692bfc33358b699832005ec2d879a747c05d9fc73775f1a0"
+    },
+    {
+      "file": "semantic-invalid-staged-digest.json",
+      "expectation": "schema-valid/model-reject",
+      "sha256": "4935ae7433c58956c644037856dcdbcd632480dc8fafa62279362ac88e94c1de"
+    },
+    {
+      "file": "staged-result.json",
+      "expectation": "schema-valid/model-valid",
+      "sha256": "bbcb915df169e638c38304c33986dee7dfa223c6cb3283e00f681e4de6a24a92"
+    }
+  ],
+  "schemas": [
+    {
+      "file": "source-collection.commit-gate-ack.schema.json",
+      "sha256": "c7470349720e217a090798000f9e2ead34b96bd7c00db33050405c2f151d5d99"
+    },
+    {
+      "file": "source-collection.staged-result.schema.json",
+      "sha256": "96a820dd3c40746aa8e7a2ac6cb34b3ee73efa5f748e3149e68584ecca08d77d"
+    }
+  ]
+}

@@ -19,7 +19,8 @@ from sqlalchemy.orm import Session
 
 from app.models.identity import User
 from app.models.jobs import Job, JobCommand, JobExecutionLease, OutboxMessage, OwnerExecutionSlot
-from app.models.w2_commit_operations import W2CommitOperation
+from app.models.w2_commit_operations import W2CommitOperation, W2StagedResult
+from app.repo.jobs import InboxReceiptReservation
 from app.repo.w2_commit_gate import W2CommitGateRepository
 
 LOCK_ORDER = (
@@ -88,6 +89,15 @@ class PrepareOperationAcceptance:
     operation: W2CommitOperation
     prepare_outbox: OutboxMessage | None
     created: bool
+
+
+@dataclass(frozen=True)
+class StagedPrepareAcceptance:
+    """Result of retaining one private W2 proposal and issuing PREPARE once."""
+
+    operation: W2CommitOperation | None
+    prepare_outbox: OutboxMessage | None
+    outcome_code: str
 
 
 @dataclass(frozen=True)
@@ -242,6 +252,134 @@ class W2CommitGateService:
             created=True,
         )
 
+    def create_staged_prepare_with_outbox(
+        self,
+        *,
+        origin_message_id: UUID,
+        schema_version: str,
+        producer_name: str,
+        occurred_at: datetime,
+        payload_digest: str,
+        owner_user_id: UUID,
+        job_id: UUID,
+        command_id: UUID,
+        execution_fence: int,
+        owner_deletion_epoch: int,
+        result_digest: str,
+        result_payload: dict[str, object],
+        inbox_consumer_name: str,
+    ) -> StagedPrepareAcceptance:
+        """Retain a validated proposal and create its sole PREPARE transactionally.
+
+        The caller must pass data already accepted by the pinned W2 wire codec.
+        This boundary resolves the execution lease only from the ordered, locked
+        W1 runtime state; W2 cannot supply or infer it.  A replay with the same
+        delivery ID and digest is a no-op.  The same ID with a different body is
+        durably classified as an ID conflict and never changes an operation.
+        """
+
+        self._validate_digest(result_digest)
+        self._validate_digest(payload_digest)
+        context = self._lock_context(
+            owner_user_id=owner_user_id,
+            job_id=job_id,
+            command_id=command_id,
+        )
+        self._require_execution_current(
+            context=context,
+            execution_fence=execution_fence,
+            owner_deletion_epoch=owner_deletion_epoch,
+        )
+        self._require_active_runtime_lease(
+            context=context,
+            execution_lease_id=context.job.active_lease_id,
+        )
+
+        reservation = self._reserve_staged_receipt(
+            consumer_name=inbox_consumer_name,
+            origin_message_id=origin_message_id,
+            payload_digest=payload_digest,
+            producer_name=producer_name,
+            schema_version=schema_version,
+        )
+        if reservation.id_conflict:
+            return StagedPrepareAcceptance(
+                operation=None,
+                prepare_outbox=None,
+                outcome_code="ID_CONFLICT",
+            )
+        if not reservation.inserted:
+            return StagedPrepareAcceptance(
+                operation=context.operation,
+                prepare_outbox=None,
+                outcome_code="DUPLICATE",
+            )
+
+        if context.operation is not None:
+            self._require_existing_binding(
+                operation=context.operation,
+                context=context,
+                execution_fence=execution_fence,
+                owner_deletion_epoch=owner_deletion_epoch,
+                result_digest=result_digest,
+            )
+            staged = self.repository.get_staged_result_for_update(
+                operation_id=context.operation.id,
+                owner_user_id=owner_user_id,
+            )
+            if (
+                staged is None
+                or staged.origin_message_id != origin_message_id
+                or staged.payload_digest != payload_digest
+            ):
+                raise W2CommitGateCurrentnessError(
+                    "an existing gate operation cannot accept another staged body"
+                )
+            return StagedPrepareAcceptance(
+                operation=context.operation,
+                prepare_outbox=None,
+                outcome_code="DUPLICATE",
+            )
+
+        operation = W2CommitOperation(
+            command_id=command_id,
+            job_id=job_id,
+            owner_user_id=owner_user_id,
+            execution_fence=execution_fence,
+            owner_deletion_epoch=owner_deletion_epoch,
+            result_digest=result_digest,
+            operation_revision=1,
+            state="PREPARE_PENDING",
+        )
+        self.repository.add_operation(operation)
+        self.session.flush()
+        self.repository.add_staged_result(
+            W2StagedResult(
+                operation_id=operation.id,
+                command_id=command_id,
+                owner_user_id=owner_user_id,
+                origin_message_id=origin_message_id,
+                schema_version=schema_version,
+                producer_name=producer_name,
+                occurred_at=occurred_at,
+                payload_digest=payload_digest,
+                result_digest=result_digest,
+                result_payload=result_payload,
+                payload_state="ACTIVE",
+            )
+        )
+        prepare_outbox = self._add_commit_gate_outbox(operation=operation, action="PREPARE")
+        self._update_staged_receipt_outcome(
+            consumer_name=inbox_consumer_name,
+            origin_message_id=origin_message_id,
+            outcome_code="PREPARE_CREATED",
+        )
+        return StagedPrepareAcceptance(
+            operation=operation,
+            prepare_outbox=prepare_outbox,
+            outcome_code="PREPARE_CREATED",
+        )
+
     def transition_operation(
         self,
         *,
@@ -282,6 +420,7 @@ class W2CommitGateService:
         execution_fence: int,
         owner_deletion_epoch: int,
         result_digest: str,
+        authenticated_owner_user_id: UUID | None = None,
         purge_owner_deletion_epoch: int | None = None,
     ) -> W2CommitOperation:
         """Apply a normalized W2 ACK after W1 re-locks the immutable binding.
@@ -303,6 +442,11 @@ class W2CommitGateService:
         operation = context.operation
         if operation is None or operation.id != operation_id:
             raise W2CommitOperationNotFoundError("W2 commit operation does not match command")
+        if (
+            authenticated_owner_user_id is not None
+            and authenticated_owner_user_id != operation.owner_user_id
+        ):
+            raise W2CommitGateCurrentnessError("W2 ACK owner does not match immutable operation")
         if (
             command_id != operation.command_id
             or job_id != operation.job_id
@@ -412,6 +556,7 @@ class W2CommitGateService:
                 expected_revision=operation.operation_revision,
                 target_state="ABORT_PENDING",
             )
+            self._clear_active_staged_payload(operation=operation, owner_user_id=owner_user_id)
             messages.append(self._add_commit_gate_outbox(operation=operation, action="ABORT"))
         return tuple(messages)
 
@@ -451,6 +596,10 @@ class W2CommitGateService:
                     expected_revision=operation.operation_revision,
                     target_state="ABORT_PENDING",
                 )
+                self._clear_active_staged_payload(
+                    operation=operation,
+                    owner_user_id=owner_user_id,
+                )
                 messages.append(self._add_commit_gate_outbox(operation=operation, action="ABORT"))
             elif operation.state in {"W1_COMMITTED", "FINALIZE_PENDING", "FINALIZED"}:
                 self._advance_locked_operation(
@@ -472,6 +621,8 @@ class W2CommitGateService:
         operation_id: UUID,
         expected_revision: int,
         apply_w1_owned: Callable[[LockedW2CommitGateContext], None],
+        apply_staged_w1_owned: Callable[[LockedW2CommitGateContext, dict[str, object]], None]
+        | None = None,
     ) -> W1CommitFinalization:
         """Commit W1-owned result/checkpoint work before emitting FINALIZE.
 
@@ -504,7 +655,30 @@ class W2CommitGateService:
             execution_lease_id=context.job.active_lease_id,
         )
 
-        apply_w1_owned(context)
+        staged = self.repository.get_staged_result_for_update(
+            operation_id=operation.id,
+            owner_user_id=owner_user_id,
+        )
+        if staged is not None:
+            if (
+                staged.payload_state != "ACTIVE"
+                or staged.result_payload is None
+                or staged.result_digest != operation.result_digest
+            ):
+                raise W2CommitGateCurrentnessError(
+                    "prepared operation has no active staged payload"
+                )
+            if apply_staged_w1_owned is None:
+                raise W2CommitGateCurrentnessError(
+                    "prepared staged operation requires a concrete W1 result writer"
+                )
+            apply_staged_w1_owned(context, staged.result_payload)
+            self.repository.consume_staged_result(staged_result=staged)
+        else:
+            # Keep the historical W1-only fake-gate harness usable while the
+            # dedicated staged path is adopted. It can never fabricate a staged
+            # payload because it is selected only when no staged row exists.
+            apply_w1_owned(context)
         self._advance_locked_operation(
             context=context,
             operation=operation,
@@ -544,6 +718,10 @@ class W2CommitGateService:
                     expected_revision=operation.operation_revision,
                     target_state="ABORT_PENDING",
                 )
+                self._clear_active_staged_payload(
+                    operation=operation,
+                    owner_user_id=context.owner.id,
+                )
                 outbox = self._add_commit_gate_outbox(operation=operation, action="ABORT")
                 return W2CommitGateRecovery(
                     operation=operation,
@@ -565,6 +743,10 @@ class W2CommitGateService:
                 operation=operation,
                 expected_revision=operation.operation_revision,
                 target_state="ABORT_PENDING",
+            )
+            self._clear_active_staged_payload(
+                operation=operation,
+                owner_user_id=context.owner.id,
             )
             outbox = self._add_commit_gate_outbox(operation=operation, action="ABORT")
             return W2CommitGateRecovery(
@@ -834,6 +1016,55 @@ class W2CommitGateService:
         self.session.add(message)
         self.session.flush()
         return message
+
+    def _reserve_staged_receipt(
+        self,
+        *,
+        consumer_name: str,
+        origin_message_id: UUID,
+        payload_digest: str,
+        producer_name: str,
+        schema_version: str,
+    ) -> InboxReceiptReservation:
+        """Reserve the parsed delivery after the parent lock set is held."""
+
+        from app.services.jobs import JobService
+
+        return JobService(self.session).reserve_digest_aware_inbox_receipt(
+            consumer_name=consumer_name,
+            event_id=origin_message_id,
+            outcome_code="PROCESSING",
+            payload_digest=payload_digest,
+            producer_name=producer_name,
+            schema_version=schema_version,
+        )
+
+    def _update_staged_receipt_outcome(
+        self,
+        *,
+        consumer_name: str,
+        origin_message_id: UUID,
+        outcome_code: str,
+    ) -> None:
+        from app.services.jobs import JobService
+
+        JobService(self.session).update_inbox_receipt_outcome(
+            consumer_name=consumer_name,
+            event_id=origin_message_id,
+            outcome_code=outcome_code,
+        )
+
+    def _clear_active_staged_payload(
+        self, *, operation: W2CommitOperation, owner_user_id: UUID
+    ) -> None:
+        """Tombstone only the private row already owned by this locked operation."""
+
+        staged = self.repository.get_staged_result_for_update(
+            operation_id=operation.id,
+            owner_user_id=owner_user_id,
+        )
+        if staged is not None and staged.payload_state == "ACTIVE":
+            self.repository.clear_staged_result(staged_result=staged)
 
     @staticmethod
     def _validate_digest(result_digest: str) -> None:

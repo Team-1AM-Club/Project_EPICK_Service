@@ -13,6 +13,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -22,6 +23,7 @@ W2_COMMIT_OPERATION_STATE_VALUES = (
     "'PREPARE_PENDING', 'PREPARED', 'W1_COMMITTED', 'FINALIZE_PENDING', 'FINALIZED', "
     "'ABORT_PENDING', 'ABORTED', 'PURGE_PENDING', 'PURGED', 'FAILED_FINAL'"
 )
+W2_STAGED_RESULT_PAYLOAD_STATE_VALUES = "'ACTIVE', 'CONSUMED', 'CLEARED'"
 
 
 class W2CommitOperation(Base):
@@ -80,5 +82,88 @@ class W2CommitOperation(Base):
     finalized_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     aborted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     purged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class W2StagedResult(Base):
+    """Private W2 candidate retained only until W1's local gate completes.
+
+    The validated W2 *result* is intentionally the only body retained here.
+    Queue receipt handles, credentials, DSNs, authorization headers and W2
+    store references do not belong in this model. The wire parser is the
+    contract boundary that makes this a durable, bounded payload rather than a
+    generic message archive.
+    """
+
+    __tablename__ = "w2_staged_results"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["operation_id"],
+            ["w2_commit_operations.id"],
+            name="operation_id",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["command_id"],
+            ["job_commands.id"],
+            name="command_id",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["owner_user_id"],
+            ["users.id"],
+            name="owner_user_id",
+            ondelete="RESTRICT",
+        ),
+        UniqueConstraint("command_id", name="command_id_once"),
+        UniqueConstraint("origin_message_id", name="origin_message_id_once"),
+        CheckConstraint(
+            "payload_digest ~ '^sha256:[0-9a-f]{64}$'",
+            name="payload_digest_sha256",
+        ),
+        CheckConstraint(
+            "result_digest ~ '^sha256:[0-9a-f]{64}$'",
+            name="result_digest_sha256",
+        ),
+        CheckConstraint(
+            f"payload_state IN ({W2_STAGED_RESULT_PAYLOAD_STATE_VALUES})",
+            name="payload_state_allowed",
+        ),
+        CheckConstraint(
+            "(payload_state = 'ACTIVE' "
+            "AND result_payload IS NOT NULL "
+            "AND consumed_at IS NULL "
+            "AND cleared_at IS NULL) "
+            "OR (payload_state = 'CONSUMED' "
+            "AND result_payload IS NULL "
+            "AND consumed_at IS NOT NULL "
+            "AND cleared_at IS NOT NULL) "
+            "OR (payload_state = 'CLEARED' "
+            "AND result_payload IS NULL "
+            "AND consumed_at IS NULL "
+            "AND cleared_at IS NOT NULL)",
+            name="payload_lifecycle_consistent",
+        ),
+    )
+
+    operation_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)
+    command_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
+    owner_user_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
+    origin_message_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
+    schema_version: Mapped[str] = mapped_column(String(128))
+    producer_name: Mapped[str] = mapped_column(String(32))
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    payload_digest: Mapped[str] = mapped_column(String(71))
+    result_digest: Mapped[str] = mapped_column(String(71))
+    # A tombstone must be SQL NULL so the lifecycle constraint distinguishes it
+    # from a retained JSON literal ``null``.  ``none_as_null`` also makes the
+    # durable payload-clear operation unambiguous for replay safety.
+    result_payload: Mapped[dict[str, object] | None] = mapped_column(
+        JSONB(none_as_null=True), nullable=True
+    )
+    payload_state: Mapped[str] = mapped_column(String(16), server_default="ACTIVE")
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cleared_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

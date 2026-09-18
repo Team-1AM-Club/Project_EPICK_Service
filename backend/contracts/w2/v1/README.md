@@ -1,47 +1,44 @@
-# W2 C-01 contract import
+# W2 private commit-gate contract snapshot
 
-These artifacts were supplied by W2 as the authoritative C-01 contract
-package. The byte hashes in `import-manifest.json` are the reproducible import
-pin; they do not define a backend-specific W2 DTO.
+## Source provenance
 
-For the private CollectionResult contract, W1 additionally verified the W2
-Pydantic `CollectionResult` parser at the crawler commit recorded in the
-manifest. This verification is limited to the result schema and the listed
-result fixtures; it does not claim verification of the public Source Event
-consumer boundary.
+- **W2 delivery SHA**: `16a7bd2653873a20a563e6d2f54c24c6dc18c373`
+- **Manifest**: W2 `contracts/w2-private/artifacts.sha256`, 81 Git-blob entries
+- **Verifier**: `python scripts/verify_w2_commit_gate_provenance.py`
+- **Snapshot rule**: schemas and fixtures in this directory tree are copied from the pinned Git
+  blobs. The verifier hashes `git cat-file blob <SHA>:<path>` output, not platform-normalized
+  worktree bytes.
 
-The private Command/Result contract is adopted for W1↔W2 validation. The public
-Source Events use the W1 common event envelope together with W2's
-`source-event-payload.schema.json`; the payload schema does not replace the
-common envelope. W1/W3 consumer compatibility is recorded separately in
-`import-manifest.json`. W3 ACK/usability and W4 input contracts are not part of
-this import.
+| Artifact | Git blob SHA-256 |
+| --- | --- |
+| `source-collection.staged-result.schema.json` | `96a820dd3c40746aa8e7a2ac6cb34b3ee73efa5f748e3149e68584ecca08d77d` |
+| `source-collection.commit-gate-ack.schema.json` | `c7470349720e217a090798000f9e2ead34b96bd7c00db33050405c2f151d5d99` |
+| proposal fixture manifest | `6c759fd6d5b11f84965609311da62adfc0084bea1b3a43ddc6dc4621a355f428` |
 
-Schema validation checks the static boundary. W2 Pydantic runtime validation
-remains required for cross-field invariants such as event/payload matching,
-command input-version equality, and Result completion consistency.
+## W1 adoption decisions
 
-## W2 CollectionResult runtime verification
+1. **Digest**: SHA-256 of canonical compact UTF-8 JSON for exactly
+   `{"command": ..., "result": ...}`, with sorted keys, `ensure_ascii=False`,
+   `allow_nan=False`, preserved Unicode and array order. Envelope, operation and lease identifiers
+   are excluded. The W1 implementation rejects duplicate JSON keys and non-finite values before
+   calculating this digest; it does not apply Unicode normalization.
+2. **Lease**: W1 resolves the active lease only from current locked W1 Job/command state; W2 does
+   not create, infer or supply it.
+3. **ACK outcome**: only a matching `APPLIED` ACK advances W1 state. `DUPLICATE`, `REJECTED`, stale
+   and same-ID/different-digest events are never normalized to success.
+4. **Routing**: staged result and gate ACK use a dedicated W2→W1 inbound queue and strict parser.
+   The legacy W2 collection-result queue and union remain unchanged.
+5. **Result/checkpoint**: W1 retains a staged result only until its ordered local finalizer writes
+   the W1-owned result/checkpoint and FINALIZE outbox transaction.
 
-`continue_limited` is not a W2 `required_actions[].code`. It is the first
-choice of `core_failure_decision.context.choices`. The adopted result Schema
-therefore accepts only W2's four discriminated action variants:
-`core_failure_decision`, `user_retry`, `correct_input`, and
-`find_alternative_source`.
+## Compatibility and status
 
-`policy_revision: null` is accepted only for `completion_kind: "none"` where
-every failure is at the `policy` stage. It is not replaced with a fabricated
-positive revision.
-
-Run the actual W2 parser at the exact commit pinned in the manifest before
-claiming runtime compatibility:
-
-```bash
-cd backend
-python scripts/verify_w2_collection_result_contract.py \
-  --crawler-root C:/dev/EPICK_Engine/crawler
-```
-
-The command rejects a standalone `continue_limited`, a non-policy failure with
-`policy_revision: null`, and a zero policy revision. It is separate from
-`pytest tests/contract -q`, which only verifies the Service-side static mirror.
+- These artifacts do not amend `w2.collection.v1` or the legacy `CollectionResult` union.
+- Unknown schema versions/message types are terminal; they do not fall back to the legacy parser.
+- The W1 codec validates the copied Draft 2020-12 schema before immutable Pydantic parsing, then
+  separately checks staged command/result binding, digest equality and the newer PURGE epoch.
+- `APPLIED`, `DUPLICATE` and `REJECTED` are distinct wire outcomes; current W2 normally replays the
+  original APPLIED ACK identity/timestamp/outcome for an exact replay.
+- **Joint status**: `JOINT_CT15_PENDING`. W1 has no authority to claim W2's private-store
+  STAGED/PREPARED/FINALIZED/ABORTED/PURGED state without the actual W2 relay and inspection hook.
+- W2 account/project deletion T067 failures remain W2-owned and unresolved.

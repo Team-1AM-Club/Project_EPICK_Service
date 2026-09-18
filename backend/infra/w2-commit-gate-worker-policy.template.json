@@ -1,0 +1,22 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReceiveOnlyFromW2CommitGateMainQueue",
+      "Effect": "Allow",
+      "Action": [
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:ChangeMessageVisibility",
+        "sqs:GetQueueAttributes"
+      ],
+      "Resource": "${W2_COMMIT_GATE_QUEUE_ARN}"
+    },
+    {
+      "Sid": "InspectW2CommitGateDlqOnly",
+      "Effect": "Allow",
+      "Action": "sqs:GetQueueAttributes",
+      "Resource": "${W2_COMMIT_GATE_DLQ_ARN}"
+    }
+  ]
+}

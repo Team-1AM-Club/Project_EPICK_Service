@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -19,6 +20,15 @@ from app.models.jobs import (
     OwnerExecutionSlot,
 )
 from app.models.lifecycle_operations import JobCheckpoint
+
+
+@dataclass(frozen=True)
+class InboxReceiptReservation:
+    """Digest-aware outcome of reserving one at-least-once inbox delivery."""
+
+    receipt: InboxReceipt
+    inserted: bool
+    id_conflict: bool
 
 
 class JobRepository:
@@ -218,6 +228,32 @@ class JobRepository:
         if receipt is None:
             raise RuntimeError("inbox receipt reservation did not produce a readable row")
         return receipt, inserted
+
+    def reserve_digest_aware_inbox_receipt(
+        self,
+        *,
+        consumer_name: str,
+        event_id: UUID,
+        outcome_code: str,
+        payload_digest: str,
+        producer_name: str,
+        schema_version: str,
+    ) -> InboxReceiptReservation:
+        """Reserve one delivery and make same-ID/different-body reuse explicit."""
+
+        receipt, inserted = self.reserve_inbox_receipt(
+            consumer_name=consumer_name,
+            event_id=event_id,
+            outcome_code=outcome_code,
+            payload_digest=payload_digest,
+            producer_name=producer_name,
+            schema_version=schema_version,
+        )
+        return InboxReceiptReservation(
+            receipt=receipt,
+            inserted=inserted,
+            id_conflict=not inserted and receipt.payload_digest != payload_digest,
+        )
 
     def record_inbox_receipt(
         self,

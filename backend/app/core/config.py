@@ -1,3 +1,4 @@
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -33,6 +34,15 @@ class Settings(BaseSettings):
     lookup_database_url: str | None = None
     w2_collection_command_queue_url: str | None = None
     w2_collection_result_queue_url: str | None = None
+    # W2 commit-gate ingress is deliberately separate from the legacy collection
+    # result route. It is only injected into the private worker profile.
+    w2_commit_gate_inbound_queue_url: str | None = None
+    w2_commit_gate_inbound_dlq_url: str | None = None
+    w2_commit_gate_expected_producer: str = "w2"
+    w2_commit_gate_expected_sender_id: str | None = None
+    w2_commit_gate_batch_size: int = 10
+    w2_commit_gate_wait_seconds: int = 20
+    w2_commit_gate_visibility_seconds: int = 120
     w1_worker_id: str | None = None
     w1_sqs_visibility_seconds: int = 120
     w1_sqs_long_poll_seconds: int = 20
@@ -52,6 +62,28 @@ class Settings(BaseSettings):
     @property
     def w1_execution_queue_url(self) -> str | None:
         return self.w1_job_execution_queue_url or self.w1_sqs_execution_queue_url
+
+    @model_validator(mode="after")
+    def validate_w2_commit_gate_runtime(self) -> "Settings":
+        queue_url = self.w2_commit_gate_inbound_queue_url
+        dlq_url = self.w2_commit_gate_inbound_dlq_url
+        if (queue_url is None) != (dlq_url is None):
+            raise ValueError("W2 commit-gate queue and DLQ must be configured together")
+        if queue_url is not None and queue_url == dlq_url:
+            raise ValueError("W2 commit-gate queue and DLQ must be distinct")
+        if queue_url is not None and not self.w2_commit_gate_expected_sender_id:
+            raise ValueError("W2 commit-gate expected sender id must be configured with the queue")
+        if not self.w2_commit_gate_expected_producer.strip():
+            raise ValueError("W2 commit-gate expected producer must be non-empty")
+        if self.w2_commit_gate_expected_producer != "w2":
+            raise ValueError("W2 commit-gate expected producer must be w2")
+        if not 1 <= self.w2_commit_gate_batch_size <= 10:
+            raise ValueError("W2 commit-gate batch size must be between 1 and 10")
+        if not 0 <= self.w2_commit_gate_wait_seconds <= 20:
+            raise ValueError("W2 commit-gate wait seconds must be between 0 and 20")
+        if not 1 <= self.w2_commit_gate_visibility_seconds <= 43_200:
+            raise ValueError("W2 commit-gate visibility seconds must be between 1 and 43200")
+        return self
 
     model_config = SettingsConfigDict(
         env_file=".env",

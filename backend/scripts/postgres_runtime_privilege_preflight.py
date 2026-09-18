@@ -28,11 +28,15 @@ PRIVILEGE_EXPECTATIONS = (
     ("epick_worker", "sources", "INSERT", True),
     ("epick_worker", "users", "SELECT", True),
     ("epick_worker", "users", "UPDATE", False),
+    ("epick_worker", "w2_staged_results", "INSERT", True),
+    ("epick_worker", "w2_staged_results", "UPDATE", True),
     ("epick_lookup", "jobs", "UPDATE", False),
     ("epick_lookup", "outbox_messages", "SELECT", False),
     ("epick_deleter", "deletion_requests", "UPDATE", True),
     ("epick_deleter", "users", "DELETE", True),
     ("epick_deleter", "sources", "DELETE", False),
+    ("epick_deleter", "w2_staged_results", "UPDATE", True),
+    ("epick_runtime", "w2_staged_results", "UPDATE", False),
 )
 
 COLUMN_PRIVILEGE_EXPECTATIONS = (
