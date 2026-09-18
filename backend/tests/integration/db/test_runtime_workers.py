@@ -12,7 +12,14 @@ from sqlalchemy import Engine, create_engine, event, func, select, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.models.identity import User
-from app.models.jobs import Job, JobCommand, JobExecutionLease, JobRequiredAction, OutboxMessage
+from app.models.jobs import (
+    Job,
+    JobCommand,
+    JobCoreDecisionBinding,
+    JobExecutionLease,
+    JobRequiredAction,
+    OutboxMessage,
+)
 from app.models.lifecycle_operations import JobCheckpoint
 from app.models.sources import AnalysisSourceDecision, JobSourceLink, Source
 from app.runtime.lookup_adapter import LookupRequest, _lookup_command, create_lookup_app
@@ -20,6 +27,7 @@ from app.runtime.outbox_relay import OutboxRelay, QueueUrlRegistry
 from app.runtime.sqs import InMemorySqsPort
 from app.runtime.workers import CollectionResultWorker, JobWorker
 from app.services.application_workspace import ApplicationWorkspaceService
+from app.services.core_decision_inbound import CoreDecisionInboundService
 from app.services.direct_source_registration import DirectSourceRegistrationService
 from app.services.jobs import JobService
 
@@ -898,6 +906,104 @@ def test_missing_core_pin_blocks_without_creating_w2_dispatch(
             OutboxMessage.message_type == "w1.private.w2.collection-command.v1"
         )
     ) is None
+
+
+@pytest.mark.postgres
+def test_explicit_retry_after_w3_core_decision_creates_new_fenced_pinned_command(
+    db_session: Session,
+) -> None:
+    owner_id, job_id, command_id, outbox_id = _seed_dispatchable_job(
+        db_session,
+        key="w3-explicit-retry",
+        include_core_pin=False,
+    )
+    job = db_session.get(Job, job_id)
+    command = db_session.get(JobCommand, command_id)
+    outbox = db_session.get(OutboxMessage, outbox_id)
+    assert job is not None and command is not None and outbox is not None
+    source_link = db_session.scalar(select(JobSourceLink).where(JobSourceLink.job_id == job_id))
+    assert source_link is not None
+    source = db_session.get(Source, source_link.source_id)
+    assert source is not None
+    job.status = "WAITING_USER"
+    job.dispatch_status = "BLOCKED"
+    command.status = "CONSUMED"
+    command.consumed_at = datetime.now(UTC)
+    outbox.status = "PUBLISHED"
+    outbox.published_at = datetime.now(UTC)
+    missing_action = JobRequiredAction(
+        job_id=job.id,
+        owner_user_id=owner_id,
+        action_code="CORE_DECISION_REQUIRED",
+        action_status="OPEN",
+        context_code="CORE_DECISION_BINDING_MISMATCH",
+        expected_input_version=job.analysis_input_version,
+    )
+    db_session.add(missing_action)
+    db_session.flush()
+    original_fence = job.execution_fence
+
+    receipt = CoreDecisionInboundService(db_session).apply(
+        body={
+            "schema_version": "w3.private.core-decision/0.1-candidate",
+            "message_type": "w3.private.w1.core-decision",
+            "message_id": str(uuid4()),
+            "occurred_at": "2026-09-18T00:00:00Z",
+            "visibility_scope": "PRIVATE",
+            "producer": "w3",
+            "job_id": str(job.id),
+            "company_id": str(source.company_id),
+            "source_id": str(source.id),
+            "analysis_input_version": job.analysis_input_version,
+            "decision_scope": "COMPANY_KNOWLEDGE",
+            "decision_owner": "W3",
+            "question_version_id": None,
+            "decision_version": 2,
+            "is_core": True,
+            "decision_code": "CORE_REQUIRED",
+            "reason_code": "REQUIRED_COMPANY_EVIDENCE",
+        },
+        authenticated_principal="w3",
+    )
+    retry_action = db_session.scalar(
+        select(JobRequiredAction).where(
+            JobRequiredAction.job_id == job.id,
+            JobRequiredAction.action_code == "RETRY",
+            JobRequiredAction.action_status == "OPEN",
+        )
+    )
+    assert retry_action is not None
+    assert db_session.scalar(
+        select(func.count()).select_from(JobCommand).where(JobCommand.job_id == job.id)
+    ) == 1
+
+    accepted = JobService(db_session).apply_required_action(
+        owner_user_id=owner_id,
+        job_id=job.id,
+        required_action_id=retry_action.id,
+        action_code="RETRY",
+        expected_input_version=retry_action.expected_input_version,
+        expected_result_version=retry_action.expected_result_version,
+        acknowledge_rate_limit=False,
+    )
+    db_session.flush()
+
+    assert accepted.command is not None and accepted.outbox_message is not None
+    assert accepted.job.status == "QUEUED"
+    assert accepted.job.execution_fence == original_fence + 1
+    assert accepted.command.execution_fence == accepted.job.execution_fence
+    assert accepted.command.analysis_source_decision_id == receipt.decision_id
+    binding = db_session.scalar(
+        select(JobCoreDecisionBinding).where(
+            JobCoreDecisionBinding.analysis_source_decision_id == receipt.decision_id
+        )
+    )
+    assert binding is not None
+    pin = accepted.command.payload["core_decision_pin"]
+    assert pin["origin_message_id"] == str(binding.origin_message_id)
+    assert pin["decision_id"] == str(receipt.decision_id)
+    assert pin["decision_version"] == binding.decision_version
+    assert accepted.outbox_message.payload["core_decision_pin"] == pin
 
 
 @pytest.mark.postgres

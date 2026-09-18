@@ -9,6 +9,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
+    Index,
     Integer,
     String,
     Text,
@@ -339,6 +340,12 @@ class OutboxMessage(Base):
 
 class InboxReceipt(Base):
     __tablename__ = "inbox_receipts"
+    __table_args__ = (
+        CheckConstraint(
+            "payload_digest IS NULL OR payload_digest ~ '^sha256:[0-9a-f]{64}$'",
+            name="payload_digest_format",
+        ),
+    )
 
     consumer_name: Mapped[str] = mapped_column(String(128), primary_key=True)
     event_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)
@@ -346,6 +353,77 @@ class InboxReceipt(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     outcome_code: Mapped[str] = mapped_column(String(64))
+    payload_digest: Mapped[str | None] = mapped_column(String(71), nullable=True)
+    producer_name: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    schema_version: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+
+class JobCoreDecisionBinding(Base):
+    __tablename__ = "job_core_decision_bindings"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["job_id", "owner_user_id"],
+            ["jobs.id", "jobs.owner_user_id"],
+            name="job_owner_scope",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(["source_id"], ["sources.id"], ondelete="RESTRICT"),
+        ForeignKeyConstraint(
+            ["analysis_source_decision_id"],
+            ["analysis_source_decisions.id"],
+            name="fk_jcdb_analysis_source_decision",
+            ondelete="RESTRICT",
+        ),
+        UniqueConstraint("origin_message_id", name="origin_message_id"),
+        UniqueConstraint(
+            "job_id",
+            "source_id",
+            "decision_version",
+            name="job_source_decision_version",
+        ),
+        UniqueConstraint(
+            "job_id",
+            "analysis_source_decision_id",
+            name="job_decision",
+        ),
+        CheckConstraint(
+            "payload_digest ~ '^sha256:[0-9a-f]{64}$'",
+            name="payload_digest_format",
+        ),
+        CheckConstraint("decision_version >= 1", name="decision_version_positive"),
+        CheckConstraint(
+            "owner_deletion_epoch >= 0",
+            name="owner_deletion_epoch_not_negative",
+        ),
+        CheckConstraint(
+            "decision_code IN ('CORE_REQUIRED', 'NON_CORE_OPTIONAL')",
+            name="decision_code_allowed",
+        ),
+        Index(
+            "ix_job_core_decision_bindings_current",
+            "job_id",
+            "source_id",
+            "analysis_input_version",
+            "decision_version",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4
+    )
+    job_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
+    owner_user_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
+    source_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
+    analysis_source_decision_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
+    origin_message_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
+    payload_digest: Mapped[str] = mapped_column(String(71))
+    analysis_input_version: Mapped[str] = mapped_column(String(64))
+    decision_version: Mapped[int] = mapped_column(Integer)
+    decision_code: Mapped[str] = mapped_column(String(64))
+    owner_deletion_epoch: Mapped[int] = mapped_column(BigInteger)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
 
 class OwnerExecutionSlot(Base):

@@ -1,0 +1,11 @@
+{
+  "schema_version": "w1.private.receipt.v1",
+  "message_id": "50000000-0000-4000-8000-000000000004",
+  "payload_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+  "consumer": "w1.core-source-decision",
+  "outcome": "REJECTED_BINDING",
+  "retryable": false,
+  "error_code": "JOB_SOURCE_BINDING_MISMATCH",
+  "decision_id": null,
+  "received_at": "2026-09-18T00:00:02Z"
+}

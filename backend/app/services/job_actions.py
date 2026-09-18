@@ -34,7 +34,9 @@ class JobActionService:
     """HTTP-facing idempotency boundary for explicit Job actions.
 
     The service records only acceptance.  It never invokes a worker, an outbox relay, or an
-    engine synchronously, so a ``202`` remains distinct from actual dispatch.
+    engine synchronously, so a ``202`` remains distinct from actual dispatch. A W3 Core Decision
+    still requires this explicit user action boundary before ``JobService`` creates the next
+    fenced command.
     """
 
     def __init__(self, session: Session) -> None:

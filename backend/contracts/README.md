@@ -54,3 +54,22 @@ as contract evidence.
 
 W3 ACK/adapter DTOs, W4 usability contracts, database migrations, queue
 workers, API endpoints, and Neo4j projections are outside this C-01 boundary.
+
+## W3 → W1 Core Decision inbound boundary
+
+The selectively adopted W3 `COMPANY_KNOWLEDGE` event is versioned separately at
+`w3/v1/core-decision.event.schema.json`; it is not the W1 private message envelope and does not
+replace the W1/W2 contract. Its provenance is pinned to W3 full SHA
+`5afbf9917eb1e02a4e6be08c4569886ca6c10d7b` in `w3/v1/README.md`.
+
+The body assertion `producer: "w3"` is never authentication. A private transport adapter must
+independently authenticate the W3 principal before invoking the W1 consumer. W1 remains
+authoritative for Job ownership, Source binding, deletion epoch, revision acceptance, execution
+fence, and explicit retry.
+
+W1 extends `w1/v1/private-delivery-receipt.schema.json` additively for Core Decision receipts with
+a canonical payload digest, W1 decision ID, binding rejection, and same-ID body conflict. Existing
+W2 collection-result receipt fixtures remain valid without those Core-only fields.
+
+The local outcome DTO does not imply a deployed ACK transport. W3 outbox deletion, the W3 relay,
+and joint CT-12 remain gated until both sides adopt and execute the runtime contract.

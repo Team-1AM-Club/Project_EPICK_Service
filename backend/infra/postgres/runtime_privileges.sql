@@ -122,7 +122,6 @@ GRANT SELECT, INSERT, UPDATE ON TABLE
     job_commands,
     w2_commit_operations,
     outbox_messages,
-    inbox_receipts,
     owner_execution_slots,
     job_execution_leases,
     job_checkpoints,
@@ -179,6 +178,18 @@ GRANT SELECT, INSERT, UPDATE ON TABLE
     experience_merge_records,
     projection_sync_states
 TO epick_worker;
+
+-- Inbound delivery receipts are append-first. Existing workers may finalize
+-- only the outcome column after a durable transaction; digest/provenance are
+-- immutable. Core Decision bindings are append-only audit pins.
+GRANT SELECT, INSERT ON TABLE inbox_receipts TO epick_worker;
+GRANT UPDATE (outcome_code) ON TABLE inbox_receipts TO epick_worker;
+GRANT SELECT, INSERT ON TABLE job_core_decision_bindings TO epick_worker;
+
+-- The interactive API reads the current owner-scoped binding only when an
+-- explicit user retry creates the next execution fence. Owner RLS still
+-- requires app.current_user_id and no mutation privilege is granted.
+GRANT SELECT ON TABLE job_core_decision_bindings TO epick_runtime;
 
 -- The lookup adapter has a separate, read-only login.  Its route is protected by
 -- a W2 service principal and still verifies command/fence/epoch before emitting

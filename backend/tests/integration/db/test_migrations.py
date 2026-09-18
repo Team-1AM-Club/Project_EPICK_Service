@@ -19,11 +19,65 @@ DATABASE_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 RUNTIME_ROLE_TEMPLATE_SQL = BACKEND_ROOT / "infra" / "postgres" / "runtime_roles.sql"
 
 
-def test_current_migration_head_includes_w1_worker_owner_lock() -> None:
-    """Keep the worker owner-row lock policy in the declared forward-only chain."""
+def test_current_migration_head_includes_w3_core_decision_inbound() -> None:
+    """Keep the W3 inbound persistence boundary in the forward-only chain."""
 
     config = Config(str(BACKEND_ROOT / "alembic.ini"))
-    assert ScriptDirectory.from_config(config).get_current_head() == "025_w1_worker_owner_lock"
+    assert ScriptDirectory.from_config(config).get_current_head() == "026_w3_core_decision_inbound"
+
+
+@pytest.mark.postgres
+def test_w3_core_decision_inbound_schema_contract(migrated_engine: object) -> None:
+    inspector = inspect(migrated_engine)
+
+    receipt_columns = {
+        column["name"]: column for column in inspector.get_columns("inbox_receipts")
+    }
+    assert {"payload_digest", "producer_name", "schema_version"} <= receipt_columns.keys()
+    assert receipt_columns["payload_digest"]["nullable"] is True
+    assert receipt_columns["producer_name"]["nullable"] is True
+    assert receipt_columns["schema_version"]["nullable"] is True
+
+    binding_columns = {
+        column["name"]: column
+        for column in inspector.get_columns("job_core_decision_bindings")
+    }
+    assert {
+        "id",
+        "job_id",
+        "owner_user_id",
+        "source_id",
+        "analysis_source_decision_id",
+        "origin_message_id",
+        "payload_digest",
+        "analysis_input_version",
+        "decision_version",
+        "decision_code",
+        "owner_deletion_epoch",
+        "created_at",
+    } == binding_columns.keys()
+
+    unique_sets = {
+        tuple(constraint["column_names"])
+        for constraint in inspector.get_unique_constraints("job_core_decision_bindings")
+    }
+    assert ("origin_message_id",) in unique_sets
+    assert ("job_id", "source_id", "decision_version") in unique_sets
+    assert ("job_id", "analysis_source_decision_id") in unique_sets
+
+    index_sets = {
+        tuple(index["column_names"])
+        for index in inspector.get_indexes("job_core_decision_bindings")
+    }
+    assert ("job_id", "source_id", "analysis_input_version", "decision_version") in index_sets
+
+    check_sql = " ".join(
+        str(constraint["sqltext"])
+        for constraint in inspector.get_check_constraints("job_core_decision_bindings")
+    )
+    assert "decision_version" in check_sql
+    assert "owner_deletion_epoch" in check_sql
+    assert "payload_digest" in check_sql
 
 
 def _admin_database_url(database_url: str) -> tuple[str, str]:

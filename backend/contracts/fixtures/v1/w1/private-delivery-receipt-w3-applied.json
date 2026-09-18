@@ -1,0 +1,11 @@
+{
+  "schema_version": "w1.private.receipt.v1",
+  "message_id": "50000000-0000-4000-8000-000000000001",
+  "payload_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "consumer": "w1.core-source-decision",
+  "outcome": "APPLIED",
+  "retryable": false,
+  "error_code": null,
+  "decision_id": "60000000-0000-4000-8000-000000000001",
+  "received_at": "2026-09-18T00:00:01Z"
+}
