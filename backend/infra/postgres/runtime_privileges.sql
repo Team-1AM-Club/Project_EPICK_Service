@@ -239,6 +239,7 @@ GRANT SELECT, INSERT, UPDATE ON TABLE
     job_required_actions,
     job_commands,
     w2_commit_operations,
+    w2_staged_results,
     outbox_messages,
     owner_execution_slots,
     job_execution_leases,
