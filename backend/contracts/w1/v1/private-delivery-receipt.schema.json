@@ -21,6 +21,10 @@
       "type": "string",
       "format": "uuid"
     },
+    "payload_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
     "consumer": {
       "enum": ["w1.collection-result", "w1.core-source-decision"]
     },
@@ -31,6 +35,8 @@
         "STALE_DISCARDED",
         "REJECTED_SCHEMA",
         "REJECTED_PRINCIPAL",
+        "REJECTED_BINDING",
+        "REJECTED_CONFLICT",
         "RETRYABLE_INFRA_FAILURE"
       ]
     },
@@ -41,12 +47,43 @@
       "type": ["string", "null"],
       "maxLength": 64
     },
+    "decision_id": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
     "received_at": {
       "type": "string",
       "format": "date-time"
     }
   },
   "allOf": [
+    {
+      "if": {
+        "properties": {
+          "consumer": {
+            "const": "w1.core-source-decision"
+          }
+        },
+        "required": ["consumer"]
+      },
+      "then": {
+        "required": ["payload_digest", "decision_id"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "consumer": { "const": "w1.core-source-decision" },
+          "outcome": { "const": "APPLIED" }
+        },
+        "required": ["consumer", "outcome"]
+      },
+      "then": {
+        "properties": {
+          "decision_id": { "type": "string", "format": "uuid" }
+        }
+      }
+    },
     {
       "if": {
         "properties": {

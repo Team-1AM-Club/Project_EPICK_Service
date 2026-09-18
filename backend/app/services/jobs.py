@@ -16,8 +16,10 @@ from app.models.jobs import (
     JobRequiredAction,
     OutboxMessage,
 )
+from app.repo.core_decisions import CoreDecisionRepository
 from app.repo.identity import IdentityRepository
 from app.repo.jobs import JobRepository
+from app.runtime.core_decision_binding import project_core_decision_pin
 from app.services.idempotency import IdempotencyService
 from app.services.w2_commit_gate import W2CommitGateService
 
@@ -255,16 +257,55 @@ class JobService:
         command: JobCommand | None = None
         outbox_message: OutboxMessage | None = None
         if action_code == "RETRY":
-            if job.status not in {"FAILED_RETRYABLE", "PAUSED_RATE_LIMIT"}:
+            if job.status not in {"FAILED_RETRYABLE", "PAUSED_RATE_LIMIT", "WAITING_USER"}:
                 raise JobTransitionError("only a retryable or rate-limited Job can be retried")
             if job.status == "PAUSED_RATE_LIMIT" and not acknowledge_rate_limit:
                 raise JobTransitionError("rate-limited Jobs require explicit acknowledgement")
             if job.active_lease_id is not None or job.owner_deletion_epoch != owner.deletion_epoch:
                 raise JobTransitionError("Job is not safe to retry for the current owner epoch")
+            core_binding = None
+            core_decision = None
+            if job.status == "WAITING_USER":
+                if action is None or action.context_code != "CORE_DECISION_AVAILABLE":
+                    raise JobTransitionError(
+                        "a user-waiting Job requires a current Core decision retry action"
+                    )
+                if job.analysis_input_version is None:
+                    raise JobTransitionError("the waiting Job has no analysis input version")
+                binding_history = CoreDecisionRepository(
+                    self.session
+                ).list_core_bindings_for_job_for_update(
+                    job_id=job.id,
+                    analysis_input_version=job.analysis_input_version,
+                )
+                current_by_source = {}
+                for candidate in binding_history:
+                    current_by_source.setdefault(candidate.source_id, candidate)
+                if len(current_by_source) != 1:
+                    raise JobTransitionError("the waiting Job has no unambiguous Core binding")
+                core_binding = next(iter(current_by_source.values()))
+                if core_binding.owner_deletion_epoch != owner.deletion_epoch:
+                    raise JobTransitionError("the Core binding owner epoch is stale")
+                core_decision = CoreDecisionRepository(self.session).get_decision(
+                    decision_id=core_binding.analysis_source_decision_id
+                )
+                if core_decision is None:
+                    raise JobTransitionError("the Core binding decision does not exist")
             command, outbox_message = self._resume_job(
                 job=job,
                 checkpoint_id=checkpoint_id,
             )
+            if core_binding is not None and core_decision is not None:
+                pin = project_core_decision_pin(
+                    binding=core_binding,
+                    decision=core_decision,
+                )
+                command.analysis_source_decision_id = core_decision.id
+                command.payload = {**command.payload, "core_decision_pin": pin}
+                outbox_message.payload = {
+                    **outbox_message.payload,
+                    "core_decision_pin": pin,
+                }
         elif action_code == "CONTINUE_LIMITED":
             if job.status != "WAITING_USER":
                 raise JobTransitionError("only a user-waiting Job can continue with limitations")
@@ -311,6 +352,10 @@ class JobService:
             job.completed_at = datetime.now(UTC)
         else:
             raise JobTransitionError("Job cannot be cancelled from its current status")
+        self.repository.dismiss_open_required_actions(
+            job_id=job.id,
+            owner_user_id=job.owner_user_id,
+        )
         job.updated_at = datetime.now(UTC)
         return command, outbox_message
 
@@ -557,6 +602,10 @@ class JobService:
                 command_sequence=self._next_command_sequence(job_id=job.id),
             )
         job.updated_at = datetime.now(UTC)
+        self.repository.dismiss_open_required_actions(
+            job_id=job.id,
+            owner_user_id=job.owner_user_id,
+        )
         self.session.flush()
         return job
 

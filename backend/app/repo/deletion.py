@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.models.deletion import DeletionRequest, DeletionTarget
 from app.models.identity import AuthSession, User
-from app.models.jobs import Job, OutboxMessage
+from app.models.jobs import Job, JobCoreDecisionBinding, OutboxMessage
 
 
 class DeletionRepository:
@@ -115,6 +115,20 @@ class DeletionRepository:
                 .with_for_update()
             )
         )
+
+    def delete_core_decision_bindings_for_owner(self, *, owner_user_id: UUID) -> int:
+        """Remove only the deleting owner's private Job bindings.
+
+        Source and AnalysisSourceDecision rows are intentionally outside this owner-scoped
+        operation because they may be shared by another owner's Job.
+        """
+
+        result = self.session.execute(
+            delete(JobCoreDecisionBinding).where(
+                JobCoreDecisionBinding.owner_user_id == owner_user_id
+            )
+        )
+        return int(result.rowcount or 0)
 
     def get_active_request_for_owner(self, *, owner_user_id: UUID) -> DeletionRequest | None:
         return self.session.scalar(

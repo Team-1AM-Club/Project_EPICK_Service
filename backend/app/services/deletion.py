@@ -332,6 +332,9 @@ class DeletionOrchestrationService:
                 job_id=job.id,
                 owner_deletion_epoch=next_epoch,
             )
+        self.repository.delete_core_decision_bindings_for_owner(
+            owner_user_id=request.owner_user_id
+        )
         resource_id = request.target_id or request.owner_user_id
         if resource_id is None:
             raise DeletionValidationError("deletion request has no private subject reference")

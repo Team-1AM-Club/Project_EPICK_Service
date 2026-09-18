@@ -85,6 +85,21 @@ def test_runtime_privilege_manifest_is_role_scoped_and_deny_by_default(
         assert _has_table_privilege(migrated_engine, "epick_worker", "jobs", "UPDATE")
         assert _has_table_privilege(migrated_engine, "epick_worker", "sources", "INSERT")
         assert _has_table_privilege(migrated_engine, "epick_worker", "users", "SELECT")
+        assert _has_table_privilege(
+            migrated_engine, "epick_worker", "job_core_decision_bindings", "SELECT"
+        )
+        assert _has_table_privilege(
+            migrated_engine, "epick_worker", "job_core_decision_bindings", "INSERT"
+        )
+        assert not _has_table_privilege(
+            migrated_engine, "epick_worker", "job_core_decision_bindings", "UPDATE"
+        )
+        assert not _has_table_privilege(
+            migrated_engine, "epick_worker", "job_core_decision_bindings", "DELETE"
+        )
+        assert not _has_table_privilege(
+            migrated_engine, "epick_worker", "inbox_receipts", "DELETE"
+        )
         assert not _has_table_privilege(migrated_engine, "epick_worker", "users", "UPDATE")
         assert _has_column_privilege(
             migrated_engine, "epick_worker", "users", "updated_at", "UPDATE"
@@ -102,6 +117,9 @@ def test_runtime_privilege_manifest_is_role_scoped_and_deny_by_default(
         assert not _has_table_privilege(migrated_engine, "epick_lookup", "jobs", "UPDATE")
         assert not _has_table_privilege(
             migrated_engine, "epick_lookup", "outbox_messages", "SELECT"
+        )
+        assert not _has_table_privilege(
+            migrated_engine, "epick_lookup", "job_core_decision_bindings", "SELECT"
         )
 
         assert _has_table_privilege(migrated_engine, "epick_deleter", "deletion_requests", "UPDATE")

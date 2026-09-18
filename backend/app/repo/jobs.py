@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select, update
@@ -46,6 +47,15 @@ class JobRepository:
         return self.session.scalar(
             select(Job).where(Job.id == job_id, Job.owner_user_id == owner_user_id)
         )
+
+    def get_job_by_id(self, *, job_id: UUID) -> Job | None:
+        """Read only enough ownership metadata to establish the User -> Job lock order.
+
+        The inbound decision service treats this as a hint, then locks the owner and
+        reloads the Job with the owner predicate before trusting any mutable state.
+        """
+
+        return self.session.scalar(select(Job).where(Job.id == job_id))
 
     def list_jobs(
         self, *, owner_user_id: UUID, offset: int, limit: int
@@ -165,8 +175,59 @@ class JobRepository:
     def add_inbox_receipt(self, receipt: InboxReceipt) -> None:
         self.session.add(receipt)
 
+    def get_inbox_receipt(
+        self, *, consumer_name: str, event_id: UUID, for_update: bool = False
+    ) -> InboxReceipt | None:
+        statement = select(InboxReceipt).where(
+            InboxReceipt.consumer_name == consumer_name,
+            InboxReceipt.event_id == event_id,
+        )
+        if for_update:
+            statement = statement.with_for_update()
+        return self.session.scalar(statement)
+
+    def reserve_inbox_receipt(
+        self,
+        *,
+        consumer_name: str,
+        event_id: UUID,
+        outcome_code: str,
+        payload_digest: str,
+        producer_name: str,
+        schema_version: str,
+    ) -> tuple[InboxReceipt, bool]:
+        statement = (
+            insert(InboxReceipt)
+            .values(
+                consumer_name=consumer_name,
+                event_id=event_id,
+                outcome_code=outcome_code,
+                payload_digest=payload_digest,
+                producer_name=producer_name,
+                schema_version=schema_version,
+            )
+            .on_conflict_do_nothing(index_elements=["consumer_name", "event_id"])
+            .returning(InboxReceipt.event_id)
+        )
+        inserted = self.session.execute(statement).scalar_one_or_none() is not None
+        receipt = self.get_inbox_receipt(
+            consumer_name=consumer_name,
+            event_id=event_id,
+            for_update=True,
+        )
+        if receipt is None:
+            raise RuntimeError("inbox receipt reservation did not produce a readable row")
+        return receipt, inserted
+
     def record_inbox_receipt(
-        self, *, consumer_name: str, event_id: UUID, outcome_code: str
+        self,
+        *,
+        consumer_name: str,
+        event_id: UUID,
+        outcome_code: str,
+        payload_digest: str | None = None,
+        producer_name: str | None = None,
+        schema_version: str | None = None,
     ) -> bool:
         statement = (
             insert(InboxReceipt)
@@ -174,6 +235,9 @@ class JobRepository:
                 consumer_name=consumer_name,
                 event_id=event_id,
                 outcome_code=outcome_code,
+                payload_digest=payload_digest,
+                producer_name=producer_name,
+                schema_version=schema_version,
             )
             .on_conflict_do_nothing(index_elements=["consumer_name", "event_id"])
             .returning(InboxReceipt.event_id)
@@ -206,6 +270,19 @@ class JobRepository:
             .with_for_update()
         )
         return self.session.scalar(statement)
+
+    def dismiss_open_required_actions(self, *, job_id: UUID, owner_user_id: UUID) -> None:
+        now = datetime.now(UTC)
+        self.session.execute(
+            update(JobRequiredAction)
+            .where(
+                JobRequiredAction.job_id == job_id,
+                JobRequiredAction.owner_user_id == owner_user_id,
+                JobRequiredAction.action_status == "OPEN",
+                JobRequiredAction.resolved_at.is_(None),
+            )
+            .values(action_status="DISMISSED", resolved_at=now)
+        )
 
     def ensure_owner_slots(self, *, owner_user_id: UUID) -> list[OwnerExecutionSlot]:
         slots = list(

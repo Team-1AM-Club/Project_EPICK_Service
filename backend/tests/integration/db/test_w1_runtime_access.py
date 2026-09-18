@@ -206,3 +206,30 @@ def test_worker_and_lookup_roles_receive_only_their_operational_rls_access(
                 ),
                 {"outbox_id": outbox_id},
             )
+
+
+@pytest.mark.postgres
+def test_worker_can_read_and_insert_but_not_mutate_core_decision_bindings(
+    migrated_engine: Engine,
+) -> None:
+    with migrated_engine.begin() as connection:
+        connection.execute(text(RUNTIME_ROLE_TEMPLATE_SQL.read_text(encoding="utf-8")))
+        connection.execute(text(RUNTIME_PRIVILEGES_SQL.read_text(encoding="utf-8")))
+
+    with migrated_engine.connect() as connection:
+        with connection.begin():
+            connection.execute(text("SET LOCAL ROLE epick_worker"))
+            assert connection.scalar(
+                text("SELECT count(*) FROM job_core_decision_bindings")
+            ) == 0
+            with pytest.raises(DBAPIError):
+                with connection.begin_nested():
+                    connection.execute(
+                        text(
+                            "UPDATE job_core_decision_bindings "
+                            "SET decision_version = decision_version + 1"
+                        )
+                    )
+            with pytest.raises(DBAPIError):
+                with connection.begin_nested():
+                    connection.execute(text("DELETE FROM job_core_decision_bindings"))

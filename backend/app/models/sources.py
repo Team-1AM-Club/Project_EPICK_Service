@@ -356,6 +356,9 @@ class JobSourceLink(Base):
 
 
 class AnalysisSourceDecision(Base):
+    # Accepted W3 events are linked from ``JobCoreDecisionBinding`` through a
+    # SQL-owned FK. Keep the existing no-relationship convention used by
+    # JobCommand so replay/audit rows are loaded explicitly under lock.
     __tablename__ = "analysis_source_decisions"
     __table_args__ = (
         ForeignKeyConstraint(["company_id"], ["companies.id"], ondelete="RESTRICT"),
