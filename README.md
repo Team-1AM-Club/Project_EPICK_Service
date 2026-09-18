@@ -70,5 +70,8 @@ adds the knowledge DTO, typed reference consumer, ACK redelivery tests, and W1 p
 deletion proposal. W4 team acceptance and actual service integration remain pending.
 # W3 → W1 Core Decision 추가 인계
 
+W1 채택 후 supplier/relay/삭제 구현: [최신 runtime 인계](docs/w3-core-runtime-handoff-2026-09-18.md).
+로컬 검증 완료 범위와 실제 앱/인증/배포 미연결 범위를 구분한다.
+
 2026-09-18 후보 계약·생산 모듈: [정본 문서](docs/w3-w1-core-decision-handoff-2026-09-18.md).
-W1 미채택·queue 미연결이며 기존 C01과 별도 계약이다.
+최초 전달 기록이며 기존 C01과 별도 계약이다. 이후 W1은 계약을 채택했고 실제 W3 배포·연결은 대기 중이다.

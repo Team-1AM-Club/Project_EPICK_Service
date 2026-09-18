@@ -1,5 +1,8 @@
 # W3 → W1 Core Decision 인계 — 2026-09-18
 
+후속: W1이 이 계약을 41dd0c21692c7f59c87962cf1e7d2746bac73303에서 채택했다고 회신했다.
+아래는 최초 전달 시점 기록이며, 최신 생산/relay 구현 상태는 `w3-core-runtime-handoff-2026-09-18.md`를 따른다.
+
 상태: **W3 독립 생산 모듈·계약 후보 제공 / W1 미채택 / queue 미연결 / 공동 CT-12 미실행**.
 정본은 이 문서다. 전달 ZIP의 `HANDOFF_RECEIPT.json`에 실제 full commit, 고정 URL,
 이 문서의 SHA256과 원격 검증 결과를 기록한다. 문서 안에 자기 commit/hash를 넣지 않는다.

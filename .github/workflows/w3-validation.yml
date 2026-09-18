@@ -20,6 +20,7 @@ jobs:
       - run: uv run --locked pytest -q
       - run: uv run --locked python scripts/restriction_smoke.py --output-dir .runtime/ci-smoke
       - run: uv run --locked python scripts/c01_smoke.py --output-dir .runtime/c01-ci-smoke
+      - run: uv run --locked python -m w3_knowledge.core_runtime_cli smoke --directory .runtime/core-relay-ci-smoke
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -27,3 +28,4 @@ jobs:
           path: |
             .runtime/ci-smoke/result.json
             .runtime/c01-ci-smoke/result.json
+            .runtime/core-relay-ci-smoke/result.json

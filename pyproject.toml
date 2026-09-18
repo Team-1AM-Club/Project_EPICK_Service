@@ -8,6 +8,7 @@ dependencies = [
   "pydantic>=2.12,<3",
   "openai>=2.0,<3",
   "jsonschema[format]>=4.26,<5",
+  "boto3>=1.43.97",
 ]
 
 [project.scripts]

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Literal
@@ -98,6 +98,14 @@ class CoreDecisionProducer:
                 revision INTEGER NOT NULL, event TEXT NOT NULL,
                 PRIMARY KEY(job_id, source_id, idempotency_key),
                 UNIQUE(company_id, source_id, revision))""")
+            db.execute("""CREATE TABLE IF NOT EXISTS w3_core_counters (
+                company_id TEXT, source_id TEXT, revision INTEGER NOT NULL,
+                PRIMARY KEY(company_id, source_id))""")
+            db.execute("""INSERT INTO w3_core_counters
+                SELECT company_id, source_id, MAX(revision) FROM w3_core_decision_outbox
+                WHERE 1 GROUP BY company_id, source_id
+                ON CONFLICT(company_id,source_id) DO UPDATE
+                SET revision=MAX(revision,excluded.revision)""")
 
     @contextmanager
     def _connect(self):
@@ -117,6 +125,7 @@ class CoreDecisionProducer:
         idempotency_key: str,
         decision_code: DecisionCode,
         reason_code: str,
+        _db: sqlite3.Connection | None = None,
     ) -> CoreDecisionEvent:
         requested, current = _context(requested), _context(current)
         if (
@@ -156,8 +165,9 @@ class CoreDecisionProducer:
             separators=(",", ":"),
         )
         key = (str(requested.job_id), str(requested.source_id))
-        with self._connect() as db:
-            db.execute("BEGIN IMMEDIATE")
+        with nullcontext(_db) if _db is not None else self._connect() as db:
+            if _db is None:
+                db.execute("BEGIN IMMEDIATE")
             previous = db.execute(
                 "SELECT request, event FROM w3_core_decision_outbox WHERE job_id=? AND source_id=? AND idempotency_key=?",
                 (*key, idempotency_key),
@@ -167,9 +177,14 @@ class CoreDecisionProducer:
                     raise ValueError("IDEMPOTENCY_CONFLICT")
                 return CoreDecisionEvent.model_validate_json(previous[1])
             revision = db.execute(
-                "SELECT COALESCE(MAX(revision),0)+1 FROM w3_core_decision_outbox WHERE company_id=? AND source_id=?",
+                "SELECT COALESCE(MAX(revision),0)+1 FROM w3_core_counters WHERE company_id=? AND source_id=?",
                 (str(requested.company_id), str(requested.source_id)),
             ).fetchone()[0]
+            db.execute(
+                """INSERT INTO w3_core_counters VALUES (?,?,?)
+                ON CONFLICT(company_id,source_id) DO UPDATE SET revision=excluded.revision""",
+                (str(requested.company_id), str(requested.source_id), revision),
+            )
             event = CoreDecisionEvent.model_validate(
                 {**candidate.model_dump(), "decision_version": revision}
             )

@@ -1,0 +1,25 @@
+{
+  "status": "W3_LOCAL_IMPLEMENTATION_VERIFIED_ENVIRONMENT_PENDING",
+  "w3_full_sha": null,
+  "contract": "w3.private.core-decision/0.1-candidate",
+  "analysis_supplier": {
+    "status": "LOCAL_VERIFIED_AUTHORITY_AND_ANALYSIS_CALLER_INTEGRATION_PENDING",
+    "entrypoint": "w3_knowledge.core_runtime.CoreRuntime.supply",
+    "synthetic_input_procedure": "python -m w3_knowledge.core_runtime_cli smoke --directory .runtime/core-relay-smoke"
+  },
+  "relay": {
+    "status": "LOCAL_VERIFIED_NOT_DEPLOYED",
+    "entrypoint": "python -m w3_knowledge.core_runtime_cli relay-once",
+    "durable_outbox": "Shared local SQLite w3_core_decision_outbox/core_delivery/w3_core_counters; retry same bytes with bounded backoff, then HELD",
+    "send_success_semantics": "TRANSPORT_HANDOFF_NOT_W1_ACCEPTANCE"
+  },
+  "iam": {"role_arn": null, "stable_role_id": null, "main_queue_send_only": null},
+  "retention": {
+    "published_event_retention": "Required operator retention_seconds, expiry at published_at + retention_seconds; production duration not configured",
+    "user_deletion_behavior": "Trusted delete_owner with higher epoch purges event/request, preserves hashed suppression metadata and public revision counter; actual deletion dispatcher integration pending",
+    "backup_replay_behavior": "Supported backup redacts before disk write and is quarantined; supply/relay/replay disabled. Raw snapshot restore unsupported."
+  },
+  "joint_window": null,
+  "joint_ct12": "NOT_RUN",
+  "evidence": "docs/w3-core-runtime-handoff-2026-09-18.md; final commit and tests in delivered HANDOFF_RECEIPT.json"
+}
