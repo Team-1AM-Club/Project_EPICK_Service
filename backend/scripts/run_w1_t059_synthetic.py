@@ -225,11 +225,30 @@ def _seed_source_collection_job(
     return accepted.job.id
 
 
-def _seed_fixture(*, session_factory: sessionmaker[Session], run_id: str) -> T059Seed:
+def _seed_missing_pin_fixture(
+    *, session_factory: sessionmaker[Session], run_id: str
+) -> tuple[UUID, UUID]:
     with session_factory.begin() as session:
         owner = User(display_name=f"T059 synthetic {run_id}", locale="ko-KR", timezone="Asia/Seoul")
         session.add(owner)
         session.flush()
+        missing_pin_job_id = _seed_source_collection_job(
+            session=session,
+            owner=owner,
+            run_id=run_id,
+            sequence=0,
+            include_core_pin=False,
+        )
+        return owner.id, missing_pin_job_id
+
+
+def _seed_dispatchable_jobs(
+    *, session_factory: sessionmaker[Session], owner_id: UUID, run_id: str
+) -> tuple[UUID, UUID, UUID, UUID]:
+    with session_factory.begin() as session:
+        owner = session.get(User, owner_id)
+        if owner is None:
+            raise T059ScenarioError("T059 synthetic owner was not found")
         dispatchable_job_ids = tuple(
             _seed_source_collection_job(
                 session=session,
@@ -240,22 +259,11 @@ def _seed_fixture(*, session_factory: sessionmaker[Session], run_id: str) -> T05
             )
             for sequence in range(1, 5)
         )
-        missing_pin_job_id = _seed_source_collection_job(
-            session=session,
-            owner=owner,
-            run_id=run_id,
-            sequence=5,
-            include_core_pin=False,
-        )
-        return T059Seed(
-            owner_id=owner.id,
-            dispatchable_job_ids=(
-                dispatchable_job_ids[0],
-                dispatchable_job_ids[1],
-                dispatchable_job_ids[2],
-                dispatchable_job_ids[3],
-            ),
-            missing_pin_job_id=missing_pin_job_id,
+        return (
+            dispatchable_job_ids[0],
+            dispatchable_job_ids[1],
+            dispatchable_job_ids[2],
+            dispatchable_job_ids[3],
         )
 
 
@@ -335,8 +343,10 @@ def _prove_explicit_retry(
             raise T059ScenarioError("T059 accepted a late result from the pre-retry fence")
 
 
-def _drain_synthetic_execution(*, worker: JobWorker) -> tuple[int, int, int]:
-    """Consume five fresh deliveries one at a time without depending on Standard-SQS ordering."""
+def _drain_synthetic_execution(
+    *, worker: JobWorker, expected_deliveries: int
+) -> tuple[int, int, int]:
+    """Consume a bounded set of fresh deliveries one at a time."""
 
     received = 0
     acknowledged = 0
@@ -346,11 +356,11 @@ def _drain_synthetic_execution(*, worker: JobWorker) -> tuple[int, int, int]:
         received += result.received
         acknowledged += result.acknowledged
         retry_scheduled += result.retry_scheduled
-        if received == 5:
+        if received == expected_deliveries:
             return received, acknowledged, retry_scheduled
         if result.received == 0:
             time.sleep(1)
-    raise T059ScenarioError("T059 did not receive all five synthetic execution deliveries")
+    raise T059ScenarioError("T059 did not receive all expected synthetic execution deliveries")
 
 
 def run() -> dict[str, str]:
@@ -376,8 +386,7 @@ def run() -> dict[str, str]:
         )
         _assert_empty_fixture_database(session_factory=seed_factory)
         _assert_empty_fixture_queues(sqs_client=sqs_client, config=config)
-        seed = _seed_fixture(session_factory=seed_factory, run_id=config.run_id)
-        relay_result = OutboxRelay(
+        relay = OutboxRelay(
             session_factory=worker_factory,
             sqs=sqs,
             queues=QueueUrlRegistry(
@@ -385,19 +394,52 @@ def run() -> dict[str, str]:
                 w2_collection_command_queue_url=config.command_queue_url,
             ),
             relay_id=f"{config.run_id}-relay",
-        ).drain_once(limit=5)
-        if relay_result.published != 5 or relay_result.retry_scheduled or relay_result.failed_final:
-            raise T059ScenarioError("T059 initial execution dispatch relay result was not clean")
+        )
         worker = JobWorker(
             session_factory=worker_factory,
             sqs=sqs,
             execution_queue_url=config.execution_queue_url,
             worker_id=f"{config.run_id}-worker",
         )
-        received, acknowledged, retry_scheduled = _drain_synthetic_execution(worker=worker)
+
+        # Standard SQS does not preserve the producer's enqueue ordering.  Process the missing
+        # Core decision separately while capacity is available, then test the four dispatchable
+        # Jobs' slot limit in their own bounded batch.
+        owner_id, missing_pin_job_id = _seed_missing_pin_fixture(
+            session_factory=seed_factory,
+            run_id=config.run_id,
+        )
+        missing_pin_relay = relay.drain_once(limit=1)
         if (
-            received != 5
-            or acknowledged != 4
+            missing_pin_relay.published != 1
+            or missing_pin_relay.retry_scheduled
+            or missing_pin_relay.failed_final
+        ):
+            raise T059ScenarioError("T059 missing Core pin dispatch relay result was not clean")
+        missing_pin_delivery = _drain_synthetic_execution(worker=worker, expected_deliveries=1)
+        if missing_pin_delivery != (1, 1, 0):
+            raise T059ScenarioError("T059 missing Core pin delivery was not cleanly blocked")
+
+        dispatchable_job_ids = _seed_dispatchable_jobs(
+            session_factory=seed_factory,
+            owner_id=owner_id,
+            run_id=config.run_id,
+        )
+        seed = T059Seed(
+            owner_id=owner_id,
+            dispatchable_job_ids=dispatchable_job_ids,
+            missing_pin_job_id=missing_pin_job_id,
+        )
+        relay_result = relay.drain_once(limit=4)
+        if relay_result.published != 4 or relay_result.retry_scheduled or relay_result.failed_final:
+            raise T059ScenarioError("T059 dispatchable execution relay result was not clean")
+        received, acknowledged, retry_scheduled = _drain_synthetic_execution(
+            worker=worker,
+            expected_deliveries=4,
+        )
+        if (
+            received != 4
+            or acknowledged != 3
             or retry_scheduled != 1
         ):
             raise T059ScenarioError(
