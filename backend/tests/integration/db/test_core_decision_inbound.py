@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
+from pathlib import Path
 from time import sleep
 from uuid import UUID, uuid4
 
@@ -26,6 +27,10 @@ from app.runtime.core_decision_binding import CoreDecisionReceiptOutcome
 from app.services.core_decision_inbound import CoreDecisionInboundService
 from app.services.deletion import DeletionOrchestrationService
 from app.services.jobs import JobActionStaleError, JobService
+
+BACKEND_ROOT = Path(__file__).parents[3]
+RUNTIME_ROLE_TEMPLATE_SQL = BACKEND_ROOT / "infra" / "postgres" / "runtime_roles.sql"
+RUNTIME_PRIVILEGES_SQL = BACKEND_ROOT / "infra" / "postgres" / "runtime_privileges.sql"
 
 
 @pytest.fixture(autouse=True)
@@ -146,6 +151,35 @@ def test_valid_core_event_is_atomic_and_does_not_auto_dispatch(db_session: Sessi
     assert binding.source_id == source.id
     assert binding.analysis_source_decision_id == UUID(str(receipt.decision_id))
     assert binding.origin_message_id == UUID(str(event["message_id"]))
+
+
+@pytest.mark.postgres
+def test_valid_core_event_applies_with_append_only_worker_role(
+    migrated_engine: Engine,
+) -> None:
+    """The real worker role can apply a decision without UPDATE on immutable bindings."""
+
+    with migrated_engine.begin() as connection:
+        connection.execute(text(RUNTIME_ROLE_TEMPLATE_SQL.read_text(encoding="utf-8")))
+        connection.execute(text(RUNTIME_PRIVILEGES_SQL.read_text(encoding="utf-8")))
+
+    factory = sessionmaker(bind=migrated_engine, expire_on_commit=False)
+    with factory.begin() as seed_session:
+        _, company, source, job, _ = _seed_waiting_job(seed_session)
+        event = _core_event(company=company, source=source, job=job)
+
+    with factory.begin() as worker_session:
+        worker_session.execute(text("SET LOCAL ROLE epick_worker"))
+        receipt = CoreDecisionInboundService(worker_session).apply(
+            body=event,
+            authenticated_principal="w3",
+        )
+
+    assert receipt.outcome is CoreDecisionReceiptOutcome.APPLIED
+    with migrated_engine.connect() as connection:
+        assert connection.scalar(text("SELECT count(*) FROM inbox_receipts")) == 1
+        assert connection.scalar(text("SELECT count(*) FROM analysis_source_decisions")) == 1
+        assert connection.scalar(text("SELECT count(*) FROM job_core_decision_bindings")) == 1
 
 
 @pytest.mark.postgres
