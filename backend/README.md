@@ -83,3 +83,11 @@ docker compose -f infra/w1-runtime.compose.yml --profile w3-core-decision up -d
 preflight는 DB read, main queue/DLQ 속성 접근, redrive target 일치와 principal 설정만 확인하며 메시지를
 수신·삭제·전송하지 않습니다. W1 isolated 검증 완료 후에도 실제 W3 relay 공동 시험 전 상태는
 `W1_ISOLATED_COMPLETE / JOINT_CT12_PENDING`입니다.
+
+T043의 실제 AWS 격리 증거는 persistent worker를 잠시 중지한 뒤
+`scripts/run_w1_t043_synthetic.py`로 생성합니다. 이 도구는 이름에 `t043`이 포함된 별도 PostgreSQL
+database와 main queue/DLQ만 허용하며 `T043_EXECUTE_SYNTHETIC=YES`,
+`T043_SEED_DATABASE_URL`, `T043_SENDER_ROLE_ARN`, `T043_RUN_ID`를 추가로 요구합니다. Worker EC2
+role의 sender-role `sts:AssumeRole`은 실행 동안만 허용하고 즉시 제거합니다. sender role 자체는 main
+queue의 `sqs:SendMessage`만 가집니다. 이 isolated sender는 실제 W3 relay 또는 joint CT-12 완료를
+뜻하지 않습니다.
