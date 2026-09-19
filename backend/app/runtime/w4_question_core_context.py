@@ -160,6 +160,12 @@ def resolve_w4_question_core_context(
         or job is None
         or owner["account_status"] != "ACTIVE"
         or owner["deleted_at"] is not None
+        # A job's stored owner epoch is a historical binding, not proof that the
+        # owner has not entered a newer deletion epoch since this context was
+        # issued.  Check the current owner state directly so W4's *first*
+        # resolve after that change is fail-closed, before it can create or send
+        # a new durable outbox entry.
+        or owner["deletion_epoch"] != context.owner_deletion_epoch
         or job["owner_user_id"] != context.owner_user_id
         or job["owner_deletion_epoch"] != context.owner_deletion_epoch
         or job["execution_fence"] != context.execution_fence

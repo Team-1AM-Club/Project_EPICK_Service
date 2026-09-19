@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine, event, text
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.models.identity import User
 from app.models.jobs import Job
 from app.runtime.w4_question_core_context import issue_w4_question_core_context
 from app.runtime.w4_question_core_context_adapter import create_w4_question_core_context_app
@@ -91,6 +92,27 @@ def test_w4_context_adapter_uses_opaque_handle_and_fails_closed_on_currentness_c
         assert body["current_decision_version"] == 0
         assert set(body).isdisjoint({"owner_user_id", "company_id", "prompt", "canonical_url"})
         first_revision = body["authorization_revision"]
+
+        # Advance only the current owner epoch.  The context and Job retain the
+        # old binding on purpose: the first resolve after an owner-side deletion
+        # change must already revoke W4 send permission.
+        with db_session.begin():
+            owner = db_session.get(User, owner_id)
+            assert owner is not None
+            owner.deletion_epoch += 1
+
+        owner_epoch_revoked = client.post(
+            "/internal/v1/w4/question-core-contexts/resolve",
+            json={
+                "schema_version": "w1.private.w4-question-core-context.v1",
+                "context_key": str(context_key),
+            },
+            headers=_headers(),
+        )
+        assert owner_epoch_revoked.status_code == 200
+        assert owner_epoch_revoked.json()["processing_allowed"] is False
+        assert owner_epoch_revoked.json()["revoked"] is True
+        assert owner_epoch_revoked.json()["authorization_revision"] != first_revision
 
         with db_session.begin():
             job = db_session.get(Job, job_id)
