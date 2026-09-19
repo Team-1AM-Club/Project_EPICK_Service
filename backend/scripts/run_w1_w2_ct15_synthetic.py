@@ -42,6 +42,7 @@ class Ct15Configuration:
     run_id: str
     queue_url: str
     dlq_url: str
+    outbound_gate_queue_url: str
     max_drain_cycles: int
 
 
@@ -86,6 +87,17 @@ def _require_configuration() -> Ct15Configuration:
     for queue_url in (config.queue_url, config.dlq_url):
         if "ct15" not in _queue_name(queue_url).lower():
             raise Ct15ScenarioError("CT15 requires dedicated queue names containing ct15")
+    if not settings.w2_ct15_gate_only_queue_approved:
+        raise Ct15ScenarioError("CT15 requires an explicitly approved gate-only outbound queue")
+    outbound_gate_queue_url = settings.w2_commit_gate_outbound_queue_url
+    if not outbound_gate_queue_url or "ct15" not in _queue_name(outbound_gate_queue_url).lower():
+        raise Ct15ScenarioError("CT15 requires a dedicated gate-only outbound queue")
+    if outbound_gate_queue_url in {
+        config.queue_url,
+        config.dlq_url,
+        settings.w2_collection_command_queue_url,
+    }:
+        raise Ct15ScenarioError("CT15 gate-only outbound queue must be isolated from other routes")
     raw_cycles = _value("W1_CT15_MAX_DRAIN_CYCLES") or "20"
     try:
         max_drain_cycles = int(raw_cycles)
@@ -97,6 +109,7 @@ def _require_configuration() -> Ct15Configuration:
         run_id=run_id,
         queue_url=config.queue_url,
         dlq_url=config.dlq_url,
+        outbound_gate_queue_url=outbound_gate_queue_url,
         max_drain_cycles=max_drain_cycles,
     )
 
@@ -148,6 +161,7 @@ def run() -> dict[str, object]:
         "preflight": preflight.as_safe_dict(),
         "queue_id": _safe_id(config.queue_url),
         "dlq_id": _safe_id(config.dlq_url),
+        "gate_only_queue_id": _safe_id(config.outbound_gate_queue_url),
         "max_drain_cycles": config.max_drain_cycles,
         "totals": totals,
     }

@@ -40,6 +40,7 @@ _W2_DIRECT_SOURCE_REGISTRATION_MESSAGE_TYPE = "w1.private.w2.direct-source-regis
 _W2_COMMIT_GATE_MESSAGE_TYPE = "w1.private.w2.commit-gate.v1"
 _W1_EXECUTION_QUEUE = "w1_execution"
 _W2_COLLECTION_COMMAND_QUEUE = "w2_collection_command"
+_W2_COMMIT_GATE_COMMAND_QUEUE = "w2_commit_gate_command"
 _MAX_SQS_BODY_BYTES = 16 * 1024
 
 
@@ -84,7 +85,7 @@ class QueueUrlRegistry:
             message_type=_W2_DIRECT_SOURCE_REGISTRATION_MESSAGE_TYPE,
         ),
         _W2_COMMIT_GATE_MESSAGE_TYPE: QueueRoute(
-            logical_key=_W2_COLLECTION_COMMAND_QUEUE,
+            logical_key=_W2_COMMIT_GATE_COMMAND_QUEUE,
             message_type=_W2_COMMIT_GATE_MESSAGE_TYPE,
         ),
     }
@@ -94,14 +95,27 @@ class QueueUrlRegistry:
         *,
         w1_execution_queue_url: str | None,
         w2_collection_command_queue_url: str | None = None,
+        w2_commit_gate_command_queue_url: str | None = None,
+        commit_gate_only: bool = False,
     ) -> None:
+        if commit_gate_only and not w2_commit_gate_command_queue_url:
+            raise ValueError("commit-gate-only relay requires a dedicated commit-gate queue")
         self._urls = {
             _W1_EXECUTION_QUEUE: w1_execution_queue_url,
             _W2_COLLECTION_COMMAND_QUEUE: w2_collection_command_queue_url,
+            # Before a CT15-only queue is explicitly approved, retain the existing
+            # outbound route.  This compatibility fallback must not be selected by
+            # the CT15 Settings validator.
+            _W2_COMMIT_GATE_COMMAND_QUEUE: (
+                w2_commit_gate_command_queue_url or w2_collection_command_queue_url
+            ),
         }
+        self._commit_gate_only = commit_gate_only
 
     @property
     def supported_message_types(self) -> tuple[str, ...]:
+        if self._commit_gate_only:
+            return (_W2_COMMIT_GATE_MESSAGE_TYPE,)
         return tuple(self._ROUTES)
 
     def resolve(self, *, message_type: str) -> tuple[QueueRoute, str]:

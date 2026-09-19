@@ -166,6 +166,30 @@ services:
       - no-new-privileges:true
     profiles: ["w2-commit-gate"]
 
+  # CT15 only: relay W1's PREPARE/FINALIZE/ABORT/PURGE messages to the
+  # separately approved gate-only queue.  It deliberately does not start the
+  # generic W1 execution worker or the legacy W2 collection-result worker.
+  w1-w2-ct15-gate-relay:
+    image: ${BACKEND_IMAGE:?set BACKEND_IMAGE to the immutable backend image reference}
+    env_file:
+      - ${W1_W2_CT15_ENV_FILE:?set W1_W2_CT15_ENV_FILE to the CT15-only worker env file}
+    command: ["python", "scripts/run_outbox_relay.py"]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - type: bind
+        source: ${RDS_CA_BUNDLE_PATH:?set RDS_CA_BUNDLE_PATH to the host RDS CA bundle}
+        target: /run/epick/rds-ca.pem
+        read_only: true
+        bind:
+          create_host_path: false
+    security_opt:
+      - no-new-privileges:true
+    profiles: ["w1-w2-ct15"]
+
   w3-core-decision-worker:
     image: ${BACKEND_IMAGE:?set BACKEND_IMAGE to the immutable backend image reference}
     env_file:

@@ -29,6 +29,8 @@ def _build_relay() -> OutboxRelay:
         queues=QueueUrlRegistry(
             w1_execution_queue_url=settings.w1_execution_queue_url,
             w2_collection_command_queue_url=settings.w2_collection_command_queue_url,
+            w2_commit_gate_command_queue_url=settings.w2_commit_gate_outbound_queue_url,
+            commit_gate_only=settings.w2_ct15_gate_only_queue_approved,
         ),
         relay_id=relay_id[:128],
         lease_seconds=settings.w1_outbox_relay_lease_seconds,

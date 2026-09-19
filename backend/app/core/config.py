@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     w1_w4_context_bearer: str | None = None
     w2_collection_command_queue_url: str | None = None
     w2_collection_result_queue_url: str | None = None
+    # CT15 uses a disposable gate-only outbound queue.  It is intentionally
+    # opt-in: normal collection and direct-registration traffic must keep using
+    # the regular W2 command queue until a joint run is explicitly approved.
+    w2_ct15_gate_only_queue_approved: bool = False
+    w2_ct15_gate_only_command_queue_url: str | None = None
     # W2 commit-gate ingress is deliberately separate from the legacy collection
     # result route. It is only injected into the private worker profile.
     w2_commit_gate_inbound_queue_url: str | None = None
@@ -77,8 +82,30 @@ class Settings(BaseSettings):
     def w1_execution_queue_url(self) -> str | None:
         return self.w1_job_execution_queue_url or self.w1_sqs_execution_queue_url
 
+    @property
+    def w2_commit_gate_outbound_queue_url(self) -> str | None:
+        if self.w2_ct15_gate_only_queue_approved:
+            return self.w2_ct15_gate_only_command_queue_url
+        return self.w2_collection_command_queue_url
+
     @model_validator(mode="after")
     def validate_w2_commit_gate_runtime(self) -> "Settings":
+        ct15_queue_url = self.w2_ct15_gate_only_command_queue_url
+        if self.w2_ct15_gate_only_queue_approved and not ct15_queue_url:
+            raise ValueError("CT15 gate-only queue must be configured when approved")
+        if ct15_queue_url and not self.w2_ct15_gate_only_queue_approved:
+            raise ValueError("CT15 gate-only queue requires explicit approval")
+        if (
+            ct15_queue_url
+            and self.w2_collection_command_queue_url
+            and ct15_queue_url == self.w2_collection_command_queue_url
+        ):
+            raise ValueError("CT15 gate-only queue must differ from the regular W2 command queue")
+        if (
+            self.w2_ct15_gate_only_queue_approved
+            and (not ct15_queue_url or "ct15" not in ct15_queue_url.lower())
+        ):
+            raise ValueError("CT15 gate-only queue URL must identify the CT15 environment")
         queue_url = self.w2_commit_gate_inbound_queue_url
         dlq_url = self.w2_commit_gate_inbound_dlq_url
         if (queue_url is None) != (dlq_url is None):
