@@ -503,7 +503,13 @@ def test_w2_import_is_pinned_to_the_observed_runtime_contract(contract_root: Pat
     assert parser_verification["required_crawler_commit"] == manifest["source_commit"]
     assert parser_verification["status"] == "VERIFIED_WITH_PINNED_LOCAL_CRAWLER_HEAD"
 
-    pending_commit_gate = manifest["pending_w2_commit_gate_adoption"]
-    assert pending_commit_gate["status"] == "W2_CANONICAL_ACK_NOT_YET_SUPPLIED"
-    assert pending_commit_gate["artifact_authority"] == "W2"
-    assert pending_commit_gate["w1_command_schema"] == "../w1/v1/private-w2-commit-gate.schema.json"
+    commit_gate_adoption = manifest["w2_commit_gate_runtime_adoption"]
+    assert commit_gate_adoption["status"] == "W1_RUNTIME_ADOPTED_JOINT_CT15_PENDING"
+    assert commit_gate_adoption["artifact_authority"] == "W2"
+    assert commit_gate_adoption["w2_delivery_sha"] == "16a7bd2653873a20a563e6d2f54c24c6dc18c373"
+    assert commit_gate_adoption["w1_implementation_sha"] == (
+        "de33e0d8375324e09cc5a6bfb89cb1fe2f96a61c"
+    )
+    assert commit_gate_adoption["w1_command_schema"] == (
+        "../w1/v1/private-w2-commit-gate.schema.json"
+    )

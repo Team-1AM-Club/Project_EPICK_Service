@@ -33,6 +33,17 @@
 
 ## Compatibility and status
 
+- **Snapshot bytes versus W1 status**: the literal `UNADOPTED PROPOSAL`,
+  `proposal.v1`, and `contracts.epick.local/w2/proposals/...` strings inside the
+  copied JSON Schema files are part of W2's pinned Git-blob bytes. They remain
+  unchanged so provenance verification is reproducible; they do **not** mean
+  that W1's parser, durable gate, or inbound worker is unadopted.
+- **W1 runtime adoption**: W1 adopted and implemented the pinned staged-result
+  and commit-gate ACK boundary at Service commit
+  `de33e0d8375324e09cc5a6bfb89cb1fe2f96a61c`. This covers W1's parser,
+  currentness lock, durable operation/staged payload, result/checkpoint
+  finalizer, and authenticated inbound worker. It does not attest to a W2
+  deployment or cross-system atomicity.
 - These artifacts do not amend `w2.collection.v1` or the legacy `CollectionResult` union.
 - Unknown schema versions/message types are terminal; they do not fall back to the legacy parser.
 - The W1 codec validates the copied Draft 2020-12 schema before immutable Pydantic parsing, then
@@ -42,3 +53,8 @@
 - **Joint status**: `JOINT_CT15_PENDING`. W1 has no authority to claim W2's private-store
   STAGED/PREPARED/FINALIZED/ABORTED/PURGED state without the actual W2 relay and inspection hook.
 - W2 account/project deletion T067 failures remain W2-owned and unresolved.
+
+The adjacent `import-manifest.json` keeps the earlier CollectionResult parser
+pin separate from the adopted commit-gate runtime status. It must not be read
+as a claim that the copied commit-gate Schema bytes themselves were rewritten
+or that CT15 has already executed.

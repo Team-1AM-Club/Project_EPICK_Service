@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.application_workspace import Company
@@ -25,10 +25,12 @@ from app.models.jobs import (
     Job,
     JobCommand,
     JobExecutionLease,
+    OutboxMessage,
     OwnerExecutionSlot,
 )
+from app.models.lifecycle_operations import JobCheckpoint
 from app.models.sources import JobSourceLink, Source
-from app.models.w2_commit_operations import W2CommitOperation
+from app.models.w2_commit_operations import W2CommitOperation, W2StagedResult
 from app.services.deletion import DeletionOrchestrationService
 from app.services.jobs import JobService
 from app.services.w2_commit_gate import W2CommitGateService
@@ -169,21 +171,17 @@ def seed_fixture(*, session: Session, run_id: str) -> Ct15Fixture:
 
 def inspect_fixture(*, session: Session, run_id: str) -> dict[str, object]:
     fixture = _load_fixture(session=session, run_id=run_id)
-    operation_states = {
-        binding.command_id: session.scalar(
-            select(W2CommitOperation.state).where(
-                W2CommitOperation.command_id == binding.command_id
-            )
-        )
-        for binding in (fixture.primary, fixture.secondary)
-    }
     return {
         **fixture.as_safe_dict(),
         "action": "inspect",
-        "operation_states": {
-            _PRIMARY_OWNER: operation_states[fixture.primary.command_id],
-            _SECONDARY_OWNER: operation_states[fixture.secondary.command_id],
-        },
+        # This is intentionally count-only.  It permits a joint CT15 assertion
+        # against W2's owner/command inspection without exposing staged payloads,
+        # queue addresses, receipt handles, or database internals.
+        "w1_counts": _fixture_counts(
+            session=session,
+            primary=fixture.primary,
+            secondary=fixture.secondary,
+        ),
     }
 
 
@@ -255,6 +253,88 @@ def redrive_primary_gate_operation(*, session: Session, run_id: str) -> dict[str
         "requeued": recovery.requeued,
         "message_id": str(recovery.outbox.id) if recovery.outbox is not None else None,
     }
+
+
+def _fixture_counts(
+    *,
+    session: Session,
+    primary: Ct15CommandBinding,
+    secondary: Ct15CommandBinding,
+) -> dict[str, object]:
+    """Return comparable W1 aggregates for the two allow-listed CT15 commands."""
+
+    return {
+        _PRIMARY_OWNER: _command_counts(session=session, command_ids=(primary.command_id,)),
+        _SECONDARY_OWNER: _command_counts(session=session, command_ids=(secondary.command_id,)),
+        "total": _command_counts(
+            session=session,
+            command_ids=(primary.command_id, secondary.command_id),
+        ),
+    }
+
+
+def _command_counts(*, session: Session, command_ids: tuple[UUID, ...]) -> dict[str, object]:
+    """Aggregate only the W1 rows bound to the supplied synthetic commands."""
+
+    command_filter = JobCommand.id.in_(command_ids)
+    operation_filter = W2CommitOperation.command_id.in_(command_ids)
+    return {
+        "operations_by_state": _count_by_label(
+            session=session,
+            label=W2CommitOperation.state,
+            where=operation_filter,
+        ),
+        "staged_results_by_state": _count_by_label(
+            session=session,
+            label=W2StagedResult.payload_state,
+            where=W2StagedResult.command_id.in_(command_ids),
+        ),
+        # W1 has no separate collection-result table.  A result effect becomes
+        # durable when this child command is consumed by the locked finalizer.
+        "result_effects": _count_rows(
+            session=session,
+            model=JobCommand,
+            where=command_filter & (JobCommand.status == "CONSUMED"),
+        ),
+        "checkpoints": _count_rows(
+            session=session,
+            model=JobCheckpoint,
+            where=JobCheckpoint.job_id.in_(
+                select(JobCommand.job_id).where(command_filter)
+            ),
+        ),
+        "commit_gate_outbox_by_action_and_status": _count_commit_gate_outbox(
+            session=session,
+            command_ids=command_ids,
+        ),
+    }
+
+
+def _count_by_label(*, session: Session, label: object, where: object) -> dict[str, int]:
+    rows = session.execute(
+        select(label, func.count()).where(where).group_by(label).order_by(label)
+    ).all()
+    return {str(value): int(count) for value, count in rows}
+
+
+def _count_rows(*, session: Session, model: object, where: object) -> int:
+    return int(session.scalar(select(func.count()).select_from(model).where(where)) or 0)
+
+
+def _count_commit_gate_outbox(
+    *, session: Session, command_ids: tuple[UUID, ...]
+) -> dict[str, int]:
+    action = OutboxMessage.payload["action"].astext
+    rows = session.execute(
+        select(action, OutboxMessage.status, func.count())
+        .where(
+            OutboxMessage.command_id.in_(command_ids),
+            OutboxMessage.message_type == "w1.private.w2.commit-gate.v1",
+        )
+        .group_by(action, OutboxMessage.status)
+        .order_by(action, OutboxMessage.status)
+    ).all()
+    return {f"{value}:{status}": int(count) for value, status, count in rows}
 
 
 def _owner_labels(run_id: str) -> dict[str, str]:

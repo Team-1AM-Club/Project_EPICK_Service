@@ -14,6 +14,7 @@ from app.runtime.w1_w2_ct15_harness import (
     Ct15HarnessError,
     cancel_primary,
     delete_primary,
+    inspect_fixture,
     redrive_primary_gate_operation,
     seed_fixture,
     validate_run_id,
@@ -50,6 +51,48 @@ def test_seeded_fixture_is_two_owner_and_shared_source(migrated_engine: Engine) 
         assert session.get(Source, fixture.primary.source_id) is not None
         assert session.get(Job, fixture.primary.job_id).status == "RUNNING"
         assert session.get(JobCommand, fixture.primary.command_id).status == "ENQUEUED"
+
+
+def test_inspection_reports_only_scoped_w1_counts(migrated_engine: Engine) -> None:
+    factory = _factory(migrated_engine)
+    with factory.begin() as session:
+        fixture = seed_fixture(session=session, run_id=RUN_ID)
+        W2CommitGateService(session).create_prepare_operation_with_outbox(
+            owner_user_id=fixture.primary.owner_id,
+            job_id=fixture.primary.job_id,
+            command_id=fixture.primary.command_id,
+            execution_fence=1,
+            owner_deletion_epoch=0,
+            execution_lease_id=fixture.primary.lease_id,
+            result_digest="sha256:" + "c" * 64,
+        )
+    with factory.begin() as session:
+        inspection = inspect_fixture(session=session, run_id=RUN_ID)
+
+    assert inspection["action"] == "inspect"
+    assert inspection["w1_counts"] == {
+        "primary": {
+            "operations_by_state": {"PREPARE_PENDING": 1},
+            "staged_results_by_state": {},
+            "result_effects": 0,
+            "checkpoints": 0,
+            "commit_gate_outbox_by_action_and_status": {"PREPARE:PENDING": 1},
+        },
+        "secondary": {
+            "operations_by_state": {},
+            "staged_results_by_state": {},
+            "result_effects": 0,
+            "checkpoints": 0,
+            "commit_gate_outbox_by_action_and_status": {},
+        },
+        "total": {
+            "operations_by_state": {"PREPARE_PENDING": 1},
+            "staged_results_by_state": {},
+            "result_effects": 0,
+            "checkpoints": 0,
+            "commit_gate_outbox_by_action_and_status": {"PREPARE:PENDING": 1},
+        },
+    }
 
 
 def test_cancel_fences_the_primary_without_touching_the_secondary(migrated_engine: Engine) -> None:
