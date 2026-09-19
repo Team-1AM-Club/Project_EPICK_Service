@@ -38,6 +38,7 @@ from app.models.application_workspace import (  # noqa: E402
     ProjectQuestion,
     QuestionVersion,
 )
+from app.models.deletion import DeletionRequest  # noqa: F401, E402
 from app.models.identity import User  # noqa: E402
 from app.models.jobs import (  # noqa: E402
     InboxReceipt,
@@ -47,6 +48,11 @@ from app.models.jobs import (  # noqa: E402
     JobRequiredAction,
     OutboxMessage,
 )
+
+# ApplicationProject.active_snapshot_id targets project_snapshots. Normal API
+# startup registers that model through the recommendation service graph, while
+# this standalone runner must register the FK target before its first flush.
+from app.models.recommendations import ProjectSnapshot  # noqa: F401, E402
 from app.models.sources import AnalysisSourceDecision, JobSourceLink, Source  # noqa: E402
 from app.runtime.sqs import Boto3SqsPort, SqsPort, SqsRetryableError  # noqa: E402
 from app.runtime.w4_question_core_decision import parse_w4_question_core_event  # noqa: E402

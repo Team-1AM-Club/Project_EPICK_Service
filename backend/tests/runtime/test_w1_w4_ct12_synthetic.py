@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.orm import configure_mappers
 
 
 def _load_runner():
@@ -54,6 +55,24 @@ def test_ct12_configuration_requires_isolated_database_and_queues(monkeypatch) -
     assert config.run_id == "w1-w4-ct12-runtime-01"
     assert config.database_name == "epick_w1_w4_ct12_runtime"
     assert config.queue_url.endswith("epick-ct12-w4-question-core")
+
+
+def test_ct12_runner_registers_standalone_fk_targets() -> None:
+    runner = _load_runner()
+    runner_path = Path(__file__).resolve().parents[2] / "scripts" / "run_w1_w4_ct12_synthetic.py"
+    runner_source = runner_path.read_text(encoding="utf-8")
+
+    assert "from app.models.deletion import DeletionRequest" in runner_source
+    assert "from app.models.recommendations import ProjectSnapshot" in runner_source
+    active_snapshot_fk = next(
+        iter(runner.ApplicationProject.__table__.c.active_snapshot_id.foreign_keys)
+    )
+    assert active_snapshot_fk.column.table.name == "project_snapshots"
+    deletion_request_fk = next(
+        iter(runner.OutboxMessage.__table__.c.deletion_request_id.foreign_keys)
+    )
+    assert deletion_request_fk.column.table.name == "deletion_requests"
+    configure_mappers()
 
 
 @pytest.mark.parametrize(
