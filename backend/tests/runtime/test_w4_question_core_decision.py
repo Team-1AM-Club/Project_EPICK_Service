@@ -30,7 +30,9 @@ def test_valid_w4_core_event_preserves_explicit_binding_and_digest() -> None:
     assert event.message_id != event.decision_id
     assert event.is_core is True
     assert event.decision_code == "CORE_REQUIRED"
-    assert event.payload_digest == "sha256:91149e2871f8bc3bf970a76997bff57bae0adf7bed35cff95b103d3993c3092a"
+    assert event.payload_digest == (
+        "sha256:91149e2871f8bc3bf970a76997bff57bae0adf7bed35cff95b103d3993c3092a"
+    )
 
 
 def test_valid_w4_non_core_event_preserves_closed_pair() -> None:

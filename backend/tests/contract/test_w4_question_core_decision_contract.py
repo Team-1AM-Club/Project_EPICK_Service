@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 from pathlib import Path
 
 import pytest
@@ -11,9 +11,7 @@ from jsonschema.exceptions import ValidationError
 from app.runtime.core_decision_binding import core_decision_payload_digest
 
 BACKEND_ROOT = Path(__file__).parents[2]
-SCHEMA_PATH = (
-    BACKEND_ROOT / "contracts" / "w4" / "v1" / "question-core-decision.event.schema.json"
-)
+SCHEMA_PATH = BACKEND_ROOT / "contracts" / "w4" / "v1" / "question-core-decision.event.schema.json"
 CANDIDATE_SCHEMA_PATH = (
     BACKEND_ROOT
     / "contracts"

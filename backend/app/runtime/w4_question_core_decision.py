@@ -8,7 +8,6 @@ from datetime import datetime
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
 from uuid import UUID
 
 from jsonschema import Draft202012Validator, FormatChecker
@@ -139,9 +138,7 @@ def parse_w4_question_core_event(
         if isinstance(body, bytes):
             if len(body) > W4_QUESTION_CORE_MAX_BODY_BYTES:
                 raise W4QuestionCoreContractError("W4_QUESTION_CORE_BODY_TOO_LARGE")
-            payload = json.loads(
-                body.decode("utf-8"), parse_constant=_reject_nonfinite_constant
-            )
+            payload = json.loads(body.decode("utf-8"), parse_constant=_reject_nonfinite_constant)
         elif isinstance(body, str):
             if len(body.encode("utf-8")) > W4_QUESTION_CORE_MAX_BODY_BYTES:
                 raise W4QuestionCoreContractError("W4_QUESTION_CORE_BODY_TOO_LARGE")
