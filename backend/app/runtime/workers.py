@@ -1329,6 +1329,7 @@ def apply_locked_collection_result(
             return "REJECTED_SCHEMA", "CHECKPOINT_STAGE_REQUIRED"
         CollectionResultWorker._append_checkpoint(
             session=session,
+            owner=owner,
             job=job,
             checkpoint_ref=checkpoint_ref,
             resume_stage=resume_stage,
