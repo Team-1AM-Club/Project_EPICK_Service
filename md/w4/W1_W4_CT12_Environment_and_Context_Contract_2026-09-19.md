@@ -2,7 +2,10 @@
 
 작성일: 2026-09-19
 상태: **W1 구현·격리 DB 검증 완료 / W4 adapter 채택·actual image·SQS 송신 증거 대기**
-W1 기준 변경: migration `029_w4_question_core_context` 및 W4 context adapter
+W1 구현 기준 commit: `deda25c62a762e3f7f6ea5273c93a7e6a18c6412` (`develop`)
+
+해당 commit에는 migration `029_w4_question_core_context`, W4 private context adapter, 전용
+DB role/RLS·Compose profile 및 계약·격리 DB 테스트가 포함된다.
 적용 범위: **Question Core CT-12 합성 데이터 전용**
 
 ## 1. 이 문서가 확정하는 것

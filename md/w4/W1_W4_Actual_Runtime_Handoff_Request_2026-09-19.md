@@ -3,7 +3,7 @@
 작성일: 2026-09-19
 송신: W1
 수신: W4
-W1 기준 commit: `519b9127227ad3ca6483a61a5143d355c5eea5eb` (`develop`)
+W1 기준 commit: `deda25c62a762e3f7f6ea5273c93a7e6a18c6412` (`develop`)
 상태: **W4 후보 검토 회신 수령 완료 / W1 private context 경계 구현·검증 완료 / W4 actual producer 인계 대기**
 
 ## 1. 이 요청의 범위와 현재 판정
