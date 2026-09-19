@@ -11,9 +11,9 @@
 -- same release. Do not grant schema CREATE to runtime groups.
 
 REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public
-    FROM epick_runtime, epick_worker, epick_lookup, epick_deleter;
+    FROM epick_runtime, epick_worker, epick_lookup, epick_w4_context, epick_deleter;
 REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public
-    FROM epick_runtime, epick_worker, epick_lookup, epick_deleter;
+    FROM epick_runtime, epick_worker, epick_lookup, epick_w4_context, epick_deleter;
 
 -- Interactive API: owner-facing records and user commands. Canonical company,
 -- Source, Claim, and indexing data remain read-only to the API.
@@ -190,6 +190,10 @@ GRANT SELECT, INSERT ON TABLE inbox_receipts TO epick_worker;
 GRANT UPDATE (outcome_code) ON TABLE inbox_receipts TO epick_worker;
 GRANT SELECT, INSERT ON TABLE job_core_decision_bindings TO epick_worker;
 
+-- W1 issues opaque synthetic CT-12 context handles; W4 has no direct database
+-- connection and can only resolve a handle through its separately authenticated adapter.
+GRANT SELECT, INSERT, UPDATE ON TABLE w4_question_core_contexts TO epick_worker;
+
 -- The interactive API reads the current owner-scoped binding only when an
 -- explicit user retry creates the next execution fence. Owner RLS still
 -- requires app.current_user_id and no mutation privilege is granted.
@@ -294,6 +298,93 @@ GRANT SELECT (
 ON TABLE job_core_decision_bindings
 TO epick_lookup;
 
+-- The W4 context adapter uses its own read-only login.  These projections are the minimal
+-- data needed to calculate an opaque authorization revision and fail closed before W4 sends.
+-- They intentionally exclude prompt text, company identifiers, source URLs/content and all
+-- mutation privileges.  `w4_question_core_contexts.context_key` is W1-issued and the adapter
+-- uses it as the only caller-supplied database reference.
+GRANT SELECT (
+    context_key,
+    job_id,
+    owner_user_id,
+    question_version_id,
+    source_id,
+    analysis_input_version,
+    execution_fence,
+    owner_deletion_epoch,
+    data_kind,
+    expires_at,
+    revoked_at,
+    created_at
+)
+ON TABLE w4_question_core_contexts
+TO epick_w4_context;
+
+GRANT SELECT (id, account_status, deletion_epoch, deleted_at)
+ON TABLE users
+TO epick_w4_context;
+
+GRANT SELECT (
+    id,
+    owner_user_id,
+    project_id,
+    status,
+    execution_fence,
+    owner_deletion_epoch,
+    analysis_input_version,
+    active_lease_id
+)
+ON TABLE jobs
+TO epick_w4_context;
+
+GRANT SELECT (id, owner_user_id, current_version_id)
+ON TABLE application_projects
+TO epick_w4_context;
+
+GRANT SELECT (id, project_id, owner_user_id, company_id)
+ON TABLE application_project_versions
+TO epick_w4_context;
+
+GRANT SELECT (id, owner_user_id, project_id, current_version_id, status)
+ON TABLE project_questions
+TO epick_w4_context;
+
+GRANT SELECT (id, question_id, project_id, owner_user_id)
+ON TABLE question_versions
+TO epick_w4_context;
+
+GRANT SELECT (id, job_id, owner_user_id, source_id, analysis_input_version)
+ON TABLE job_source_links
+TO epick_w4_context;
+
+GRANT SELECT (id, company_id)
+ON TABLE sources
+TO epick_w4_context;
+
+GRANT SELECT (
+    id,
+    job_id,
+    owner_user_id,
+    action_code,
+    action_status,
+    expected_input_version,
+    resolved_at
+)
+ON TABLE job_required_actions
+TO epick_w4_context;
+
+GRANT SELECT (
+    job_id,
+    source_id,
+    origin_producer,
+    decision_scope,
+    question_version_id,
+    analysis_input_version,
+    decision_version
+)
+ON TABLE job_core_decision_bindings
+TO epick_w4_context;
+
 -- The deleter advances deletion state and may remove owner-scoped data. It is
 -- deliberately denied mutation of canonical Source/knowledge tables.
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO epick_deleter;
@@ -376,6 +467,6 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public
 -- created by the principal executing this script (the migration login). They
 -- guarantee that a future table gets no runtime DML until it is reviewed here.
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
-    REVOKE ALL ON TABLES FROM epick_runtime, epick_worker, epick_lookup, epick_deleter;
+    REVOKE ALL ON TABLES FROM epick_runtime, epick_worker, epick_lookup, epick_w4_context, epick_deleter;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
-    REVOKE ALL ON SEQUENCES FROM epick_runtime, epick_worker, epick_lookup, epick_deleter;
+    REVOKE ALL ON SEQUENCES FROM epick_runtime, epick_worker, epick_lookup, epick_w4_context, epick_deleter;

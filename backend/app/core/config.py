@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     # runtime-only Secrets Manager entries once R-3 provisions the private host.
     worker_database_url: str | None = None
     lookup_database_url: str | None = None
+    # W4's pre-send currentness adapter has a distinct, read-only database
+    # login and bearer.  It is not the W2 lookup bearer or worker database URL.
+    w4_context_database_url: str | None = None
+    w1_w4_context_bearer: str | None = None
     w2_collection_command_queue_url: str | None = None
     w2_collection_result_queue_url: str | None = None
     # W2 commit-gate ingress is deliberately separate from the legacy collection

@@ -20,6 +20,10 @@
 # SenderId, and the isolated queue policy has passed W1 preflight:
 #   docker compose -f w1-runtime.compose.yml --profile w4-question-core up -d
 #
+# W4's pre-send context check is a distinct private listener.  It has no host
+# port: only a W4 container attached to this Compose network can reach it.
+#   docker compose -f w1-runtime.compose.yml --profile w4-question-core-context up -d
+#
 # W2 staged-result and ACK ingress uses a separate worker-only env file.  It is
 # deliberately not the legacy W2 result consumer profile:
 #   docker compose -f w1-runtime.compose.yml --profile w2-commit-gate up -d
@@ -203,3 +207,26 @@ services:
     security_opt:
       - no-new-privileges:true
     profiles: ["w4-question-core"]
+
+  w1-w4-question-core-context:
+    image: ${BACKEND_IMAGE:?set BACKEND_IMAGE to the immutable backend image reference}
+    env_file:
+      - ${W1_W4_CONTEXT_ENV_FILE:?set W1_W4_CONTEXT_ENV_FILE to the W4 context-only env file}
+    command: ["python", "scripts/run_w4_question_core_context_adapter.py"]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    expose:
+      - "8081"
+    volumes:
+      - type: bind
+        source: ${RDS_CA_BUNDLE_PATH:?set RDS_CA_BUNDLE_PATH to the host RDS CA bundle}
+        target: /run/epick/rds-ca.pem
+        read_only: true
+        bind:
+          create_host_path: false
+    security_opt:
+      - no-new-privileges:true
+    profiles: ["w4-question-core-context"]
