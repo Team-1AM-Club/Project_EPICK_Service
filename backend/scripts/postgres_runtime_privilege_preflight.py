@@ -75,6 +75,24 @@ COLUMN_PRIVILEGE_EXPECTATIONS = (
     ("epick_worker", "job_core_decision_bindings", "origin_decision_id", "UPDATE", False),
 )
 
+RLS_POLICY_EXPECTATIONS = tuple(
+    (table_name, f"{table_name}_worker_question_core_read_policy", "SELECT")
+    for table_name in (
+        "application_projects",
+        "application_project_versions",
+        "project_questions",
+        "question_versions",
+    )
+) + tuple(
+    (table_name, f"{table_name}_worker_question_core_lock_policy", "UPDATE")
+    for table_name in (
+        "application_projects",
+        "application_project_versions",
+        "project_questions",
+        "question_versions",
+    )
+)
+
 
 def main() -> None:
     migration_url = settings.migration_database_url
@@ -123,6 +141,30 @@ def main() -> None:
                     raise SystemExit(
                         f"runtime column privilege mismatch: {role_name} {privilege} "
                         f"on {table_name}.{column_name} must be {expectation}"
+                    )
+            for table_name, policy_name, command in RLS_POLICY_EXPECTATIONS:
+                present = connection.execute(
+                    text(
+                        "SELECT EXISTS ("
+                        "SELECT 1 FROM pg_policies "
+                        "WHERE schemaname = 'public' "
+                        "AND tablename = :table_name "
+                        "AND policyname = :policy_name "
+                        "AND cmd = :command "
+                        "AND :role_name = ANY(roles))"
+                    ),
+                    {
+                        "table_name": table_name,
+                        "policy_name": policy_name,
+                        "command": command,
+                        "role_name": "epick_worker",
+                    },
+                ).scalar_one()
+                if not present:
+                    raise SystemExit(
+                        "runtime RLS policy mismatch: "
+                        f"{policy_name} must grant epick_worker {command} visibility "
+                        f"on {table_name}"
                     )
     finally:
         engine.dispose()
