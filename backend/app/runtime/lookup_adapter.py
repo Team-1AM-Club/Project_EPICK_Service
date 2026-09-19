@@ -14,11 +14,17 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
+from app.db.session import set_local_owner_context
 from app.models.identity import User
 from app.models.jobs import Job, JobCommand
 from app.runtime.core_decision_binding import (
     CoreDecisionBindingError,
     validate_core_pin_payload_binding,
+)
+from app.runtime.question_core_binding import (
+    QUESTION_MATCHING_SCOPE,
+    QuestionCoreBindingError,
+    resolve_question_collection_company_for_lookup,
 )
 
 _W2_SERVICE_PRINCIPAL = "w2"
@@ -160,6 +166,7 @@ def _lookup_command(*, session: Session, request: LookupRequest) -> LookupRespon
             JobCommand.command_type,
             JobCommand.execution_fence,
             JobCommand.owner_deletion_epoch,
+            JobCommand.analysis_source_decision_id,
             JobCommand.payload,
             JobCommand.status,
         ).where(JobCommand.id == request.command_id)
@@ -170,6 +177,10 @@ def _lookup_command(*, session: Session, request: LookupRequest) -> LookupRespon
             status="NOT_FOUND",
             reason_code="COMMAND_NOT_FOUND",
         )
+    # The command row is the canonical, opaque W1 reference received from the protected route.
+    # Only after resolving it do we set the transaction-local RLS scope used for its owner-bound
+    # Job, binding, Question and Source projections.  No caller-controlled owner value is used.
+    set_local_owner_context(session, command["owner_user_id"])
     job = session.execute(
         select(
             Job.id,
@@ -177,6 +188,8 @@ def _lookup_command(*, session: Session, request: LookupRequest) -> LookupRespon
             Job.status,
             Job.execution_fence,
             Job.owner_deletion_epoch,
+            Job.project_id,
+            Job.analysis_input_version,
             Job.active_lease_id,
         ).where(Job.id == command["job_id"])
     ).mappings().one_or_none()
@@ -259,7 +272,16 @@ def _lookup_command(*, session: Session, request: LookupRequest) -> LookupRespon
             )
         try:
             validate_core_pin_payload_binding(pin=core_pin, w2_command=w2_command)
-        except CoreDecisionBindingError:
+            if core_pin.get("decision_scope") == QUESTION_MATCHING_SCOPE:
+                resolve_question_collection_company_for_lookup(
+                    session=session,
+                    owner=owner,
+                    job=job,
+                    command=command,
+                    pin=core_pin,
+                    w2_command=w2_command,
+                )
+        except (CoreDecisionBindingError, QuestionCoreBindingError):
             return _semantic_response(
                 request=request,
                 status="EXPIRED",

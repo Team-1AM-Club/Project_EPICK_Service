@@ -58,6 +58,16 @@ class Settings(BaseSettings):
     w3_core_decision_batch_size: int = 10
     w3_core_decision_wait_seconds: int = 20
     w3_core_decision_visibility_seconds: int = 120
+    # W4 Question Core decisions have a distinct queue and authenticated sender.
+    # Body ``producer=w4`` is a contract check only; the consumer trusts SQS
+    # SenderId metadata after normalising its session suffix.
+    w4_question_core_decision_queue_url: str | None = None
+    w4_question_core_decision_dlq_url: str | None = None
+    w4_question_core_decision_expected_producer: str = "w4"
+    w4_question_core_decision_expected_sender_id: str | None = None
+    w4_question_core_decision_batch_size: int = 10
+    w4_question_core_decision_wait_seconds: int = 20
+    w4_question_core_decision_visibility_seconds: int = 120
 
     @property
     def w1_execution_queue_url(self) -> str | None:
@@ -83,6 +93,30 @@ class Settings(BaseSettings):
             raise ValueError("W2 commit-gate wait seconds must be between 0 and 20")
         if not 1 <= self.w2_commit_gate_visibility_seconds <= 43_200:
             raise ValueError("W2 commit-gate visibility seconds must be between 1 and 43200")
+        queue_url = self.w4_question_core_decision_queue_url
+        dlq_url = self.w4_question_core_decision_dlq_url
+        if (queue_url is None) != (dlq_url is None):
+            raise ValueError("W4 Question Core queue and DLQ must be configured together")
+        if queue_url is not None and queue_url == dlq_url:
+            raise ValueError("W4 Question Core queue and DLQ must be distinct")
+        if queue_url is not None and not self.w4_question_core_decision_expected_sender_id:
+            raise ValueError(
+                "W4 Question Core expected sender id must be configured with the queue"
+            )
+        if queue_url is not None and ":" in self.w4_question_core_decision_expected_sender_id:
+            raise ValueError(
+                "W4 Question Core expected sender id must be a stable principal id without session"
+            )
+        if not self.w4_question_core_decision_expected_producer.strip():
+            raise ValueError("W4 Question Core expected producer must be non-empty")
+        if self.w4_question_core_decision_expected_producer != "w4":
+            raise ValueError("W4 Question Core expected producer must be w4")
+        if not 1 <= self.w4_question_core_decision_batch_size <= 10:
+            raise ValueError("W4 Question Core batch size must be between 1 and 10")
+        if not 0 <= self.w4_question_core_decision_wait_seconds <= 20:
+            raise ValueError("W4 Question Core wait seconds must be between 0 and 20")
+        if not 1 <= self.w4_question_core_decision_visibility_seconds <= 43_200:
+            raise ValueError("W4 Question Core visibility seconds must be between 1 and 43200")
         return self
 
     model_config = SettingsConfigDict(

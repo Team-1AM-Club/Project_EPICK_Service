@@ -15,6 +15,11 @@
 # W3 Core Decision inbound uses a separate worker-only env file:
 #   docker compose -f w1-runtime.compose.yml --profile w3-core-decision up -d
 #
+# W4 Question Core inbound is opt-in and uses a separate worker-only env file.
+# Do not start this profile until W4 has supplied its pinned producer, stable
+# SenderId, and the isolated queue policy has passed W1 preflight:
+#   docker compose -f w1-runtime.compose.yml --profile w4-question-core up -d
+#
 # W2 staged-result and ACK ingress uses a separate worker-only env file.  It is
 # deliberately not the legacy W2 result consumer profile:
 #   docker compose -f w1-runtime.compose.yml --profile w2-commit-gate up -d
@@ -177,3 +182,24 @@ services:
     security_opt:
       - no-new-privileges:true
     profiles: ["w3-core-decision"]
+
+  w4-question-core-decision-worker:
+    image: ${BACKEND_IMAGE:?set BACKEND_IMAGE to the immutable backend image reference}
+    env_file:
+      - ${W1_W4_QUESTION_CORE_ENV_FILE:?set W1_W4_QUESTION_CORE_ENV_FILE to the W4 Question Core worker env file}
+    command: ["python", "scripts/run_w4_question_core_decision_worker.py"]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - type: bind
+        source: ${RDS_CA_BUNDLE_PATH:?set RDS_CA_BUNDLE_PATH to the host RDS CA bundle}
+        target: /run/epick/rds-ca.pem
+        read_only: true
+        bind:
+          create_host_path: false
+    security_opt:
+      - no-new-privileges:true
+    profiles: ["w4-question-core"]

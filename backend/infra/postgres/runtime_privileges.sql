@@ -182,7 +182,10 @@ TO epick_worker;
 
 -- Inbound delivery receipts are append-first. Existing workers may finalize
 -- only the outcome column after a durable transaction; digest/provenance are
--- immutable. Core Decision bindings are append-only audit pins.
+-- immutable. Core Decision bindings are append-only audit pins.  Revision 028
+-- adds W4 producer/scope/question/origin columns to that same table; the
+-- existing table-level SELECT+INSERT grant is intentionally sufficient and
+-- does not grant UPDATE or DELETE on any W3/W4 identity field.
 GRANT SELECT, INSERT ON TABLE inbox_receipts TO epick_worker;
 GRANT UPDATE (outcome_code) ON TABLE inbox_receipts TO epick_worker;
 GRANT SELECT, INSERT ON TABLE job_core_decision_bindings TO epick_worker;
@@ -205,6 +208,7 @@ GRANT SELECT (
     status,
     execution_fence,
     owner_deletion_epoch,
+    project_id,
     analysis_input_version,
     active_lease_id
 )
@@ -221,12 +225,73 @@ GRANT SELECT (
     execution_fence,
     owner_deletion_epoch,
     analysis_input_version,
+    analysis_source_decision_id,
     payload,
     status,
     created_at,
     consumed_at
 )
 ON TABLE job_commands
+TO epick_lookup;
+
+-- QUESTION_MATCHING decisions deliberately retain a null company pin.  The lookup adapter may
+-- resolve the W2 company only through these current, owner-scoped relation columns.  This is not
+-- a general table grant: no prompt, URL, content, mutation, or unrelated projection is exposed.
+GRANT SELECT (id, owner_user_id, current_version_id)
+ON TABLE application_projects
+TO epick_lookup;
+
+GRANT SELECT (id, project_id, owner_user_id, company_id)
+ON TABLE application_project_versions
+TO epick_lookup;
+
+GRANT SELECT (id, owner_user_id, project_id, current_version_id, status)
+ON TABLE project_questions
+TO epick_lookup;
+
+GRANT SELECT (id, question_id, project_id, owner_user_id)
+ON TABLE question_versions
+TO epick_lookup;
+
+GRANT SELECT (id, job_id, owner_user_id, source_id, command_id, purpose_ref, analysis_input_version)
+ON TABLE job_source_links
+TO epick_lookup;
+
+GRANT SELECT (id, company_id)
+ON TABLE sources
+TO epick_lookup;
+
+GRANT SELECT (
+    id,
+    decision_scope,
+    company_id,
+    question_version_id,
+    source_id,
+    analysis_input_version,
+    decision_version,
+    decision_code,
+    decision_owner,
+    reason_code
+)
+ON TABLE analysis_source_decisions
+TO epick_lookup;
+
+GRANT SELECT (
+    id,
+    job_id,
+    owner_user_id,
+    owner_deletion_epoch,
+    analysis_source_decision_id,
+    origin_producer,
+    origin_message_id,
+    decision_scope,
+    question_version_id,
+    source_id,
+    analysis_input_version,
+    decision_version,
+    decision_code
+)
+ON TABLE job_core_decision_bindings
 TO epick_lookup;
 
 -- The deleter advances deletion state and may remove owner-scoped data. It is

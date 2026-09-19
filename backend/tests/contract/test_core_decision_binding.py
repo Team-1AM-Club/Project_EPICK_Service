@@ -93,3 +93,28 @@ def test_database_binding_rejects_owner_that_conflicts_with_the_pinned_scope(
             job_analysis_input_version=pin["analysis_input_version"],
             source_link=source_link,
         )
+
+
+def test_question_matching_pin_keeps_null_company_while_w2_command_uses_a_resolved_uuid(
+    contract_root: Path,
+) -> None:
+    dispatch = _load(contract_root / "fixtures/v1/w1/private-w2-command-dispatch.json")
+    pin = dict(dispatch["core_decision_pin"])
+    payload = dict(dispatch["payload"])
+    assert isinstance(payload["core_source_decision"], dict)
+
+    resolved_company_id = "11111111-1111-4111-8111-111111111111"
+    pin.update(
+        {
+            "decision_scope": "QUESTION_MATCHING",
+            "company_id": None,
+            "question_version_id": "22222222-2222-4222-8222-222222222222",
+            "reason_code": "QUESTION_EVIDENCE_REQUIRED",
+        }
+    )
+    payload.update({"company_id": resolved_company_id})
+    payload["core_source_decision"].update(
+        {"decided_by": "W4", "rationale": "QUESTION_EVIDENCE_REQUIRED"}
+    )
+
+    validate_core_pin_payload_binding(pin=pin, w2_command=payload)

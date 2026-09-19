@@ -332,6 +332,12 @@ class DeletionOrchestrationService:
                 job_id=job.id,
                 owner_deletion_epoch=next_epoch,
             )
+        # Both W3 COMPANY_KNOWLEDGE and W4 QUESTION_MATCHING bindings are private
+        # owner-scoped authorization state.  Deleting them after each affected Job
+        # is fenced prevents a late explicit retry, relay or lookup from restoring
+        # the deleting owner's access.  The repository intentionally does not touch
+        # Source or AnalysisSourceDecision rows because another owner may reference
+        # the same public company Source.
         self.repository.delete_core_decision_bindings_for_owner(
             owner_user_id=request.owner_user_id
         )

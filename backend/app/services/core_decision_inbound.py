@@ -86,6 +86,7 @@ class CoreDecisionInboundService:
                     error_code="CORE_DECISION_MESSAGE_ID_CONFLICT",
                 )
             binding = self.decisions.get_binding_by_origin(
+                origin_producer=event.producer,
                 origin_message_id=event.message_id
             )
             return self._receipt_from_row(
@@ -146,6 +147,9 @@ class CoreDecisionInboundService:
             job_id=job.id,
             source_id=event.source_id,
             analysis_input_version=event.analysis_input_version,
+            origin_producer=event.producer,
+            decision_scope=event.decision_scope,
+            question_version_id=event.question_version_id,
         )
         if current is not None and event.decision_version <= current.decision_version:
             if event.decision_version < current.decision_version:
@@ -218,7 +222,11 @@ class CoreDecisionInboundService:
             owner_user_id=owner.id,
             source_id=event.source_id,
             analysis_source_decision_id=decision.id,
+            origin_producer=event.producer,
+            decision_scope=event.decision_scope,
+            question_version_id=event.question_version_id,
             origin_message_id=event.message_id,
+            origin_decision_id=None,
             payload_digest=event.payload_digest,
             analysis_input_version=event.analysis_input_version,
             decision_version=event.decision_version,

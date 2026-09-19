@@ -256,9 +256,15 @@ def validate_core_pin_payload_binding(
         core = w2_command["core_source_decision"]
         if not isinstance(core, Mapping):
             raise CoreDecisionBindingError()
+        w2_company_id = w2_command["company_id"]
+        if scope == "QUESTION_MATCHING":
+            try:
+                UUID(str(w2_company_id))
+            except (TypeError, ValueError) as error:
+                raise CoreDecisionBindingError() from error
         if (
             w2_command["source_id"] != source_id
-            or w2_command["company_id"] != company_id
+            or (scope == "COMPANY_KNOWLEDGE" and w2_company_id != company_id)
             or w2_command["input_version"] != decision_version
             or core.get("is_core") is not True
             or core.get("decided_by") != expected_owner
@@ -280,12 +286,21 @@ def validate_database_core_binding(
     w2_command: Mapping[str, object],
     job_analysis_input_version: str | None,
     source_link: Any,
+    resolved_company_id: UUID | None = None,
 ) -> None:
     """Validate the DB source of truth before W1 creates or publishes a W2 command."""
 
     validate_core_pin_payload_binding(pin=pin, w2_command=w2_command)
     try:
         expected_owner = owner_for_core_scope(pin["decision_scope"])
+        if pin["decision_scope"] == "QUESTION_MATCHING":
+            if (
+                resolved_company_id is None
+                or w2_command["company_id"] != str(resolved_company_id)
+            ):
+                raise CoreDecisionBindingError()
+        elif resolved_company_id is not None:
+            raise CoreDecisionBindingError()
         if (
             str(decision.id) != pin["decision_id"]
             or decision.decision_scope != pin["decision_scope"]

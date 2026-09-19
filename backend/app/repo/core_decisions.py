@@ -43,7 +43,7 @@ class CoreDecisionRepository:
         )
 
     def get_binding_by_origin(
-        self, *, origin_message_id: UUID
+        self, *, origin_producer: str, origin_message_id: UUID
     ) -> JobCoreDecisionBinding | None:
         """Read an immutable binding after the owning Job row is locked.
 
@@ -54,7 +54,22 @@ class CoreDecisionRepository:
         """
         return self.session.scalar(
             select(JobCoreDecisionBinding)
-            .where(JobCoreDecisionBinding.origin_message_id == origin_message_id)
+            .where(
+                JobCoreDecisionBinding.origin_producer == origin_producer,
+                JobCoreDecisionBinding.origin_message_id == origin_message_id,
+            )
+        )
+
+    def get_binding_by_origin_decision(
+        self, *, origin_producer: str, origin_decision_id: UUID
+    ) -> JobCoreDecisionBinding | None:
+        """Find a producer-scoped immutable decision identity under the Job lock."""
+
+        return self.session.scalar(
+            select(JobCoreDecisionBinding).where(
+                JobCoreDecisionBinding.origin_producer == origin_producer,
+                JobCoreDecisionBinding.origin_decision_id == origin_decision_id,
+            )
         )
 
     def get_current_binding(
@@ -63,6 +78,9 @@ class CoreDecisionRepository:
         job_id: UUID,
         source_id: UUID,
         analysis_input_version: str,
+        origin_producer: str,
+        decision_scope: str,
+        question_version_id: UUID | None,
     ) -> JobCoreDecisionBinding | None:
         """Read immutable decision history under the caller-held Job lock."""
         return self.session.scalar(
@@ -71,6 +89,9 @@ class CoreDecisionRepository:
                 JobCoreDecisionBinding.job_id == job_id,
                 JobCoreDecisionBinding.source_id == source_id,
                 JobCoreDecisionBinding.analysis_input_version == analysis_input_version,
+                JobCoreDecisionBinding.origin_producer == origin_producer,
+                JobCoreDecisionBinding.decision_scope == decision_scope,
+                JobCoreDecisionBinding.question_version_id == question_version_id,
             )
             .order_by(JobCoreDecisionBinding.decision_version.desc())
             .limit(1)

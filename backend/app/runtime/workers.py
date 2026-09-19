@@ -16,6 +16,7 @@ from app.models.identity import User
 from app.models.jobs import (
     Job,
     JobCommand,
+    JobCoreDecisionBinding,
     JobExecutionLease,
     JobRequiredAction,
     OutboxMessage,
@@ -26,6 +27,11 @@ from app.models.sources import AnalysisSourceDecision, JobSourceLink
 from app.runtime.core_decision_binding import (
     CoreDecisionBindingError,
     validate_database_core_binding,
+)
+from app.runtime.question_core_binding import (
+    QUESTION_MATCHING_SCOPE,
+    QuestionCoreBindingError,
+    resolve_question_collection_company,
 )
 from app.runtime.sqs import ReceivedSqsMessage, SqsPort, SqsRetryableError
 from app.services.direct_source_registration import (
@@ -311,6 +317,7 @@ class JobWorker:
 
             if not self._create_w2_dispatch_or_block(
                 session=session,
+                owner=owner,
                 job=job,
                 execution_command=command,
                 lease=lease,
@@ -343,6 +350,7 @@ class JobWorker:
         self,
         *,
         session: Session,
+        owner: User,
         job: Job,
         execution_command: JobCommand,
         lease: JobExecutionLease,
@@ -373,13 +381,19 @@ class JobWorker:
             return False
         try:
             source_id = UUID(str(pin["source_id"]))
-            company_id = UUID(str(pin["company_id"]))
-            origin_message_id = UUID(str(pin["origin_message_id"]))
             decision_id = UUID(str(pin["decision_id"]))
-            if pin.get("decision_scope") != "COMPANY_KNOWLEDGE":
+            decision_scope = pin.get("decision_scope")
+            if decision_scope == "COMPANY_KNOWLEDGE":
+                company_id = UUID(str(pin["company_id"]))
+                if pin.get("question_version_id") is not None:
+                    raise RuntimeContractError("CORE_DECISION_SCOPE_INVALID")
+            elif decision_scope == QUESTION_MATCHING_SCOPE:
+                company_id = None
+                UUID(str(pin["question_version_id"]))
+                if pin.get("company_id") is not None:
+                    raise RuntimeContractError("CORE_DECISION_SCOPE_INVALID")
+            else:
                 raise RuntimeContractError("CORE_DECISION_SCOPE_UNSUPPORTED")
-            if pin.get("question_version_id") is not None:
-                raise RuntimeContractError("CORE_DECISION_SCOPE_INVALID")
             if pin.get("decision_code") != "CORE_REQUIRED" or pin.get("is_core") is not True:
                 raise RuntimeContractError("CORE_DECISION_NOT_REQUIRED")
             decision_version = int(pin["decision_version"])
@@ -403,30 +417,65 @@ class JobWorker:
             .where(AnalysisSourceDecision.id == decision_id)
             .with_for_update()
         )
-        if (
-            decision is None
-            or decision.decision_scope != "COMPANY_KNOWLEDGE"
-            or decision.company_id != company_id
-            or decision.question_version_id is not None
-            or decision.source_id != source_id
-            or decision.analysis_input_version != analysis_input_version
-            or decision.decision_version != decision_version
-            or decision.decision_code != "CORE_REQUIRED"
-            or decision.reason_code != reason_code
-        ):
+        if decision is None:
             self._block_for_core_decision(session=session, job=job, lease=lease)
             return False
-        source_link = session.scalar(
-            select(JobSourceLink)
-            .where(
-                JobSourceLink.job_id == job.id,
-                JobSourceLink.owner_user_id == job.owner_user_id,
-                JobSourceLink.source_id == source_id,
+        if decision_scope == QUESTION_MATCHING_SCOPE:
+            binding = session.scalar(
+                select(JobCoreDecisionBinding)
+                .where(
+                    JobCoreDecisionBinding.job_id == job.id,
+                    JobCoreDecisionBinding.analysis_source_decision_id == decision.id,
+                )
+                .with_for_update()
             )
-            .order_by(JobSourceLink.created_at, JobSourceLink.id)
-            .limit(1)
-            .with_for_update()
-        )
+            if binding is None:
+                self._block_for_core_decision(session=session, job=job, lease=lease)
+                return False
+            try:
+                resolved = resolve_question_collection_company(
+                    session=session,
+                    owner=owner,
+                    job=job,
+                    decision=decision,
+                    binding=binding,
+                    pin=pin,
+                    expected_command_id=None,
+                    for_update=True,
+                )
+            except QuestionCoreBindingError:
+                self._block_for_core_decision(session=session, job=job, lease=lease)
+                return False
+            company_id = resolved.company_id
+            source_link = session.scalar(
+                select(JobSourceLink)
+                .where(JobSourceLink.id == resolved.source_link_id)
+                .with_for_update()
+            )
+        else:
+            if (
+                decision.decision_scope != "COMPANY_KNOWLEDGE"
+                or decision.company_id != company_id
+                or decision.question_version_id is not None
+                or decision.source_id != source_id
+                or decision.analysis_input_version != analysis_input_version
+                or decision.decision_version != decision_version
+                or decision.decision_code != "CORE_REQUIRED"
+                or decision.reason_code != reason_code
+            ):
+                self._block_for_core_decision(session=session, job=job, lease=lease)
+                return False
+            source_link = session.scalar(
+                select(JobSourceLink)
+                .where(
+                    JobSourceLink.job_id == job.id,
+                    JobSourceLink.owner_user_id == job.owner_user_id,
+                    JobSourceLink.source_id == source_id,
+                )
+                .order_by(JobSourceLink.created_at, JobSourceLink.id)
+                .limit(1)
+                .with_for_update()
+            )
         if source_link is None or source_link.command_id is not None:
             self._block_for_core_decision(session=session, job=job, lease=lease)
             return False
@@ -464,6 +513,9 @@ class JobWorker:
                 w2_command=w2_payload,
                 job_analysis_input_version=job.analysis_input_version,
                 source_link=source_link,
+                resolved_company_id=(
+                    company_id if decision_scope == QUESTION_MATCHING_SCOPE else None
+                ),
             )
         except CoreDecisionBindingError:
             self._block_for_core_decision(session=session, job=job, lease=lease)
@@ -487,13 +539,7 @@ class JobWorker:
             payload={
                 "command_type": "W2_SOURCE_COLLECTION",
                 "w2_command": w2_payload,
-                "core_decision_pin": {
-                    **pin,
-                    "origin_message_id": str(origin_message_id),
-                    "decision_id": str(decision_id),
-                    "company_id": str(company_id),
-                    "source_id": str(source_id),
-                },
+                "core_decision_pin": dict(pin),
                 "runtime": {"lease_id": str(lease.id), "input_version": input_version},
             },
         )
@@ -1079,6 +1125,7 @@ class CollectionResultWorker:
     def _append_checkpoint(
         *,
         session: Session,
+        owner: User,
         job: Job,
         checkpoint_ref: str,
         resume_stage: str,

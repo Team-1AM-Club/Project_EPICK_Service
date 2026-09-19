@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w4/v1/question-core-decision.event.schema.json",
+  "title": "W4 private W1 question Core Decision",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "w4.private.question-core-decision/0.1-candidate" },
+    "message_type": { "const": "w4.private.w1.question-core-decision" },
+    "message_id": { "type": "string", "format": "uuid" },
+    "decision_id": { "type": "string", "format": "uuid" },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "visibility_scope": { "const": "PRIVATE" },
+    "producer": { "const": "w4" },
+    "job_id": { "type": "string", "format": "uuid" },
+    "company_id": { "type": "null" },
+    "question_version_id": { "type": "string", "format": "uuid" },
+    "source_id": { "type": "string", "format": "uuid" },
+    "analysis_input_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "\\S"
+    },
+    "decision_scope": { "const": "QUESTION_MATCHING" },
+    "decision_owner": { "const": "W4" },
+    "decision_version": { "type": "integer", "minimum": 1 },
+    "is_core": { "type": "boolean" },
+    "decision_code": { "enum": ["CORE_REQUIRED", "NON_CORE_OPTIONAL"] },
+    "reason_code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,63}$" }
+  },
+  "required": [
+    "schema_version",
+    "message_type",
+    "message_id",
+    "decision_id",
+    "occurred_at",
+    "visibility_scope",
+    "producer",
+    "job_id",
+    "company_id",
+    "question_version_id",
+    "source_id",
+    "analysis_input_version",
+    "decision_scope",
+    "decision_owner",
+    "decision_version",
+    "is_core",
+    "decision_code",
+    "reason_code"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": { "decision_code": { "const": "CORE_REQUIRED" } },
+        "required": ["decision_code"]
+      },
+      "then": { "properties": { "is_core": { "const": true } } },
+      "else": { "properties": { "is_core": { "const": false } } }
+    }
+  ]
+}

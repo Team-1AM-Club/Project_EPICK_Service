@@ -15,6 +15,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
@@ -374,12 +375,16 @@ class JobCoreDecisionBinding(Base):
             name="fk_jcdb_analysis_source_decision",
             ondelete="RESTRICT",
         ),
-        UniqueConstraint("origin_message_id", name="origin_message_id"),
+        ForeignKeyConstraint(
+            ["question_version_id"],
+            ["question_versions.id"],
+            name="fk_jcdb_question_version",
+            ondelete="RESTRICT",
+        ),
         UniqueConstraint(
-            "job_id",
-            "source_id",
-            "decision_version",
-            name="job_source_decision_version",
+            "origin_producer",
+            "origin_message_id",
+            name="origin_producer_origin_message_id",
         ),
         UniqueConstraint(
             "job_id",
@@ -399,12 +404,51 @@ class JobCoreDecisionBinding(Base):
             "decision_code IN ('CORE_REQUIRED', 'NON_CORE_OPTIONAL')",
             name="decision_code_allowed",
         ),
+        CheckConstraint(
+            "(origin_producer = 'w3' "
+            "AND decision_scope = 'COMPANY_KNOWLEDGE' "
+            "AND question_version_id IS NULL "
+            "AND origin_decision_id IS NULL) "
+            "OR (origin_producer = 'w4' "
+            "AND decision_scope = 'QUESTION_MATCHING' "
+            "AND question_version_id IS NOT NULL "
+            "AND origin_decision_id IS NOT NULL)",
+            name="producer_scope_compatibility",
+        ),
         Index(
             "ix_job_core_decision_bindings_current",
+            "origin_producer",
+            "decision_scope",
             "job_id",
             "source_id",
             "analysis_input_version",
             "decision_version",
+        ),
+        Index(
+            "uq_job_core_decision_bindings_origin_producer_decision",
+            "origin_producer",
+            "origin_decision_id",
+            unique=True,
+            postgresql_where=text("origin_decision_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_job_core_decision_bindings_company_revision",
+            "origin_producer",
+            "job_id",
+            "source_id",
+            "decision_version",
+            unique=True,
+            postgresql_where=text("decision_scope = 'COMPANY_KNOWLEDGE'"),
+        ),
+        Index(
+            "uq_job_core_decision_bindings_question_revision",
+            "origin_producer",
+            "job_id",
+            "question_version_id",
+            "source_id",
+            "decision_version",
+            unique=True,
+            postgresql_where=text("decision_scope = 'QUESTION_MATCHING'"),
         ),
     )
 
@@ -415,7 +459,15 @@ class JobCoreDecisionBinding(Base):
     owner_user_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
     source_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
     analysis_source_decision_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
+    origin_producer: Mapped[str] = mapped_column(String(32))
+    decision_scope: Mapped[str] = mapped_column(String(32))
+    question_version_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=True
+    )
     origin_message_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
+    origin_decision_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=True
+    )
     payload_digest: Mapped[str] = mapped_column(String(71))
     analysis_input_version: Mapped[str] = mapped_column(String(64))
     decision_version: Mapped[int] = mapped_column(Integer)

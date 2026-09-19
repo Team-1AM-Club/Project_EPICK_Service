@@ -20,6 +20,12 @@ from app.repo.core_decisions import CoreDecisionRepository
 from app.repo.identity import IdentityRepository
 from app.repo.jobs import InboxReceiptReservation, JobRepository
 from app.runtime.core_decision_binding import project_core_decision_pin
+from app.runtime.question_core_binding import (
+    QUESTION_MATCHING_SCOPE,
+    W4_QUESTION_CORE_PRODUCER,
+    QuestionCoreBindingError,
+    resolve_question_collection_company,
+)
 from app.services.idempotency import IdempotencyService
 from app.services.w2_commit_gate import W2CommitGateService
 
@@ -266,7 +272,10 @@ class JobService:
             core_binding = None
             core_decision = None
             if job.status == "WAITING_USER":
-                if action is None or action.context_code != "CORE_DECISION_AVAILABLE":
+                if action is None or action.context_code not in {
+                    "CORE_DECISION_AVAILABLE",
+                    "W4_QUESTION_CORE_AVAILABLE",
+                }:
                     raise JobTransitionError(
                         "a user-waiting Job requires a current Core decision retry action"
                     )
@@ -280,7 +289,19 @@ class JobService:
                 )
                 current_by_source = {}
                 for candidate in binding_history:
-                    current_by_source.setdefault(candidate.source_id, candidate)
+                    if action.context_code == "W4_QUESTION_CORE_AVAILABLE":
+                        if (
+                            candidate.origin_producer != W4_QUESTION_CORE_PRODUCER
+                            or candidate.decision_scope != QUESTION_MATCHING_SCOPE
+                            or candidate.question_version_id is None
+                        ):
+                            continue
+                        key = (candidate.source_id, candidate.question_version_id)
+                    else:
+                        if candidate.decision_scope != "COMPANY_KNOWLEDGE":
+                            continue
+                        key = (candidate.source_id, None)
+                    current_by_source.setdefault(key, candidate)
                 if len(current_by_source) != 1:
                     raise JobTransitionError("the waiting Job has no unambiguous Core binding")
                 core_binding = next(iter(current_by_source.values()))
@@ -291,6 +312,25 @@ class JobService:
                 )
                 if core_decision is None:
                     raise JobTransitionError("the Core binding decision does not exist")
+                if action.context_code == "W4_QUESTION_CORE_AVAILABLE":
+                    try:
+                        resolve_question_collection_company(
+                            session=self.session,
+                            owner=owner,
+                            job=job,
+                            decision=core_decision,
+                            binding=core_binding,
+                            pin=project_core_decision_pin(
+                                binding=core_binding,
+                                decision=core_decision,
+                            ),
+                            expected_command_id=None,
+                            for_update=True,
+                        )
+                    except QuestionCoreBindingError as error:
+                        raise JobTransitionError(
+                            "the Question Core binding is no longer current"
+                        ) from error
             command, outbox_message = self._resume_job(
                 job=job,
                 checkpoint_id=checkpoint_id,

@@ -12,9 +12,11 @@ from jsonschema import Draft202012Validator, FormatChecker
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
+from app.models.identity import User
 from app.models.jobs import (
     Job,
     JobCommand,
+    JobCoreDecisionBinding,
     JobExecutionLease,
     OutboxMessage,
     OwnerExecutionSlot,
@@ -24,6 +26,11 @@ from app.models.w2_commit_operations import W2CommitOperation
 from app.runtime.core_decision_binding import (
     CoreDecisionBindingError,
     validate_database_core_binding,
+)
+from app.runtime.question_core_binding import (
+    QUESTION_MATCHING_SCOPE,
+    QuestionCoreBindingError,
+    resolve_question_collection_company,
 )
 from app.runtime.sqs import SqsFinalDeliveryError, SqsPort, SqsRetryableError
 
@@ -424,10 +431,22 @@ class OutboxRelay:
             "execution_fence": command.execution_fence,
             "owner_deletion_epoch": command.owner_deletion_epoch,
         }
+        allowed_payload_keys = {*expected_payload, "checkpoint_id"}
+        command_payload = command.payload
+        if (
+            message.message_type == _PRIVATE_DISPATCH_MESSAGE_TYPE
+            and isinstance(command_payload, dict)
+            and isinstance(command_payload.get("core_decision_pin"), dict)
+        ):
+            allowed_payload_keys.add("core_decision_pin")
         if (
             not isinstance(payload, dict)
-            or set(payload).difference({*expected_payload, "checkpoint_id"})
+            or set(payload).difference(allowed_payload_keys)
             or any(payload.get(key) != value for key, value in expected_payload.items())
+            or (
+                "core_decision_pin" in payload
+                and payload.get("core_decision_pin") != command_payload.get("core_decision_pin")
+            )
         ):
             raise OutboxPayloadError("OUTBOX_PRIVATE_PAYLOAD_INVALID")
         self._validate_command_payload(
@@ -610,14 +629,42 @@ class OutboxRelay:
                 if decision is None:
                     raise OutboxPayloadError("OUTBOX_W2_DECISION_BINDING_MISMATCH")
                 try:
+                    resolved_company_id = None
+                    if dispatch_pin.get("decision_scope") == QUESTION_MATCHING_SCOPE:
+                        owner = session.scalar(
+                            select(User)
+                            .where(User.id == job.owner_user_id)
+                            .with_for_update()
+                        )
+                        binding = session.scalar(
+                            select(JobCoreDecisionBinding)
+                            .where(
+                                JobCoreDecisionBinding.job_id == job.id,
+                                JobCoreDecisionBinding.analysis_source_decision_id == decision.id,
+                            )
+                            .with_for_update()
+                        )
+                        if owner is None or binding is None:
+                            raise QuestionCoreBindingError()
+                        resolved_company_id = resolve_question_collection_company(
+                            session=session,
+                            owner=owner,
+                            job=job,
+                            decision=decision,
+                            binding=binding,
+                            pin=dispatch_pin,
+                            expected_command_id=command.id,
+                            for_update=True,
+                        ).company_id
                     validate_database_core_binding(
                         decision=decision,
                         pin=dispatch_pin,
                         w2_command=w2_command,
                         job_analysis_input_version=job.analysis_input_version,
                         source_link=source_link,
+                        resolved_company_id=resolved_company_id,
                     )
-                except CoreDecisionBindingError as error:
+                except (CoreDecisionBindingError, QuestionCoreBindingError) as error:
                     raise OutboxPayloadError("OUTBOX_W2_DECISION_BINDING_MISMATCH") from error
             return
         raise OutboxPayloadError("OUTBOX_ROUTE_UNKNOWN")

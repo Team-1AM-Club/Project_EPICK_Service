@@ -97,6 +97,20 @@ def test_runtime_privilege_manifest_is_role_scoped_and_deny_by_default(
         assert not _has_table_privilege(
             migrated_engine, "epick_worker", "job_core_decision_bindings", "DELETE"
         )
+        assert _has_column_privilege(
+            migrated_engine,
+            "epick_worker",
+            "job_core_decision_bindings",
+            "origin_producer",
+            "INSERT",
+        )
+        assert not _has_column_privilege(
+            migrated_engine,
+            "epick_worker",
+            "job_core_decision_bindings",
+            "origin_decision_id",
+            "UPDATE",
+        )
         assert not _has_table_privilege(
             migrated_engine, "epick_worker", "inbox_receipts", "DELETE"
         )
@@ -113,6 +127,71 @@ def test_runtime_privilege_manifest_is_role_scoped_and_deny_by_default(
         )
         assert _has_column_privilege(
             migrated_engine, "epick_lookup", "jobs", "execution_fence", "SELECT"
+        )
+        assert _has_column_privilege(
+            migrated_engine, "epick_lookup", "jobs", "project_id", "SELECT"
+        )
+        assert _has_column_privilege(
+            migrated_engine,
+            "epick_lookup",
+            "job_commands",
+            "analysis_source_decision_id",
+            "SELECT",
+        )
+        assert _has_column_privilege(
+            migrated_engine,
+            "epick_lookup",
+            "application_projects",
+            "current_version_id",
+            "SELECT",
+        )
+        assert _has_column_privilege(
+            migrated_engine,
+            "epick_lookup",
+            "application_project_versions",
+            "company_id",
+            "SELECT",
+        )
+        assert _has_column_privilege(
+            migrated_engine,
+            "epick_lookup",
+            "project_questions",
+            "current_version_id",
+            "SELECT",
+        )
+        assert _has_column_privilege(
+            migrated_engine,
+            "epick_lookup",
+            "question_versions",
+            "question_id",
+            "SELECT",
+        )
+        assert _has_column_privilege(
+            migrated_engine,
+            "epick_lookup",
+            "job_source_links",
+            "command_id",
+            "SELECT",
+        )
+        assert _has_column_privilege(
+            migrated_engine, "epick_lookup", "sources", "company_id", "SELECT"
+        )
+        assert _has_column_privilege(
+            migrated_engine,
+            "epick_lookup",
+            "analysis_source_decisions",
+            "decision_scope",
+            "SELECT",
+        )
+        assert _has_column_privilege(
+            migrated_engine,
+            "epick_lookup",
+            "job_core_decision_bindings",
+            "origin_producer",
+            "SELECT",
+        )
+        assert not _has_column_privilege(
+            migrated_engine, "epick_lookup", "sources", "canonical_url", "SELECT"
         )
         assert not _has_table_privilege(migrated_engine, "epick_lookup", "jobs", "UPDATE")
         assert not _has_table_privilege(
