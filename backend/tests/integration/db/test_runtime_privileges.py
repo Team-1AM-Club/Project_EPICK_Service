@@ -121,6 +121,44 @@ def test_runtime_privilege_manifest_is_role_scoped_and_deny_by_default(
         assert not _has_column_privilege(
             migrated_engine, "epick_worker", "users", "account_status", "UPDATE"
         )
+        for table_name, lock_column, authoritative_column in (
+            ("application_projects", "updated_at", "current_version_id"),
+            ("application_project_versions", "created_at", "company_id"),
+            ("project_questions", "updated_at", "current_version_id"),
+            ("question_versions", "created_at", "prompt"),
+        ):
+            assert _has_column_privilege(
+                migrated_engine,
+                "epick_worker",
+                table_name,
+                lock_column,
+                "UPDATE",
+            )
+            assert not _has_column_privilege(
+                migrated_engine,
+                "epick_worker",
+                table_name,
+                authoritative_column,
+                "UPDATE",
+            )
+
+        with migrated_engine.begin() as worker_connection:
+            worker_connection.execute(text("SET LOCAL ROLE epick_worker"))
+            for table_name in (
+                "users",
+                "jobs",
+                "inbox_receipts",
+                "application_projects",
+                "application_project_versions",
+                "project_questions",
+                "question_versions",
+                "job_source_links",
+                "sources",
+                "job_required_actions",
+            ):
+                worker_connection.execute(
+                    text(f"SELECT * FROM {table_name} LIMIT 1 FOR UPDATE")
+                )
 
         assert _has_column_privilege(
             migrated_engine, "epick_lookup", "job_commands", "payload", "SELECT"

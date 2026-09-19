@@ -115,6 +115,15 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO epick_worker;
 -- and deletion_epoch, but never mutates identity state.  Limit the capability
 -- to the non-authoritative timestamp column instead of granting table UPDATE.
 GRANT UPDATE (updated_at) ON TABLE users TO epick_worker;
+-- W4 acceptance locks the mutable Project/Question rows and their immutable
+-- version rows before its final currentness check. PostgreSQL requires an
+-- UPDATE-capable column for SELECT ... FOR UPDATE even though W1 never mutates
+-- these rows on this path. Keep that capability on non-authoritative audit
+-- timestamps; current bindings, status, company, prompt, and IDs remain denied.
+GRANT UPDATE (updated_at) ON TABLE application_projects TO epick_worker;
+GRANT UPDATE (created_at) ON TABLE application_project_versions TO epick_worker;
+GRANT UPDATE (updated_at) ON TABLE project_questions TO epick_worker;
+GRANT UPDATE (created_at) ON TABLE question_versions TO epick_worker;
 GRANT SELECT, INSERT, UPDATE ON TABLE
     jobs,
     job_input_refs,

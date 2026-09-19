@@ -80,17 +80,18 @@ def test_preflight_is_mutation_free_and_verifies_w4_redrive_binding() -> None:
         "principal": "configured",
     }
     assert factory.session.statements == [
-        "SELECT id FROM users LIMIT 1",
-        "SELECT id FROM jobs LIMIT 1",
-        "SELECT event_id FROM inbox_receipts LIMIT 1",
+        "SELECT id FROM users LIMIT 1 FOR UPDATE",
+        "SELECT id FROM jobs LIMIT 1 FOR UPDATE",
+        "SELECT event_id FROM inbox_receipts LIMIT 1 FOR UPDATE",
         "SELECT id FROM analysis_source_decisions LIMIT 1",
         "SELECT id FROM job_core_decision_bindings LIMIT 1",
-        "SELECT id FROM application_projects LIMIT 1",
-        "SELECT id FROM application_project_versions LIMIT 1",
-        "SELECT id FROM project_questions LIMIT 1",
-        "SELECT id FROM question_versions LIMIT 1",
-        "SELECT id FROM job_source_links LIMIT 1",
-        "SELECT id FROM sources LIMIT 1",
+        "SELECT id FROM application_projects LIMIT 1 FOR UPDATE",
+        "SELECT id FROM application_project_versions LIMIT 1 FOR UPDATE",
+        "SELECT id FROM project_questions LIMIT 1 FOR UPDATE",
+        "SELECT id FROM question_versions LIMIT 1 FOR UPDATE",
+        "SELECT id FROM job_source_links LIMIT 1 FOR UPDATE",
+        "SELECT id FROM sources LIMIT 1 FOR UPDATE",
+        "SELECT id FROM job_required_actions LIMIT 1 FOR UPDATE",
     ]
     assert sqs.calls == [
         (QUEUE_URL, ("QueueArn", "RedrivePolicy")),

@@ -88,22 +88,23 @@ def verify_w4_question_core_runtime(
     session_factory: SessionFactory,
     sqs: SqsPort,
 ) -> W4QuestionCorePreflightResult:
-    """Check only read access and Redrive binding; never consume or mutate a delivery."""
+    """Check read/row-lock access and Redrive binding without durable mutation."""
 
     try:
         with session_factory.begin() as session:
             for statement in (
-                "SELECT id FROM users LIMIT 1",
-                "SELECT id FROM jobs LIMIT 1",
-                "SELECT event_id FROM inbox_receipts LIMIT 1",
+                "SELECT id FROM users LIMIT 1 FOR UPDATE",
+                "SELECT id FROM jobs LIMIT 1 FOR UPDATE",
+                "SELECT event_id FROM inbox_receipts LIMIT 1 FOR UPDATE",
                 "SELECT id FROM analysis_source_decisions LIMIT 1",
                 "SELECT id FROM job_core_decision_bindings LIMIT 1",
-                "SELECT id FROM application_projects LIMIT 1",
-                "SELECT id FROM application_project_versions LIMIT 1",
-                "SELECT id FROM project_questions LIMIT 1",
-                "SELECT id FROM question_versions LIMIT 1",
-                "SELECT id FROM job_source_links LIMIT 1",
-                "SELECT id FROM sources LIMIT 1",
+                "SELECT id FROM application_projects LIMIT 1 FOR UPDATE",
+                "SELECT id FROM application_project_versions LIMIT 1 FOR UPDATE",
+                "SELECT id FROM project_questions LIMIT 1 FOR UPDATE",
+                "SELECT id FROM question_versions LIMIT 1 FOR UPDATE",
+                "SELECT id FROM job_source_links LIMIT 1 FOR UPDATE",
+                "SELECT id FROM sources LIMIT 1 FOR UPDATE",
+                "SELECT id FROM job_required_actions LIMIT 1 FOR UPDATE",
             ):
                 session.execute(text(statement))
     except SQLAlchemyError as error:
