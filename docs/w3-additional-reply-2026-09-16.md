@@ -87,9 +87,14 @@ DB consumer identity는 `w3-c01/0.2-candidate/r2`다.
 wire 버전 표시는 아직 candidate이므로 0.2를 유지하되 **정확한 commit/profile로 호환성을 고정**한다.
 r1/r2 혼용을 정식 호환으로 보장하지 않는다.
 
-## 4. restriction_revision 기술 권고
+## 4. restriction_revision 확정 — 2026-09-20
 
-**권고: (a) Source당 단일 연속 restriction 번호. 최종 결정자는 W2/제품 책임자다.**
+**확정: (a) Source당 단일 연속 restriction 번호. W2/제품 책임자가 2026-09-20 채택했다.**
+근거: `W3_Restriction_Revision_Decision_2026-09-20.md` 수신 문서.
+W3-REPEAT-02의 단위 선택은 해소됐으며 다시 질의하지 않는다. per-ID 대안은 미채택 비교 이력이다.
+동일 ID의 active → cleared → active는 허용하지만 적용 Source 및 Version/null 범위는 고정한다.
+Version/Observation은 restriction 번호를 소비하지 않으며 outer revision은 별도 Source 순번이다.
+W2 저장·adapter·재색인 ACK·W4 소비·배포·공동 검증 완료를 뜻하지 않는다.
 
 W2는 이미 Source 단위 transport 번호를 원자적으로 할당한다. 같은 트랜잭션에서 restriction
 event일 때만 별도 번호를 증가시키면 추가적인 writer 직렬화 범위가 필요하지 않다.
@@ -248,7 +253,7 @@ P4/P5 제품 승인이나 W4 consumer acceptance 완료 주장.
 
 | 채택을 막는 항목 | 소유자 / 선행조건 |
 |---|---|
-| restriction R 단위 최종 결정 | W2·제품 책임자. 권고(a)를 채택하거나 (b) 변경을 승인 |
+| restriction R 단위 최종 결정 | **해소(2026-09-20)**. W2/제품이 Source 단일 연속 순번 채택 |
 | P4/P5 최종 정책 | PM/W2/W4. 위 행렬 수락 또는 구체적 변경값 결정 |
 | replay F/H·원자 snapshot 생산 | W2. producer 계약 및 실제 운영 보관/복구 구현 |
 | authoritative replacement Source 등록 확인 | W2 registry 조회/목록 계약 + W3 연결. 현재 로컬 관측 목록은 보수적 후보 |

@@ -283,7 +283,10 @@ def test_version_scope_does_not_apply_old_version_restriction_to_new_version(tmp
         assert store.consume(parse(restriction))["reason"] == "POLICY_BLOCKED"
         restriction["event_id"] = str(uuid4())
         restriction["revision"] = 4
-        restriction["payload"].update(source_version_id=None, restriction_revision=2)
+        # Source-wide restriction is a distinct ID: an existing ID's scope is immutable.
+        restriction["payload"].update(
+            restriction_id=str(uuid4()), source_version_id=None, restriction_revision=2
+        )
         assert store.consume(parse(restriction))["reason"] == "RESTRICTED"
 
 

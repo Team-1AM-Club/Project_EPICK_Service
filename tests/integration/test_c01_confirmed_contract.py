@@ -142,3 +142,53 @@ def test_per_id_variant_is_not_silently_accepted_by_source_revision_consumer(tmp
     with store_at(tmp_path / "incompatible.db") as store:
         results = [store.consume(parse(e)) for e in value["variants"]["restriction_id"][:3]]
         assert results[-1]["reason"] == "CONFLICT"
+
+
+@pytest.mark.parametrize("delivery", ["event", "replay", "snapshot"])
+def test_same_restriction_id_cannot_change_version_scope(tmp_path, delivery):
+    from test_c01 import snapshot_value
+    from w3_knowledge.c01.contracts import Replay, VERSION
+
+    with store_at(tmp_path / "scope-fixed.db") as store:
+        store.consume(parse(allowed_version()))
+        first = released(2, 1)
+        first["payload"]["restriction_status"] = "active"
+        store.consume(parse(first))
+        changed = released(3, 2)
+        changed["payload"]["source_version_id"] = None
+        if delivery == "event":
+            result = store.consume(parse(changed))
+        elif delivery == "replay":
+            result = store.replay(
+                Replay.model_validate(
+                    dict(
+                        schema_version=VERSION,
+                        source_id=SOURCE,
+                        after_cursor=2,
+                        high_watermark=3,
+                        retention_floor_cursor=0,
+                        events=[changed],
+                    )
+                )
+            )
+        else:
+            result = store.snapshot(
+                snapshot_value(3, restrictions=[changed], restriction_revision=2)
+            )
+        assert result["reason"] == "CONFLICT"
+        assert result["index_ack"] is False
+
+
+def test_restriction_id_cannot_move_to_another_source(tmp_path):
+    from uuid import uuid4
+
+    with store_at(tmp_path / "source-fixed.db") as store:
+        first = released(1, 1)
+        store.consume(parse(first))
+        other = released(1, 1)
+        other_source = str(uuid4())
+        other["aggregate_id"] = other_source
+        other["payload"]["source_id"] = other_source
+        other["payload"]["source_version_id"] = None
+        result = store.consume(parse(other))
+        assert result["reason"] == "CONFLICT"

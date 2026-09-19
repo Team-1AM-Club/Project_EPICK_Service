@@ -209,6 +209,29 @@ class Store(BaseStore):
         self._clear_index(source)
         self._emit(source, state)
 
+    def _restriction_scope_conflict(self, source, incoming):
+        scopes = {}
+        identifiers = {
+            v["payload"]["restriction_id"]
+            for v in incoming
+            if v["event_type"] == "source.restriction.changed"
+        }
+        if not identifiers:
+            return False
+        known = [json.loads(row[0]) for row in self.db.execute("SELECT projection FROM c01_events")]
+        for value in [*known, *incoming]:
+            if value["event_type"] != "source.restriction.changed":
+                continue
+            payload = value["payload"]
+            key = payload["restriction_id"]
+            if key not in identifiers:
+                continue
+            scope = (payload["source_id"], payload["source_version_id"])
+            if key in scopes and scopes[key] != scope:
+                return True
+            scopes[key] = scope
+        return False
+
     def _apply(self, state, value):
         p = value["payload"]
         if value["event_type"] == "source.version.available":
@@ -251,6 +274,9 @@ class Store(BaseStore):
         state = self._state(source)
         if event.revision <= state["cursor"]:
             return "STALE"
+        if self._restriction_scope_conflict(source, [projection(event)]):
+            self._block_conflict(source, event.revision)
+            return "CONFLICT"
         self.db.execute(
             "INSERT INTO c01_events VALUES (?,?,?,?,?)",
             (
@@ -380,7 +406,7 @@ class Store(BaseStore):
                 + snapshot.restrictions
                 + ([snapshot.observation] if snapshot.observation else [])
             )
-            inconsistent = False
+            inconsistent = self._restriction_scope_conflict(source, [projection(e) for e in events])
             for event in events:
                 known = self.db.execute(
                     "SELECT hash FROM c01_events WHERE event_id=? OR (source=? AND revision=?)",
