@@ -19,7 +19,7 @@
 | ECR policy template | `backend/infra/w3-runtime-ecr-policy.template.json` |
 | 로컬 OCI image digest | `sha256:441d97ad515e0fcceb1cca39fcbaa96a16a6144dfad9366c2f5cc6fd1e3a3fe9` |
 | 목표 ECR repository | `epick-staging-w3-core-runtime` |
-| W1 전달 revision | 이 문서를 포함하는 W1 commit의 full SHA를 별도 전달 |
+| W1 전달 revision | `aabc06a9273959728e42dc5522a0b05b3095c0cb` |
 
 로컬 digest는 현재 recipe의 재현·검토 식별자이며 ECR manifest digest를 대신하지 않는다.
 W3-D가 확인되기 전에는 이 image를 production-ready 또는 M1 완료로 표시하지 않는다.
