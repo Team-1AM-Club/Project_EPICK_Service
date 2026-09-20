@@ -24,7 +24,7 @@ services:
       - --db
       - /state/core.db
       - --retention-seconds
-      - ${W3_RETENTION_SECONDS:?set W3_RETENTION_SECONDS}
+      - "1209600"
     profiles: ["w3-init"]
 
   w3-core-smoke:
@@ -39,8 +39,47 @@ services:
       - --db
       - /state/core.db
       - --retention-seconds
-      - ${W3_RETENTION_SECONDS:?set W3_RETENTION_SECONDS}
+      - "1209600"
     profiles: ["w3-inspect"]
+
+  w3-core-relay:
+    <<: *w3-runtime
+    environment:
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-}
+      W3_CORE_DECISION_QUEUE_URL: ${W3_CORE_DECISION_QUEUE_URL:-}
+      W3_CORE_DECISION_EXPECTED_ROLE_ID: ${W3_CORE_DECISION_EXPECTED_ROLE_ID:-}
+    command:
+      - relay-once
+      - --db
+      - /state/core.db
+      - --retention-seconds
+      - "1209600"
+      - --authority
+      - ${W3_AUTHORITY_FACTORY:-UNSET:factory}
+      - --send
+    profiles: ["w3-relay"]
+
+  w3-core-expire:
+    <<: *w3-runtime
+    command:
+      - expire
+      - --db
+      - /state/core.db
+      - --retention-seconds
+      - "1209600"
+    profiles: ["w3-expire"]
+
+  w3-core-backup:
+    <<: *w3-runtime
+    command:
+      - backup
+      - --db
+      - /state/core.db
+      - --retention-seconds
+      - "1209600"
+      - --destination
+      - ${W3_BACKUP_DESTINATION:-/state/quarantine/manual.db}
+    profiles: ["w3-backup"]
 
   w3-core-command:
     <<: *w3-runtime
@@ -49,7 +88,7 @@ services:
       - --db
       - /state/core.db
       - --retention-seconds
-      - ${W3_RETENTION_SECONDS:?set W3_RETENTION_SECONDS}
+      - "1209600"
     profiles: ["w3-command"]
 
 volumes:

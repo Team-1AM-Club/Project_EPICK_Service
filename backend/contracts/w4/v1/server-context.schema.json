@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "w1.private.w4.recommendation-server-context.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "context_version", "data_kind", "project", "snapshot",
+    "episodes", "excluded_episode_ids", "question_scope_id", "company_knowledge"
+  ],
+  "properties": {
+    "schema_version": {"const": "w4-server-context/0.2"},
+    "context_version": {"type": "string", "minLength": 1, "maxLength": 200},
+    "data_kind": {"const": "SYNTHETIC"},
+    "project": {
+      "type": "object", "additionalProperties": false,
+      "required": ["owner_id", "project_id"],
+      "properties": {
+        "owner_id": {"type": "string", "format": "uuid"},
+        "project_id": {"type": "string", "format": "uuid"}
+      }
+    },
+    "snapshot": {
+      "type": "object", "additionalProperties": false,
+      "required": ["snapshot_id", "episode_versions"],
+      "properties": {
+        "snapshot_id": {"type": "string", "format": "uuid"},
+        "episode_versions": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 1}}
+      }
+    },
+    "episodes": {
+      "type": "array", "maxItems": 20,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["episode_id", "version", "owner_id", "activity_id", "title", "raw_text"],
+        "properties": {
+          "episode_id": {"type": "string", "format": "uuid"},
+          "version": {"type": "integer", "minimum": 1},
+          "owner_id": {"type": "string", "format": "uuid"},
+          "activity_id": {"type": "string", "format": "uuid"},
+          "title": {"type": "string", "minLength": 1, "maxLength": 500},
+          "raw_text": {"type": "string", "minLength": 1, "maxLength": 12000}
+        }
+      }
+    },
+    "excluded_episode_ids": {"type": "array", "items": {"type": "string"}, "maxItems": 100},
+    "question_scope_id": {"type": "string", "minLength": 1, "maxLength": 200},
+    "company_knowledge": {"type": "object"}
+  }
+}

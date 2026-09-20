@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "w1.private.w4.recommendation-service-input.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "request_id", "project_id", "question", "top_k"],
+  "properties": {
+    "schema_version": {"const": "w4-service-input/0.1"},
+    "request_id": {"type": "string", "format": "uuid"},
+    "project_id": {"type": "string", "format": "uuid"},
+    "question": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope_id", "question_id"],
+      "properties": {
+        "scope_id": {"type": "string", "minLength": 1, "maxLength": 200},
+        "question_id": {
+          "enum": ["expertise", "teamwork", "challenge", "self_description", "job_experience"]
+        },
+        "user_theme": {"type": ["string", "null"], "maxLength": 200}
+      }
+    },
+    "top_k": {"type": "integer", "minimum": 1, "maximum": 20}
+  }
+}

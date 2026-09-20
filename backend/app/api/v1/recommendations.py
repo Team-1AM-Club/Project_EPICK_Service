@@ -49,7 +49,7 @@ IdempotencyKey = Annotated[str | None, Header(alias="Idempotency-Key")]
     status_code=status.HTTP_202_ACCEPTED,
     response_model=RecommendationRunResponse,
 )
-def create_synthetic_recommendation_run(
+def create_recommendation_run(
     question_id: UUID,
     body: RecommendationRunCreateRequest,
     response: Response,
@@ -71,7 +71,7 @@ def create_synthetic_recommendation_run(
             raise InvalidInputError(message_ko="이전 추천 실행 응답을 확인할 수 없습니다.")
     else:
         try:
-            run = RecommendationService(session).create_synthetic_recommendation_run(
+            run = RecommendationService(session).create_server_selected_recommendation_run(
                 owner_user_id=principal.owner_user_id,
                 question_id=question_id,
                 expected_question_version=body.question_version,

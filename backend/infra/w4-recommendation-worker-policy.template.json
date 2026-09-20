@@ -1,0 +1,22 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ConsumeW4RecommendationMainOnly",
+      "Effect": "Allow",
+      "Action": [
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:ChangeMessageVisibility",
+        "sqs:GetQueueAttributes"
+      ],
+      "Resource": "${W4_RECOMMENDATION_MAIN_QUEUE_ARN}"
+    },
+    {
+      "Sid": "InspectW4RecommendationDlqOnly",
+      "Effect": "Allow",
+      "Action": ["sqs:GetQueueAttributes"],
+      "Resource": "${W4_RECOMMENDATION_DLQ_ARN}"
+    }
+  ]
+}

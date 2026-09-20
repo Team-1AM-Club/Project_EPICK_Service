@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w1/v1/private-message-envelope.schema.json",
+  "title": "EPICK W1 private inbound message envelope v1",
+  "description": "A protected W1 inbound transport record. It must never be published as a common public event.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "message_id",
+    "message_type",
+    "producer",
+    "occurred_at",
+    "visibility_scope",
+    "channel",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "w1.private.v1"
+    },
+    "message_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "message_type": {
+      "enum": [
+        "w2.collection.result.v1",
+        "w1.core-source-decision.v1"
+      ]
+    },
+    "producer": {
+      "enum": ["w2", "w3", "w4"]
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "visibility_scope": {
+      "const": "PRIVATE"
+    },
+    "channel": {
+      "enum": [
+        "w1.private.w2.collection-result.v1",
+        "w1.private.w3.core-source-decision.v1",
+        "w1.private.w4.core-source-decision.v1"
+      ]
+    },
+    "payload": {
+      "type": "object"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "producer": { "const": "w2" }
+        }
+      },
+      "then": {
+        "properties": {
+          "message_type": { "const": "w2.collection.result.v1" },
+          "channel": { "const": "w1.private.w2.collection-result.v1" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "message_type": { "const": "w1.core-source-decision.v1" }
+        }
+      },
+      "then": {
+        "properties": {
+          "producer": { "enum": ["w3", "w4"] },
+          "channel": {
+            "enum": [
+              "w1.private.w3.core-source-decision.v1",
+              "w1.private.w4.core-source-decision.v1"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "producer": { "const": "w3" }
+        }
+      },
+      "then": {
+        "properties": {
+          "message_type": { "const": "w1.core-source-decision.v1" },
+          "channel": { "const": "w1.private.w3.core-source-decision.v1" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "producer": { "const": "w4" }
+        }
+      },
+      "then": {
+        "properties": {
+          "message_type": { "const": "w1.core-source-decision.v1" },
+          "channel": { "const": "w1.private.w4.core-source-decision.v1" }
+        }
+      }
+    }
+  ]
+}

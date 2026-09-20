@@ -1,12 +1,22 @@
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Sequence
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
+from app.models.experience import EpisodeVersion
+from app.models.identity import User
+from app.models.jobs import OutboxMessage
 from app.models.projection import SnapshotExclusion
+from app.models.recommendation_execution import (
+    RecommendationExecutionBinding,
+    RecommendationExecutionEpisode,
+)
 from app.models.recommendations import (
     MaterialSelectionItem,
     MaterialSelectionSet,
@@ -15,7 +25,9 @@ from app.models.recommendations import (
     RecommendationRun,
     SnapshotEpisodeVersion,
 )
+from app.models.sources import Source, SourceVersion
 from app.repo.recommendations import RecommendationRepository
+from app.services.w4_recommendation_run_store import canonical_sha256
 
 _MATCH_STATUSES = {
     "DIRECT_MATCH",
@@ -24,6 +36,7 @@ _MATCH_STATUSES = {
     "NO_RELEVANT_EVIDENCE",
 }
 _VALIDATION_STATUSES = {"PENDING", "PASSED", "LIMITED", "FAILED"}
+W4_SYNTHETIC_QUESTION_SCOPE_ID = "skhynix-2026-march-R260521-IT"
 
 
 class RecommendationError(Exception):
@@ -317,6 +330,307 @@ class RecommendationService:
         self.session.flush()
         return run
 
+    def create_server_selected_recommendation_run(
+        self,
+        *,
+        owner_user_id: UUID,
+        question_id: UUID,
+        expected_question_version: int,
+        expected_snapshot_no: int,
+        requested_candidate_limit: int,
+        include_excluded: bool,
+        allow_limited_analysis: bool,
+    ) -> RecommendationRun:
+        """Accept the public DTO while deployment policy selects the executor.
+
+        ENGINE creates only durable W1 state and an opaque outbox trigger. It
+        never invokes W4 or falls back to the synthetic adapter in this request.
+        """
+
+        run = self.create_synthetic_recommendation_run(
+            owner_user_id=owner_user_id,
+            question_id=question_id,
+            expected_question_version=expected_question_version,
+            expected_snapshot_no=expected_snapshot_no,
+            requested_candidate_limit=requested_candidate_limit,
+            include_excluded=include_excluded,
+            allow_limited_analysis=allow_limited_analysis,
+        )
+        if settings.w1_recommendation_execution_mode == "SYNTHETIC":
+            return run
+        self._adopt_engine_execution(owner_user_id=owner_user_id, run=run)
+        return run
+
+    def _adopt_engine_execution(
+        self,
+        *,
+        owner_user_id: UUID,
+        run: RecommendationRun,
+    ) -> None:
+        owner = self.session.get(User, owner_user_id)
+        if owner is None or owner.account_status != "ACTIVE" or owner.deleted_at is not None:
+            raise RecommendationNotFoundError("owner is not active")
+        question_version = self.repository.get_question_version(
+            question_version_id=run.question_version_id,
+            owner_user_id=owner_user_id,
+        )
+        episode_versions = self.repository.get_episode_versions(
+            episode_version_ids=self.repository.list_snapshot_episode_version_ids(
+                snapshot_id=run.snapshot_id,
+                owner_user_id=owner_user_id,
+            ),
+            owner_user_id=owner_user_id,
+        )
+        source = self.session.scalar(
+            select(Source)
+            .where(Source.current_version_id.is_not(None))
+            .order_by(Source.id)
+            .limit(1)
+        )
+        source_version = (
+            self.session.get(SourceVersion, source.current_version_id)
+            if source is not None and source.current_version_id is not None
+            else None
+        )
+        if question_version is None or source is None or source_version is None:
+            raise RecommendationValidationError(
+                "ENGINE synthetic acceptance requires a current question and Source version"
+            )
+        context_version = f"w1-engine-{run.id}"
+        # The delivered W4 acceptance runtime is intentionally pinned to its
+        # reviewed draft criteria catalog. Arbitrary question scopes and user
+        # themes remain outside Stage 4.5 while REAL input is disabled.
+        question_scope_id = W4_SYNTHETIC_QUESTION_SCOPE_ID
+        context = self._engine_context(
+            run=run,
+            owner_user_id=owner_user_id,
+            question_scope_id=question_scope_id,
+            context_version=context_version,
+            episode_versions=episode_versions,
+            source=source,
+            source_version=source_version,
+        )
+        request = {
+            "schema_version": "w4-service-input/0.1",
+            "request_id": str(run.id),
+            "project_id": str(run.project_id),
+            "question": {
+                "scope_id": question_scope_id,
+                "question_id": "job_experience",
+                "user_theme": None,
+            },
+            "top_k": run.requested_candidate_limit,
+        }
+        run.result_origin = "ENGINE"
+        run.analysis_policy_version = "w4-synthetic-acceptance-v1"
+        run.limited_analysis = True
+        run.limitations = ["W4_SYNTHETIC_ACCEPTANCE_ONLY"]
+        binding = RecommendationExecutionBinding(
+            run_id=run.id,
+            owner_user_id=owner_user_id,
+            project_id=run.project_id,
+            question_id=run.question_id,
+            question_version_id=run.question_version_id,
+            snapshot_id=run.snapshot_id,
+            owner_deletion_epoch=owner.deletion_epoch,
+            context_sha256=canonical_sha256(context),
+            contract_version="w1-w4-recommendation/1.0",
+            engine_source_revision=settings.w4_recommendation_engine_source_revision,
+            request_body=request,
+            context_body=context,
+        )
+        self.session.add(binding)
+        self.session.flush()
+        for episode in episode_versions:
+            self.session.add(
+                RecommendationExecutionEpisode(
+                    binding_id=binding.id,
+                    episode_version_id=episode.id,
+                    owner_user_id=owner_user_id,
+                    episode_id=str(episode.episode_id),
+                    episode_version=episode.version_no,
+                )
+            )
+        self.session.add(
+            OutboxMessage(
+                message_type="w1.private.w4.recommendation-execution.v1",
+                schema_version="w1.w4.recommendation-exec/1",
+                visibility_scope="PRIVATE",
+                aggregate_type="recommendation_run",
+                aggregate_id=run.id,
+                aggregate_revision=1,
+                recommendation_run_id=run.id,
+                owner_user_id=owner_user_id,
+                owner_deletion_epoch=owner.deletion_epoch,
+                payload={
+                    "run_id": str(run.id),
+                    "binding_id": str(binding.id),
+                    "contract_version": binding.contract_version,
+                    "engine_source_revision": binding.engine_source_revision,
+                    "schema_manifest_sha256": (settings.w4_recommendation_schema_manifest_sha256),
+                },
+            )
+        )
+        self.session.flush()
+
+    @staticmethod
+    def _engine_context(
+        *,
+        run: RecommendationRun,
+        owner_user_id: UUID,
+        question_scope_id: str,
+        context_version: str,
+        episode_versions: Sequence[EpisodeVersion],
+        source: Source,
+        source_version: SourceVersion,
+    ) -> dict[str, object]:
+        now = datetime.now(UTC)
+        index_key = {
+            "source_version_id": str(source_version.id),
+            "extraction_revision_id": str(source_version.id),
+            "representation": "w1-source-version",
+            "normalization_version": source_version.content_normalization_version,
+        }
+        source_ref = {
+            "source_id": str(source.id),
+            "source_version_id": str(source_version.id),
+            "source_kind": source.source_type.lower(),
+        }
+        signal = {
+            "schema_version": "w3-c01/0.2-candidate",
+            "source_id": str(source.id),
+            "event_cursor": source_version.version_no,
+            "required_event_cursor": source_version.version_no,
+            "restriction_revision": source_version.version_no,
+            "required_restriction_revision": source_version.version_no,
+            "generation": source_version.version_no,
+            "restriction_scope": "version",
+            "reason": "READY",
+            "index_ack": True,
+            "index_key": index_key,
+            "history_complete": True,
+            "event_type": "w3.source.usability.changed",
+            "signal_id": str(source_version.id),
+            "usable": True,
+        }
+        synthetic_excerpt = (
+            "T104 synthetic acceptance source; no production or user-provided content."
+        )
+        synthetic_limitation = {
+            "code": "W4_SYNTHETIC_ACCEPTANCE_ONLY",
+            "impact": "Synthetic acceptance does not prove REAL-data readiness.",
+            "source_ref": source_ref,
+            "artifact_id": f"t104-synthetic-{source_version.id}",
+        }
+        knowledge = {
+            "status": "LIMITED",
+            "errors": [],
+            "bundle": {
+                "mode": "SYNTHETIC",
+                "purpose": "SYNTHETIC_ACCEPTANCE",
+                "requirement_presence": "NOT_ASSESSED",
+                "evidences": [
+                    {
+                        "evidence_id": "t104-synthetic-evidence",
+                        "artifact_id": f"t104-synthetic-{source_version.id}",
+                        "source_ref": source_ref,
+                        "excerpt": synthetic_excerpt,
+                        "native_locator": {
+                            "locator_type": "external_reference",
+                            "value": f"synthetic:t104:{source_version.id}",
+                            "reproducible": True,
+                        },
+                        "observed_integrity": {
+                            "algorithm": "sha256",
+                            "digest": hashlib.sha256(synthetic_excerpt.encode()).hexdigest(),
+                            "scope": "excerpt",
+                            "reported_by": "W3_CURRENT",
+                        },
+                    }
+                ],
+                "claims": [],
+                "requirements": [],
+                "source_reviews": [
+                    {
+                        "source_ref": source_ref,
+                        "checks": [],
+                        "limitations": [synthetic_limitation],
+                        "process_status": "LIMITED",
+                    }
+                ],
+                "limitations": [synthetic_limitation],
+            },
+        }
+        episodes = []
+        for episode in episode_versions:
+            raw_text = episode.original_narrative or "\n".join(
+                value
+                for value in (
+                    episode.situation_text,
+                    episode.problem_text,
+                    episode.goal_text,
+                    episode.actions_text,
+                    episode.result_text,
+                    episode.learning_text,
+                )
+                if value
+            )
+            episodes.append(
+                {
+                    "episode_id": str(episode.episode_id),
+                    "version": episode.version_no,
+                    "owner_id": str(owner_user_id),
+                    "activity_id": str(episode.activity_id),
+                    "title": episode.title,
+                    "raw_text": raw_text or "합성 검증용 빈 경험입니다.",
+                }
+            )
+        return {
+            "schema_version": "w4-server-context/0.2",
+            "context_version": context_version,
+            "data_kind": "SYNTHETIC",
+            "project": {"owner_id": str(owner_user_id), "project_id": str(run.project_id)},
+            "snapshot": {
+                "snapshot_id": str(run.snapshot_id),
+                "episode_versions": {
+                    str(item.episode_id): item.version_no for item in episode_versions
+                },
+            },
+            "episodes": episodes,
+            "excluded_episode_ids": [],
+            "question_scope_id": question_scope_id,
+            "company_knowledge": {
+                "schema_version": "w4-c01-knowledge/0.1-proposal",
+                "profile": "w3-c01/0.2-candidate/r2",
+                "upstream_commit": "05f26b4c0a52aecf155a66df0fcaa38e6fbd4cf5",
+                "knowledge_bundle_id": f"w1-synthetic-{run.id}",
+                "data_kind": "SYNTHETIC",
+                "scope_id": question_scope_id,
+                "as_of": now.date().isoformat(),
+                "sources": [
+                    {
+                        "signal": signal,
+                        "knowledge_generation": source_version.version_no,
+                        "knowledge": knowledge,
+                        "metadata": {
+                            "source_id": str(source.id),
+                            "index_key": index_key,
+                            "scope_id": question_scope_id,
+                            "content_sha256": source_version.content_hash,
+                            "published_at": None,
+                            "valid_from": None,
+                            "valid_to": None,
+                            "parse_status": "PARSED",
+                            "required_for_scope": True,
+                            "expires_at": (now + timedelta(minutes=30))
+                            .isoformat()
+                            .replace("+00:00", "Z"),
+                        },
+                    }
+                ],
+            },
+        }
+
     def record_candidate(
         self,
         *,
@@ -487,10 +801,10 @@ class RecommendationService:
             or run.snapshot_id != candidate.snapshot_id
         ):
             raise RecommendationNotFoundError("run does not belong to this question")
-        if (
-            run.status not in {"SUCCEEDED", "LIMITED"}
-            or run.result_status not in {"READY", "LIMITED"}
-        ):
+        if run.status not in {"SUCCEEDED", "LIMITED"} or run.result_status not in {
+            "READY",
+            "LIMITED",
+        }:
             raise RecommendationValidationError("recommendation result is not ready")
 
         current = self.repository.get_current_selection_for_update(

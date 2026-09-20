@@ -18,6 +18,10 @@ PRIVILEGE_EXPECTATIONS = (
     ("epick_runtime", "project_snapshots", "INSERT", True),
     ("epick_runtime", "snapshot_episode_versions", "INSERT", True),
     ("epick_runtime", "recommendation_runs", "INSERT", True),
+    ("epick_runtime", "recommendation_execution_bindings", "INSERT", True),
+    ("epick_runtime", "recommendation_execution_episodes", "INSERT", True),
+    ("epick_runtime", "recommendation_publications", "INSERT", False),
+    ("epick_runtime", "recommendation_source_dependencies", "INSERT", False),
     ("epick_runtime", "material_selection_sets", "INSERT", True),
     ("epick_runtime", "material_selection_items", "INSERT", True),
     ("epick_runtime", "outbox_messages", "INSERT", True),
@@ -37,8 +41,15 @@ PRIVILEGE_EXPECTATIONS = (
     ("epick_lookup", "job_core_decision_bindings", "SELECT", False),
     ("epick_worker", "w2_staged_results", "INSERT", True),
     ("epick_worker", "w2_staged_results", "UPDATE", True),
+    ("epick_worker", "recommendation_execution_bindings", "UPDATE", True),
+    ("epick_worker", "recommendation_publications", "INSERT", True),
+    ("epick_worker", "recommendation_source_dependencies", "INSERT", True),
+    ("epick_worker", "recommendation_candidates", "INSERT", True),
     ("epick_lookup", "jobs", "UPDATE", False),
     ("epick_lookup", "outbox_messages", "SELECT", False),
+    ("epick_w3_authority", "users", "UPDATE", False),
+    ("epick_w3_authority", "jobs", "UPDATE", False),
+    ("epick_w3_authority", "outbox_messages", "SELECT", False),
     ("epick_deleter", "deletion_requests", "UPDATE", True),
     ("epick_deleter", "users", "DELETE", True),
     ("epick_deleter", "sources", "DELETE", False),
@@ -71,6 +82,18 @@ COLUMN_PRIVILEGE_EXPECTATIONS = (
     ("epick_lookup", "analysis_source_decisions", "decision_scope", "SELECT", True),
     ("epick_lookup", "job_core_decision_bindings", "origin_producer", "SELECT", True),
     ("epick_lookup", "sources", "canonical_url", "SELECT", False),
+    ("epick_w3_authority", "users", "id", "SELECT", True),
+    ("epick_w3_authority", "users", "account_status", "SELECT", True),
+    ("epick_w3_authority", "users", "deletion_epoch", "SELECT", True),
+    ("epick_w3_authority", "users", "email", "SELECT", False),
+    ("epick_w3_authority", "users", "display_name", "SELECT", False),
+    ("epick_w3_authority", "jobs", "owner_user_id", "SELECT", True),
+    ("epick_w3_authority", "jobs", "analysis_input_version", "SELECT", True),
+    ("epick_w3_authority", "jobs", "safe_failure_message", "SELECT", False),
+    ("epick_w3_authority", "job_source_links", "source_id", "SELECT", True),
+    ("epick_w3_authority", "job_source_links", "command_id", "SELECT", False),
+    ("epick_w3_authority", "sources", "company_id", "SELECT", True),
+    ("epick_w3_authority", "sources", "canonical_url", "SELECT", False),
     ("epick_worker", "job_core_decision_bindings", "origin_producer", "INSERT", True),
     ("epick_worker", "job_core_decision_bindings", "origin_decision_id", "UPDATE", False),
 )
@@ -91,6 +114,11 @@ RLS_POLICY_EXPECTATIONS = tuple(
         "project_questions",
         "question_versions",
     )
+)
+
+W3_AUTHORITY_RLS_POLICY_EXPECTATIONS = tuple(
+    (table_name, f"{table_name}_w3_authority_read_policy", "SELECT")
+    for table_name in ("users", "jobs", "job_source_links", "sources")
 )
 
 
@@ -164,6 +192,30 @@ def main() -> None:
                     raise SystemExit(
                         "runtime RLS policy mismatch: "
                         f"{policy_name} must grant epick_worker {command} visibility "
+                        f"on {table_name}"
+                    )
+            for table_name, policy_name, command in W3_AUTHORITY_RLS_POLICY_EXPECTATIONS:
+                present = connection.execute(
+                    text(
+                        "SELECT EXISTS ("
+                        "SELECT 1 FROM pg_policies "
+                        "WHERE schemaname = 'public' "
+                        "AND tablename = :table_name "
+                        "AND policyname = :policy_name "
+                        "AND cmd = :command "
+                        "AND :role_name = ANY(roles))"
+                    ),
+                    {
+                        "table_name": table_name,
+                        "policy_name": policy_name,
+                        "command": command,
+                        "role_name": "epick_w3_authority",
+                    },
+                ).scalar_one()
+                if not present:
+                    raise SystemExit(
+                        "runtime RLS policy mismatch: "
+                        f"{policy_name} must grant epick_w3_authority {command} visibility "
                         f"on {table_name}"
                     )
     finally:

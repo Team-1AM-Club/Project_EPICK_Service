@@ -9,17 +9,15 @@ from fastapi import Depends, Header
 from sqlalchemy.orm import Session
 
 from app.api.errors import AuthenticationRequiredError
+from app.core.config import settings
 from app.db.session import SessionLocal, set_local_owner_context
+from app.repo.identity import IdentityRepository
+from app.services.auth_sessions import AuthSessionService
 
 
 @dataclass(frozen=True)
 class CurrentPrincipal:
-    """Verified identity mapped to the internal owner UUID.
-
-    API-0 deliberately has no production OIDC adapter. The default dependency
-    therefore fails closed; tests override it after creating a matching
-    synthetic User row in the isolated PostgreSQL database.
-    """
+    """Verified EPICK session mapped to the internal owner UUID."""
 
     issuer: str
     subject: str
@@ -29,11 +27,40 @@ class CurrentPrincipal:
 def get_current_principal(
     authorization: Annotated[str | None, Header()] = None,
 ) -> CurrentPrincipal:
-    """Fail closed until the deployment-specific OIDC adapter is configured."""
-
     if authorization is None or not authorization.startswith("Bearer "):
         raise AuthenticationRequiredError()
-    raise AuthenticationRequiredError()
+    token = authorization.removeprefix("Bearer ").strip()
+    if not token:
+        raise AuthenticationRequiredError()
+    session = SessionLocal()
+    try:
+        with session.begin():
+            verified = build_auth_session_service(IdentityRepository(session)).verify_access_token(
+                token
+            )
+            return CurrentPrincipal(
+                issuer=verified.issuer,
+                subject=verified.subject,
+                owner_user_id=verified.owner_user_id,
+            )
+    finally:
+        session.close()
+
+
+def build_auth_session_service(repository: IdentityRepository) -> AuthSessionService:
+    signing_key = settings.epick_auth_signing_key
+    refresh_pepper = settings.epick_refresh_token_pepper
+    if signing_key is None or refresh_pepper is None:
+        raise AuthenticationRequiredError()
+    return AuthSessionService(
+        repository,
+        signing_key=signing_key.get_secret_value(),
+        refresh_pepper=refresh_pepper.get_secret_value(),
+        issuer=settings.epick_auth_issuer,
+        audience=settings.epick_auth_audience,
+        access_ttl_seconds=settings.epick_access_token_ttl_seconds,
+        refresh_ttl_seconds=settings.epick_refresh_token_ttl_seconds,
+    )
 
 
 CurrentPrincipalDep = Annotated[CurrentPrincipal, Depends(get_current_principal)]

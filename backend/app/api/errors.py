@@ -31,6 +31,24 @@ class AuthenticationRequiredError(ApiProblem):
         )
 
 
+class OriginNotAllowedError(ApiProblem):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=403,
+            code="ORIGIN_NOT_ALLOWED",
+            message_ko="허용되지 않은 요청 출처입니다.",
+        )
+
+
+class AccountUnavailableError(ApiProblem):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=409,
+            code="ACCOUNT_UNAVAILABLE",
+            message_ko="현재 계정 상태에서는 로그인할 수 없습니다.",
+        )
+
+
 class ResourceNotFoundError(ApiProblem):
     def __init__(self) -> None:
         super().__init__(

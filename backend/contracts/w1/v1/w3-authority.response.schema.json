@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://epick.local/contracts/w1/private/w3-authority-response.v1.schema.json",
+  "title": "W1 private W3 authority response",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "context", "owner_id", "owner_epoch", "active"],
+  "properties": {
+    "schema_version": {
+      "const": "w1.private.w3-authority-response.v1"
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["job_id", "company_id", "source_id", "analysis_input_version"],
+      "properties": {
+        "job_id": {"type": "string", "format": "uuid"},
+        "company_id": {"type": "string", "format": "uuid"},
+        "source_id": {"type": "string", "format": "uuid"},
+        "analysis_input_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "\\S"
+        }
+      }
+    },
+    "owner_id": {"type": "string", "format": "uuid"},
+    "owner_epoch": {"type": "integer", "minimum": 0},
+    "active": {"type": "boolean"}
+  }
+}

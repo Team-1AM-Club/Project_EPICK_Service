@@ -1,0 +1,37 @@
+{
+  "profile": "w3-c01/0.2-candidate/r2",
+  "commit": "05f26b4c0a52aecf155a66df0fcaa38e6fbd4cf5",
+  "adoption": "PENDING_JOINT_AGREEMENT",
+  "files": [
+    {
+      "upstream_path": "contracts/c01/v0.2-candidate/status.schema.json",
+      "local_path": "epick_w4/c01_schemas/status.schema.json",
+      "sha256": "a4ba653fd9f4bd149117a97b3a4843b2567f02f0be6017634a42ac5f3972641d"
+    },
+    {
+      "upstream_path": "contracts/c01/v0.2-candidate/signal.schema.json",
+      "local_path": "epick_w4/c01_schemas/signal.schema.json",
+      "sha256": "c4f2c50681f94d12f2e079e4ff1b6f93893f25c4b94562f8a066ed87169021f5"
+    },
+    {
+      "upstream_path": "contracts/c01/v0.2-candidate/knowledge.schema.json",
+      "local_path": "epick_w4/c01_schemas/knowledge.schema.json",
+      "sha256": "a221f298f59bd524d80c7873a3d3f731c04ea5d70188ec49f76729ec2c0c6504"
+    },
+    {
+      "upstream_path": "contracts/c01/v0.2-candidate/delivery-receipt.schema.json",
+      "local_path": "epick_w4/c01_schemas/delivery-receipt.schema.json",
+      "sha256": "76ef0e6ad095b0bc0b0f1ba17917898854c5acd9c3ff03efa2168523cdb80a20"
+    },
+    {
+      "upstream_path": "contracts/c01/v0.2-candidate/delivery-response.schema.json",
+      "local_path": "epick_w4/c01_schemas/delivery-response.schema.json",
+      "sha256": "65d641de630a4362e8d32f71e4f98dc22a5e99d602e72661db1cd5c572536fb5"
+    },
+    {
+      "upstream_path": "contracts/c01/v0.2-candidate/examples/w4-consumer.json",
+      "local_path": "samples/c01/upstream/w4-consumer.json",
+      "sha256": "fdb67f0e11276b3eabdc62e51fb7281e319602b7baa7e99fc93a4ef9b3abf621"
+    }
+  ]
+}

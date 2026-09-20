@@ -20,8 +20,15 @@ from app.runtime.sqs import Boto3SqsPort  # noqa: E402
 
 
 def _build_relay() -> OutboxRelay:
-    if not settings.w1_execution_queue_url:
-        raise SystemExit("W1_JOB_EXECUTION_QUEUE_URL must be set before starting the outbox relay")
+    if not any(
+        (
+            settings.w1_execution_queue_url,
+            settings.w2_collection_command_queue_url,
+            settings.w2_commit_gate_outbound_queue_url,
+            settings.w4_recommendation_execution_queue_url,
+        )
+    ):
+        raise SystemExit("at least one private outbox destination must be configured")
     relay_id = settings.w1_outbox_relay_instance_id or socket.gethostname()
     return OutboxRelay(
         session_factory=create_worker_session_factory(),
@@ -30,6 +37,7 @@ def _build_relay() -> OutboxRelay:
             w1_execution_queue_url=settings.w1_execution_queue_url,
             w2_collection_command_queue_url=settings.w2_collection_command_queue_url,
             w2_commit_gate_command_queue_url=settings.w2_commit_gate_outbound_queue_url,
+            w4_recommendation_execution_queue_url=(settings.w4_recommendation_execution_queue_url),
             commit_gate_only=settings.w2_ct15_gate_only_queue_approved,
         ),
         relay_id=relay_id[:128],

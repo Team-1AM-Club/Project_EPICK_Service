@@ -18,6 +18,8 @@ htmlcov/
 build/
 dist/
 *.egg-info/
+.runtime/
+.uv-cache*/
 
 
 # ==============================
@@ -84,3 +86,6 @@ skills-lock.json
 
 docs/
 **/docs/
+
+specs/
+**/specs

@@ -11,9 +11,9 @@
 -- same release. Do not grant schema CREATE to runtime groups.
 
 REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public
-    FROM epick_runtime, epick_worker, epick_lookup, epick_w4_context, epick_deleter;
+    FROM epick_runtime, epick_worker, epick_lookup, epick_w3_authority, epick_w4_context, epick_deleter;
 REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public
-    FROM epick_runtime, epick_worker, epick_lookup, epick_w4_context, epick_deleter;
+    FROM epick_runtime, epick_worker, epick_lookup, epick_w3_authority, epick_w4_context, epick_deleter;
 
 -- Interactive API: owner-facing records and user commands. Canonical company,
 -- Source, Claim, and indexing data remain read-only to the API.
@@ -42,6 +42,8 @@ GRANT SELECT, INSERT, UPDATE ON TABLE
     project_snapshots,
     snapshot_episode_versions,
     recommendation_runs,
+    recommendation_execution_bindings,
+    recommendation_execution_episodes,
     material_selection_sets,
     material_selection_items,
     inference_decisions,
@@ -179,6 +181,10 @@ GRANT SELECT, INSERT, UPDATE ON TABLE
     project_snapshots,
     snapshot_episode_versions,
     recommendation_runs,
+    recommendation_execution_bindings,
+    recommendation_execution_episodes,
+    recommendation_publications,
+    recommendation_source_dependencies,
     recommendation_candidates,
     material_selection_sets,
     material_selection_items,
@@ -306,6 +312,25 @@ GRANT SELECT (
 )
 ON TABLE job_core_decision_bindings
 TO epick_lookup;
+
+-- W3 Authority has its own read-only login. It can derive only the current
+-- Authorization projection and cannot read identity attributes, Source URLs,
+-- command payloads, content, or any mutable column.
+GRANT SELECT (id, account_status, deletion_epoch)
+ON TABLE users
+TO epick_w3_authority;
+
+GRANT SELECT (id, owner_user_id, status, owner_deletion_epoch, analysis_input_version)
+ON TABLE jobs
+TO epick_w3_authority;
+
+GRANT SELECT (job_id, owner_user_id, source_id, analysis_input_version)
+ON TABLE job_source_links
+TO epick_w3_authority;
+
+GRANT SELECT (id, company_id)
+ON TABLE sources
+TO epick_w3_authority;
 
 -- The W4 context adapter uses its own read-only login.  These projections are the minimal
 -- data needed to calculate an opaque authorization revision and fail closed before W4 sends.
@@ -476,6 +501,6 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public
 -- created by the principal executing this script (the migration login). They
 -- guarantee that a future table gets no runtime DML until it is reviewed here.
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
-    REVOKE ALL ON TABLES FROM epick_runtime, epick_worker, epick_lookup, epick_w4_context, epick_deleter;
+    REVOKE ALL ON TABLES FROM epick_runtime, epick_worker, epick_lookup, epick_w3_authority, epick_w4_context, epick_deleter;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
-    REVOKE ALL ON SEQUENCES FROM epick_runtime, epick_worker, epick_lookup, epick_w4_context, epick_deleter;
+    REVOKE ALL ON SEQUENCES FROM epick_runtime, epick_worker, epick_lookup, epick_w3_authority, epick_w4_context, epick_deleter;

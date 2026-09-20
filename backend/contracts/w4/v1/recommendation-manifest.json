@@ -1,0 +1,21 @@
+{
+  "contract_version": "w1-w4-recommendation/1.0",
+  "w4_source_revision": "df41433218918e4167784243dc9b88e5a858278d",
+  "w4_files": {
+    "epick_w4/w1_bridge.py": "sha256:a7474b92a188e6f4210f17d96690d891662f2b14565c210023356d00d9c3093a",
+    "epick_w4/w1_http_run_store.py": "sha256:bfe86c75cb550f0cab900dd36b40cad4f609907b3a0721ba3a287f188b8149e8",
+    "epick_w4/w1_runtime.py": "sha256:2da3763234464d4b9b16dab656f1ba864f28f42a9b61f445b406f686a154696a",
+    "epick_w4/acceptance_bootstrap.py": "sha256:b930fc3d2804a605566891918b62ff45de4c0660315388df5890feaecbf90f42",
+    "epick_w4/handoff_contract.py": "sha256:0df47b416fbd3e5e8c0f9888a7b1b465822827f9b7d6f3e0c27ea75f3c9b9d8f",
+    "epick_w4/c01_contract.py": "sha256:451875fc245f6185092b833022c3837bd80c31f5acfc2fcbdc8a60b850b41774",
+    "epick_w4/criteria_catalog.json": "sha256:3eb850f2b08a055f45ec48c3356d56d1f2fdfba19abf5a86df5ec6db349bcbff",
+    "epick_w4/c01_schemas/knowledge.schema.json": "sha256:a221f298f59bd524d80c7873a3d3f731c04ea5d70188ec49f76729ec2c0c6504"
+  },
+  "schemas": {
+    "dispatch.schema.json": "sha256:54276a0e31cc6c7a139c8bf0df7e4005c747280966e0ea42739495924fee43d4",
+    "publication.schema.json": "sha256:061c0f18e6e7f59439e7a0225eb705ea8e0b00452c1e0c943ce119a361dd7f85",
+    "server-context.schema.json": "sha256:24ca4a84b4ea5f81799a25e4aadc6fd498958df3eb736af99b373d3ad6f17dd2",
+    "service-input.schema.json": "sha256:fe881ef958d14763ca13202ab77e6e21c9d8439e4cf1474711f802e69c81e04f"
+  },
+  "real_data_enabled": false
+}

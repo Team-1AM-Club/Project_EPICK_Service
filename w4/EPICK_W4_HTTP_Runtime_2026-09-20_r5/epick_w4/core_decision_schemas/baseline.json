@@ -1,0 +1,47 @@
+{
+  "repository": "https://github.com/Team-1AM-Club/Project_EPICK_Service.git",
+  "commit": "afec08a9602132e5e433b523b0b6804850440524",
+  "status": "W1_PINNED_W4_PRODUCER_PROPOSAL_NOT_ADOPTED",
+  "files": [
+    {
+      "upstream_path": "backend/contracts/w1/v1/private-message-envelope.schema.json",
+      "local_path": "epick_w4/core_decision_schemas/envelope.schema.json",
+      "sha256": "8119cb594782187669df608d6f1748c57c45130356998c7cd77867cdd9f80201"
+    },
+    {
+      "upstream_path": "backend/contracts/w1/v1/core-source-decision.schema.json",
+      "local_path": "epick_w4/core_decision_schemas/payload.schema.json",
+      "sha256": "421cf7808c1e15758b9de1164b606f7007010636e3394befadb1f38ff5997b4e"
+    },
+    {
+      "upstream_path": "backend/contracts/w1/v1/private-delivery-receipt.schema.json",
+      "local_path": "epick_w4/core_decision_schemas/receipt.schema.json",
+      "sha256": "d8fde5b60f61a115b6ca1550397343e142a4a4b023a922f4c7d2031a4b06f02a"
+    },
+    {
+      "upstream_path": "backend/contracts/w2/v1/source-collection.command.schema.json",
+      "local_path": "samples/core-decision/upstream/w2-command.schema.json",
+      "sha256": "615b7810ff0a3c20a8013c7549ef7f5bb5439715e8a47b480ceae1a92d5f32e1"
+    },
+    {
+      "upstream_path": "backend/app/runtime/core_decision_binding.py",
+      "local_path": "samples/core-decision/upstream/core_decision_binding.py",
+      "sha256": "d7989cc7d0a1f29c6ee4383e8e5037a07def4f04e36921bd9880a99417a9afdc"
+    },
+    {
+      "upstream_path": "backend/contracts/fixtures/v1/w1/private-w2-command-dispatch.json",
+      "local_path": "samples/core-decision/upstream/w2-dispatch.json",
+      "sha256": "aa142cd06ced65eef9108678f66c27c8202a1c7dddb8629ed3f431f4b0848bd7"
+    },
+    {
+      "upstream_path": "backend/contracts/fixtures/v1/w1/private-core-source-decision-question.json",
+      "local_path": "samples/core-decision/upstream/question-decision.json",
+      "sha256": "805cdd8a88271ca5ea9f2712a5b6cec3c1bee2d8e72e361b08b892508d99ba7f"
+    },
+    {
+      "upstream_path": "backend/contracts/w1/v1/README.md",
+      "local_path": "samples/core-decision/upstream/w1-contract-readme.md",
+      "sha256": "64775aca69a8372437cc686dd9e1b59b8f2351489d33e81cea25f8f19aca4ed4"
+    }
+  ]
+}

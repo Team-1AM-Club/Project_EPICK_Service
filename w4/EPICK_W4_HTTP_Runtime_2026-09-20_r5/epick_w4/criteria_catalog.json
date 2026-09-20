@@ -1,0 +1,232 @@
+{
+  "scope_id": "skhynix-2026-march-R260521-IT",
+  "questions": [
+    {
+      "question_id": "expertise",
+      "official_text": null,
+      "form_constraints": {
+        "max_characters": null,
+        "required": null,
+        "max_hashtags": null
+      },
+      "content_checks": [
+        {
+          "id": "expertise.specific_area",
+          "description": "어떤 직무 지식·기술을 익혔는지 구체적으로 드러나는가",
+          "origin": "QUESTION_CONTENT_INTERPRETATION",
+          "question_source_ids": [
+            "catch_march_listing"
+          ]
+        },
+        {
+          "id": "expertise.sustained_learning",
+          "description": "학습을 지속하거나 반복한 과정이 드러나는가",
+          "origin": "QUESTION_CONTENT_INTERPRETATION",
+          "question_source_ids": [
+            "catch_march_listing"
+          ]
+        },
+        {
+          "id": "expertise.practical_use",
+          "description": "배운 내용을 실제 작업에 사용한 행동이 있는가",
+          "origin": "QUESTION_CONTENT_INTERPRETATION",
+          "question_source_ids": [
+            "catch_march_listing"
+          ]
+        }
+      ],
+      "evidence_to_collect": [
+        "전문 분야",
+        "학습 방법",
+        "학습 기간 또는 반복",
+        "활용 행동",
+        "결과와 근거 자료"
+      ],
+      "question_source_ids": [
+        "catch_march_listing"
+      ],
+      "implementation_notes": [
+        "특정 학습 기간이나 횟수의 하한을 만들지 않는다.",
+        "자격증·성과 수치를 일괄 필수로 만들지 않는다."
+      ]
+    },
+    {
+      "question_id": "teamwork",
+      "official_text": null,
+      "form_constraints": {
+        "max_characters": null,
+        "required": null,
+        "max_hashtags": null
+      },
+      "content_checks": [
+        {
+          "id": "teamwork.shared_goal",
+          "description": "함께 이루려던 일이 구체적으로 드러나는가",
+          "origin": "QUESTION_CONTENT_INTERPRETATION",
+          "question_source_ids": [
+            "jobplanet_march_article"
+          ]
+        },
+        {
+          "id": "teamwork.cooperation_action",
+          "description": "본인이 다른 사람들의 협력을 이끌어 낸 행동이 있는가",
+          "origin": "QUESTION_CONTENT_INTERPRETATION",
+          "question_source_ids": [
+            "jobplanet_march_article"
+          ]
+        },
+        {
+          "id": "teamwork.contribution",
+          "description": "본인의 행동이 공동 목표에 어떻게 보탬이 되었는가",
+          "origin": "QUESTION_CONTENT_INTERPRETATION",
+          "question_source_ids": [
+            "jobplanet_march_article"
+          ]
+        }
+      ],
+      "evidence_to_collect": [
+        "상황",
+        "참여자 관계",
+        "공동 목표",
+        "본인 행동",
+        "이후 결과",
+        "소회"
+      ],
+      "question_source_ids": [
+        "jobplanet_march_article"
+      ],
+      "implementation_notes": [
+        "리더 직책이나 갈등의 존재를 필수로 만들지 않는다.",
+        "팀의 성과를 본인의 단독 기여로 바꾸지 않는다."
+      ]
+    },
+    {
+      "question_id": "challenge",
+      "official_text": null,
+      "form_constraints": {
+        "max_characters": null,
+        "required": null,
+        "max_hashtags": null
+      },
+      "content_checks": [
+        {
+          "id": "challenge.self_set_goal",
+          "description": "본인이 높은 목표를 정한 과정이 드러나는가",
+          "origin": "QUESTION_CONTENT_INTERPRETATION",
+          "question_source_ids": [
+            "jobkorea_march_question_listing"
+          ]
+        },
+        {
+          "id": "challenge.persistence",
+          "description": "어려움 속에서도 행동을 이어 가거나 조정한 과정이 있는가",
+          "origin": "QUESTION_CONTENT_INTERPRETATION",
+          "question_source_ids": [
+            "jobkorea_march_question_listing"
+          ]
+        }
+      ],
+      "evidence_to_collect": [
+        "목표 설정",
+        "당시 여건과 난관",
+        "대응 행동",
+        "지속한 과정",
+        "결과",
+        "소회"
+      ],
+      "question_source_ids": [
+        "jobkorea_march_question_listing"
+      ],
+      "implementation_notes": [
+        "목표 미달을 이유로 경험을 자동 제외하지 않는다.",
+        "성과 수치만으로 노력의 지속성을 인정하지 않는다."
+      ]
+    },
+    {
+      "question_id": "self_description",
+      "official_text": null,
+      "form_constraints": {
+        "max_characters": null,
+        "required": null,
+        "max_hashtags": null
+      },
+      "content_checks": [
+        {
+          "id": "self_description.theme",
+          "description": "사용자가 드러내려는 가치관·개성·강점 중 선택한 주제와 연결되는가",
+          "origin": "QUESTION_CONTENT_INTERPRETATION",
+          "question_source_ids": [
+            "jobkorea_march_question_listing"
+          ]
+        }
+      ],
+      "evidence_to_collect": [
+        "사용자가 선택한 주제",
+        "그 주제를 뒷받침하는 본인 행동",
+        "행동의 맥락"
+      ],
+      "evidence_collection_origin": "IMPLEMENTATION_PROPOSAL",
+      "question_source_ids": [
+        "jobkorea_march_question_listing"
+      ],
+      "implementation_notes": [
+        "가치관·개성·강점을 모두 제시하도록 강제하지 않는다.",
+        "사용자가 선택하지 않은 성격이나 정체성을 단정하지 않는다.",
+        "해시태그 개수를 후보 경험 개수 제한으로 사용하지 않는다."
+      ]
+    },
+    {
+      "question_id": "job_experience",
+      "official_text": null,
+      "form_constraints": {
+        "max_characters": null,
+        "required": null,
+        "max_hashtags": null
+      },
+      "content_checks": [
+        {
+          "id": "job_experience.job_connection",
+          "description": "경험에서 실제 수행한 작업이 대상 IT 업무와 연결되는가",
+          "origin": "QUESTION_CONTENT_INTERPRETATION",
+          "question_source_ids": [
+            "jobplanet_march_article"
+          ],
+          "company_evidence_ids": [
+            "ko-it-duties"
+          ]
+        }
+      ],
+      "evidence_to_collect": [
+        "활동 범위",
+        "본인 역할",
+        "작업 내용",
+        "사용한 기술",
+        "결과"
+      ],
+      "evidence_collection_origin": "IMPLEMENTATION_PROPOSAL",
+      "question_source_ids": [
+        "jobplanet_march_article"
+      ],
+      "implementation_notes": [
+        "반도체 업계 경험만 허용하지 않는다.",
+        "특정 기술이나 경험 개수를 일괄 필수로 두지 않는다."
+      ]
+    }
+  ],
+  "schema_version": "w4-runtime-criteria/0.1",
+  "status": "DRAFT_FOR_LOCAL_REVIEW",
+  "is_official_rubric": false,
+  "source_sha256": "c3767efbf7ef1c7ba176284438e91a6fd8675adb3ee1300cc088409e55ad76ec",
+  "company_review_sha256": "10a707d336b0e8b3f9342651ad71b301194c58cde458b7116db13443e6d265bb",
+  "job_duties": [
+    "업무용 소프트웨어",
+    "자동 반송",
+    "플랫폼",
+    "데이터 처리",
+    "기준정보 관리",
+    "전산 인프라"
+  ],
+  "job_evidence_ids": [
+    "ko-it-duties"
+  ]
+}

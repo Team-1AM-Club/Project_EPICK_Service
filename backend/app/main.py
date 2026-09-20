@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
@@ -12,10 +13,12 @@ from app.api.errors import ApiFieldError, ApiProblem, ResourceNotFoundError
 from app.api.middleware import correlation_id_middleware, get_correlation_id
 from app.api.schemas.common import ApiErrorBody, ApiErrorResponse, ErrorFieldResponse
 from app.api.v1.router import router as api_v1_router
+from app.core.config import settings
 from app.db.session import engine
 
 OPENAPI_TAGS = [
     {"name": "health", "description": "프로세스와 데이터베이스 준비 상태를 확인합니다."},
+    {"name": "auth", "description": "Google OIDC와 EPICK 세션을 관리합니다."},
     {"name": "activities", "description": "사용자 Activity와 immutable version을 관리합니다."},
     {
         "name": "episodes",
@@ -58,6 +61,20 @@ def create_app() -> FastAPI:
             "DB 수락만 의미하며 실제 worker dispatch 또는 외부 엔진 완료를 뜻하지 않습니다."
         ),
         openapi_tags=OPENAPI_TAGS,
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.epick_allowed_frontend_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=[
+            "Authorization",
+            "Content-Type",
+            "Idempotency-Key",
+            "If-Match",
+            "X-CSRF-Token",
+        ],
+        expose_headers=["Location", "ETag", "Retry-After", "X-Correlation-ID"],
     )
     app.middleware("http")(correlation_id_middleware)
     _register_api_error_handlers(app)
@@ -132,9 +149,7 @@ def _register_api_error_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(StarletteHTTPException)
-    async def http_error_handler(
-        request: Request, error: StarletteHTTPException
-    ) -> JSONResponse:
+    async def http_error_handler(request: Request, error: StarletteHTTPException) -> JSONResponse:
         if not _is_api_request(request):
             return await http_exception_handler(request, error)
         if error.status_code == 404:

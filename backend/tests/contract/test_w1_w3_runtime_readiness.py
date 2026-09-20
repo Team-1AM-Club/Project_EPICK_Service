@@ -12,16 +12,22 @@ from app.runtime.w1_w3_runtime_readiness import (
     load_runtime_readiness,
     validate_runtime_readiness,
     validate_runtime_readiness_transition,
+    validate_runtime_source_pins,
 )
 
 REPO_ROOT = Path(__file__).parents[3]
 FEATURE_ROOT = REPO_ROOT / "specs" / "007-w1-w3-runtime-integration"
 READINESS_PATH = FEATURE_ROOT / "evidence" / "runtime-readiness.json"
+BASELINE_PATH = FEATURE_ROOT / "evidence" / "source-baseline.json"
 SCHEMA_PATH = FEATURE_ROOT / "contracts" / "runtime-readiness.schema.json"
 
 
 def _readiness() -> dict[str, object]:
     return json.loads(READINESS_PATH.read_text(encoding="utf-8"))
+
+
+def _baseline() -> dict[str, object]:
+    return json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
 
 
 def _gate(data: dict[str, object], gate_id: str) -> dict[str, object]:
@@ -30,14 +36,44 @@ def _gate(data: dict[str, object], gate_id: str) -> dict[str, object]:
     return next(gate for gate in gates if gate["id"] == gate_id)
 
 
-def test_initial_readiness_is_schema_valid_and_only_m1_is_in_progress() -> None:
+def test_rebased_readiness_is_schema_valid_without_false_cutover_claims() -> None:
     loaded = load_runtime_readiness(READINESS_PATH, schema_path=SCHEMA_PATH)
 
     assert loaded["status"] == "M1_IN_PROGRESS"
     assert loaded["milestones"]["M1"]["status"] == "IN_PROGRESS"
-    assert {loaded["milestones"][name]["status"] for name in ("M2", "M3", "M4", "M5")} == {
-        "BLOCKED"
-    }
+    assert loaded["milestones"]["M2"]["status"] == "NOT_STARTED"
+    assert loaded["milestones"]["M3"]["status"] == "NOT_STARTED"
+    assert loaded["milestones"]["M4"]["status"] == "BLOCKED"
+    assert loaded["milestones"]["M5"]["status"] == "BLOCKED"
+    assert _gate(loaded, "W3-C")["status"] == "RECEIVED"
+    assert _gate(loaded, "W3-E")["status"] == "VERIFIED"
+
+
+def test_w1_owned_work_may_start_but_actual_cutover_stays_gated() -> None:
+    data = _readiness()
+    data["milestones"]["M2"]["status"] = "IN_PROGRESS"
+    validate_runtime_readiness(data, schema_path=SCHEMA_PATH)
+
+    data["milestones"]["M2"]["status"] = "COMPLETE"
+    with pytest.raises(W1W3ReadinessError, match="W3-A, W3-B"):
+        validate_runtime_readiness(data, schema_path=SCHEMA_PATH)
+
+
+def test_received_w3_c_is_not_enough_to_complete_m3() -> None:
+    data = _readiness()
+    data["milestones"]["M3"]["status"] = "COMPLETE"
+
+    with pytest.raises(W1W3ReadinessError, match="W3-C"):
+        validate_runtime_readiness(data, schema_path=SCHEMA_PATH)
+
+
+def test_readiness_uses_implementation_pin_and_retains_receipt_pin_separately() -> None:
+    validate_runtime_source_pins(_readiness(), _baseline())
+
+    stale = _readiness()
+    stale["w3_source_sha"] = stale["w1_source_sha"]
+    with pytest.raises(W1W3ReadinessError, match="implementation SHA"):
+        validate_runtime_source_pins(stale, _baseline())
 
 
 def test_false_ready_is_rejected_until_required_gates_are_verified() -> None:
@@ -80,4 +116,13 @@ def test_completed_milestone_cannot_move_backwards() -> None:
     after["milestones"]["M1"]["status"] = "IN_PROGRESS"
 
     with pytest.raises(W1W3ReadinessError, match="M1.*backwards"):
+        validate_runtime_readiness_transition(before, after, schema_path=SCHEMA_PATH)
+
+
+def test_received_gate_cannot_move_back_to_open() -> None:
+    before = _readiness()
+    after = deepcopy(before)
+    _gate(after, "W3-C")["status"] = "OPEN"
+
+    with pytest.raises(W1W3ReadinessError, match="W3-C.*backwards"):
         validate_runtime_readiness_transition(before, after, schema_path=SCHEMA_PATH)

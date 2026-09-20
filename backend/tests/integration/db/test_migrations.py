@@ -19,13 +19,13 @@ DATABASE_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 RUNTIME_ROLE_TEMPLATE_SQL = BACKEND_ROOT / "infra" / "postgres" / "runtime_roles.sql"
 
 
-def test_current_migration_head_includes_w4_worker_currentness_rls() -> None:
+def test_current_migration_head_includes_w4_candidate_result_version() -> None:
     """Keep the latest W1-owned persistence boundary in the forward-only chain."""
 
     config = Config(str(BACKEND_ROOT / "alembic.ini"))
     assert (
         ScriptDirectory.from_config(config).get_current_head()
-        == "030_w4_worker_currentness_rls"
+        == "033_w4_candidate_result_version"
     )
 
 

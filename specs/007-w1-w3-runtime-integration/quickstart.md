@@ -10,23 +10,26 @@ From the repository root:
 
 ```powershell
 git rev-parse HEAD
-(Get-Content -Raw w3/HANDOFF_RECEIPT.json | ConvertFrom-Json).full_commit
-Get-FileHash -Algorithm SHA256 w3/docs/w3-core-runtime-handoff-2026-09-18.md
+git -C w3/Project_EPICK_Service rev-parse HEAD
+git -C w3/Project_EPICK_Service cat-file -t 3b23e0843a134fb341e6a256576ccf52fedbf4a8
+python backend/scripts/verify_w3_runtime_provenance.py --w3-root w3/Project_EPICK_Service
 ```
 
 Expected:
 
-- W3 source is `c7e6788168c048941bdabe7ed8cb01007edeecec`.
-- The handoff hash matches `w3/HANDOFF_RECEIPT.json`.
+- W3 implementation is `3b23e0843a134fb341e6a256576ccf52fedbf4a8` and receipt HEAD is
+  `34660343f197c74cc03459a93e0160e46adbcd2b`.
+- The implementation commit is an ancestor of receipt HEAD and runtime paths have no drift.
 - No runtime env, Queue URL, Role ID, token, owner ID or database URL is printed.
 
 ## 2. M1 — image and single-host state
 
 ```powershell
-docker build --pull --tag epick-w3-core-runtime:c7e6788 --file w3/Dockerfile w3
+python backend/scripts/export_w3_runtime_context.py --source w3/Project_EPICK_Service --commit 3b23e0843a134fb341e6a256576ccf52fedbf4a8
+docker build --pull --tag epick-w3-core-runtime:3b23e084 --file backend/infra/w3-runtime.Dockerfile .runtime/w3-build-context
 docker compose --file backend/infra/w3-runtime.compose.yml config
 docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,nodev,size=16m `
-  epick-w3-core-runtime:c7e6788 `
+  epick-w3-core-runtime:3b23e084 `
   smoke --directory /tmp/smoke
 python -m pytest backend/tests/contract/test_w3_runtime_deployment.py -q
 ```
@@ -45,14 +48,14 @@ run `inspect` from the replacement container. Expected M1 evidence:
 
 Validate `runtime-readiness.schema.json`. Do not proceed when these are absent:
 
-- M2: W3-A and W3-B verified;
-- M3: W3-C/W3-E verified plus revisioned retention approval;
+- M2 W1 work: may run now; actual cutover requires W3-A and W3-B verified;
+- M3 W1 work: may run with verified `w3.retention/1.1`; dispatcher cutover requires W3-C transport/ACK adoption;
 - M4: M1/M2 complete and actual workload identity assigned;
 - M5: M1–M4 complete and W3-F executor/window confirmed.
 
 ## 4. M2 — actual caller and Authority
 
-After W3-A/B:
+Run W1 contract/service work now. Run actual caller/client integration only after W3-A/B:
 
 ```powershell
 python -m pytest backend/tests/contract/test_w3_authority_contract.py -q
@@ -64,9 +67,9 @@ Exercise current, source mismatch, cancel, deletion epoch mismatch, 401/403/404/
 Expected: only current input returns a valid snapshot; all other cases are fail-closed and emit no
 SQS message or new W1 decision.
 
-## 5. M3 — deletion and operations
+## 5. M3 — deletion, Source retirement, and operations
 
-After W3-C/E and retention approval:
+Run W1 persistence and lifecycle work against `w3.retention/1.1`; run dispatcher cutover after W3-C:
 
 ```powershell
 python -m pytest backend/tests/integration/db/test_w3_deletion_dispatch.py -q

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://epick.local/contracts/w1/private/w3-authority-request.v1.schema.json",
+  "title": "W1 private W3 authority request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "job_id", "source_id"],
+  "properties": {
+    "schema_version": {
+      "const": "w1.private.w3-authority-request.v1"
+    },
+    "job_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "source_id": {
+      "type": "string",
+      "format": "uuid"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: epick-local-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: epick
+      POSTGRES_PASSWORD: epick_2026_local
+      POSTGRES_DB: epick_local
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - epick-postgres-data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U epick -d epick_local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  epick-postgres-data:

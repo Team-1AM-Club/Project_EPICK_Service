@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "w1.private.w4.recommendation-execution.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "message_id", "message_type", "producer", "occurred_at",
+    "owner_user_id", "run_id", "binding_id", "contract_version",
+    "engine_source_revision", "schema_manifest_sha256", "correlation_id"
+  ],
+  "properties": {
+    "schema_version": {"const": "w1.w4.recommendation-exec/1"},
+    "message_id": {"type": "string", "format": "uuid"},
+    "message_type": {"const": "w1.private.w4.recommendation-execution.v1"},
+    "producer": {"const": "w1"},
+    "occurred_at": {"type": "string", "format": "date-time"},
+    "owner_user_id": {"type": "string", "format": "uuid"},
+    "run_id": {"type": "string", "format": "uuid"},
+    "binding_id": {"type": "string", "format": "uuid"},
+    "contract_version": {"const": "w1-w4-recommendation/1.0"},
+    "engine_source_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "schema_manifest_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "correlation_id": {"type": "string", "format": "uuid"}
+  }
+}

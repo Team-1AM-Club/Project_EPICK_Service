@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:epick:w3-c01:0.2-candidate:delivery-response",
+  "additionalProperties": false,
+  "properties": {
+    "delivered": {
+      "const": true,
+      "title": "Delivered",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "delivered"
+  ],
+  "title": "DeliveryResponse",
+  "type": "object"
+}

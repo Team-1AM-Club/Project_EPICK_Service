@@ -14,13 +14,17 @@ feature into a perpetually gated deployment project and invalidate its existing 
 
 ## Decision 2 — Reproducible W3 image
 
-**Decision**: Build from W3 full SHA `c7e6788168c048941bdabe7ed8cb01007edeecec` with `uv.lock`,
-Python 3.12, a non-root runtime user, read-only rootfs, bounded `/tmp` tmpfs and one `/state` volume.
-Push a commit-SHA tag but deploy only `repository@sha256:manifest`.
+**Decision**: Treat `w3/Project_EPICK_Service` as a read-only independent clone, verify runtime
+implementation SHA `3b23e0843a134fb341e6a256576ccf52fedbf4a8` is an ancestor of documentation
+receipt HEAD `34660343f197c74cc03459a93e0160e46adbcd2b`, and prove no runtime-path drift. Export an
+allowlisted build context from the implementation commit and build it with `uv.lock`, Python 3.12,
+a non-root runtime user, read-only rootfs, bounded `/tmp` tmpfs and one `/state` volume. Push an
+implementation-SHA tag but deploy only `repository@sha256:manifest`.
 
-**Rationale**: The W3 handoff is source-verified but contains no Dockerfile/Compose or immutable image.
-The lockfile and package metadata provide a reproducible dependency boundary; digest deployment
-prevents a mutable tag from changing the tested runtime.
+**Rationale**: The actual W3 Git objects are now locally verifiable, while the former `c7e678...`
+handoff image is stale and its W1-owned Dockerfile was removed when the clone replaced the copied
+tree. A Git archive prevents `.git`, `.venv` and working-tree-only files entering the image context;
+the lockfile and digest deployment prevent a mutable branch or tag changing the tested runtime.
 
 **Alternatives considered**: Install W3 directly on the host; rejected because dependencies,
 identity and restart evidence would not be immutable. Build from an unpinned branch; rejected because
@@ -84,10 +88,11 @@ explicitly does not require one.
 
 ## Decision 7 — Runtime operations
 
-**Decision**: W1-managed scheduling invokes bounded `relay-once`, `expire` and `inspect` operations
-against the same state volume. `HELD` emits an alert and stops automatic retry. Replay is an explicit,
-audited operator action after W3 technical review. Production retention stays gated on a revisioned
-product/privacy decision.
+**Decision**: W1-managed scheduling invokes bounded `relay-once`, `expire`, `inspect` and redacted
+quarantine `backup` operations against the same state volume. `HELD` emits an alert and stops
+automatic retry. Replay is an explicit, audited operator action after W3 technical review. Runtime
+deadlines are the immutable `w3.retention/1.1` values; the CLI compatibility input is exactly
+`1209600` seconds.
 
 **Rationale**: W3's CLI is deliberately one-shot and its retry budget transitions to HELD. A bounded
 scheduler makes each execution observable and restartable without wrapping it in an unreviewed
@@ -99,9 +104,10 @@ because PENDING/RETRY/HELD require resolution rather than deletion.
 
 ## Decision 8 — Backup and recovery
 
-**Decision**: Permit only W3's redacted, quarantined backup for counter/tombstone inspection. Do not
-restore raw SQLite, Docker volume, filesystem or EBS snapshots as live primary. Keep live
-reconstruction blocked until W3-E defines and approves a procedure.
+**Decision**: Permit only W3's redacted, quarantined backup for counter/tombstone inspection with the
+policy-defined maximum lifecycle. Do not restore raw SQLite, Docker volume, filesystem or EBS
+snapshots as live primary. W3-E is satisfied by `w3.retention/1.1`; no live reconstruction procedure
+is approved.
 
 **Rationale**: Raw restore can resurrect deleted event bodies and roll back revision/deletion state.
 The handed-off backup intentionally disables supply/relay/replay.
@@ -136,6 +142,7 @@ not service behavior. Reuse T043 as actual producer proof; rejected because T043
 
 ## Resolved unknowns and explicit gates
 
-No implementation choice is left as an unqualified `NEEDS CLARIFICATION`. Missing inter-team values
-are deliberate gates: W3-A/B block M2, W3-C/E plus retention approval block M3, M1/M2 block M4, and
-M1–M4 plus W3-F block M5. The plan defines what each gate must supply and forbids placeholder READY values.
+No implementation choice is left as an unqualified `NEEDS CLARIFICATION`. W3-E is resolved by the
+approved implementation. Missing inter-team values remain deliberate cutover gates: W3-A/B block
+M2 actual binding, W3-C transport/ACK adoption blocks M3 closure, M1/M2 block M4, and M1–M4 plus
+W3-F block M5. W1-owned work before those cutovers may proceed without placeholder READY values.

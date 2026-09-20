@@ -21,6 +21,8 @@ from app.models.jobs import (
     OutboxMessage,
     OwnerExecutionSlot,
 )
+from app.models.recommendation_execution import RecommendationExecutionBinding
+from app.models.recommendations import RecommendationRun
 from app.models.sources import AnalysisSourceDecision, JobSourceLink
 from app.models.w2_commit_operations import W2CommitOperation
 from app.runtime.core_decision_binding import (
@@ -38,9 +40,12 @@ _PRIVATE_DISPATCH_MESSAGE_TYPE = "job.command.dispatch"
 _W2_COLLECTION_COMMAND_MESSAGE_TYPE = "w1.private.w2.collection-command.v1"
 _W2_DIRECT_SOURCE_REGISTRATION_MESSAGE_TYPE = "w1.private.w2.direct-source-registration.v1"
 _W2_COMMIT_GATE_MESSAGE_TYPE = "w1.private.w2.commit-gate.v1"
+_W4_RECOMMENDATION_EXECUTION_MESSAGE_TYPE = "w1.private.w4.recommendation-execution.v1"
+_W4_RECOMMENDATION_EXECUTION_SCHEMA_VERSION = "w1.w4.recommendation-exec/1"
 _W1_EXECUTION_QUEUE = "w1_execution"
 _W2_COLLECTION_COMMAND_QUEUE = "w2_collection_command"
 _W2_COMMIT_GATE_COMMAND_QUEUE = "w2_commit_gate_command"
+_W4_RECOMMENDATION_EXECUTION_QUEUE = "w4_recommendation_execution"
 _MAX_SQS_BODY_BYTES = 16 * 1024
 
 
@@ -88,6 +93,10 @@ class QueueUrlRegistry:
             logical_key=_W2_COMMIT_GATE_COMMAND_QUEUE,
             message_type=_W2_COMMIT_GATE_MESSAGE_TYPE,
         ),
+        _W4_RECOMMENDATION_EXECUTION_MESSAGE_TYPE: QueueRoute(
+            logical_key=_W4_RECOMMENDATION_EXECUTION_QUEUE,
+            message_type=_W4_RECOMMENDATION_EXECUTION_MESSAGE_TYPE,
+        ),
     }
 
     def __init__(
@@ -96,6 +105,7 @@ class QueueUrlRegistry:
         w1_execution_queue_url: str | None,
         w2_collection_command_queue_url: str | None = None,
         w2_commit_gate_command_queue_url: str | None = None,
+        w4_recommendation_execution_queue_url: str | None = None,
         commit_gate_only: bool = False,
     ) -> None:
         if commit_gate_only and not w2_commit_gate_command_queue_url:
@@ -109,6 +119,7 @@ class QueueUrlRegistry:
             _W2_COMMIT_GATE_COMMAND_QUEUE: (
                 w2_commit_gate_command_queue_url or w2_collection_command_queue_url
             ),
+            _W4_RECOMMENDATION_EXECUTION_QUEUE: w4_recommendation_execution_queue_url,
         }
         self._commit_gate_only = commit_gate_only
 
@@ -328,16 +339,31 @@ class OutboxRelay:
                 message.relay_lease_expires_at = now + timedelta(seconds=self._lease_seconds)
 
                 try:
-                    command, job = self._require_private_job_command(
-                        session=session, message=message
-                    )
+                    if message.message_type == _W4_RECOMMENDATION_EXECUTION_MESSAGE_TYPE:
+                        binding, recommendation_run = self._require_private_recommendation(
+                            session=session,
+                            message=message,
+                        )
+                    else:
+                        binding = None
+                        recommendation_run = None
+                        command, job = self._require_private_job_command(
+                            session=session, message=message
+                        )
                     _, queue_url = self._queues.resolve(message_type=message.message_type)
-                    body = self._serialize_private_dispatch(
-                        message=message,
-                        command=command,
-                        job=job,
-                        issued_at=now,
-                    )
+                    if binding is not None and recommendation_run is not None:
+                        body = self._serialize_w4_recommendation_dispatch(
+                            message=message,
+                            binding=binding,
+                            issued_at=now,
+                        )
+                    else:
+                        body = self._serialize_private_dispatch(
+                            message=message,
+                            command=command,
+                            job=job,
+                            issued_at=now,
+                        )
                 except (OutboxPayloadError, OutboxRouteError) as error:
                     if command is None or job is None:
                         command, job = self._read_current_job_command(
@@ -365,11 +391,24 @@ class OutboxRelay:
                             "epick_schema_version": message.schema_version,
                             "epick_message_id": str(
                                 message.id
-                                if message.message_type == _W2_COMMIT_GATE_MESSAGE_TYPE
+                                if message.message_type
+                                in {
+                                    _W2_COMMIT_GATE_MESSAGE_TYPE,
+                                    _W4_RECOMMENDATION_EXECUTION_MESSAGE_TYPE,
+                                }
                                 else command.id
                             ),
-                            "epick_command_id": str(command.id),
-                            "epick_job_id": str(job.id),
+                            **(
+                                {
+                                    "epick_run_id": str(recommendation_run.id),
+                                    "epick_binding_id": str(binding.id),
+                                }
+                                if binding is not None and recommendation_run is not None
+                                else {
+                                    "epick_command_id": str(command.id),
+                                    "epick_job_id": str(job.id),
+                                }
+                            ),
                         },
                         attempts=message.attempts,
                     )
@@ -475,6 +514,58 @@ class OutboxRelay:
         return command, job
 
     @staticmethod
+    def _require_private_recommendation(
+        *, session: Session, message: OutboxMessage
+    ) -> tuple[RecommendationExecutionBinding, RecommendationRun]:
+        if (
+            message.recommendation_run_id is None
+            or message.owner_user_id is None
+            or message.owner_deletion_epoch is None
+            or message.command_id is not None
+            or message.job_id is not None
+            or message.execution_fence is not None
+            or message.schema_version != _W4_RECOMMENDATION_EXECUTION_SCHEMA_VERSION
+        ):
+            raise OutboxPayloadError("OUTBOX_W4_RECOMMENDATION_REFERENCE_INVALID")
+        run = session.scalar(
+            select(RecommendationRun)
+            .where(RecommendationRun.id == message.recommendation_run_id)
+            .with_for_update()
+        )
+        binding = session.scalar(
+            select(RecommendationExecutionBinding)
+            .where(RecommendationExecutionBinding.run_id == message.recommendation_run_id)
+            .with_for_update()
+        )
+        owner = session.scalar(
+            select(User).where(User.id == message.owner_user_id).with_for_update()
+        )
+        if run is None or binding is None or owner is None:
+            raise OutboxPayloadError("OUTBOX_W4_RECOMMENDATION_REFERENCE_NOT_FOUND")
+        payload = message.payload
+        expected = {
+            "run_id": str(run.id),
+            "binding_id": str(binding.id),
+            "contract_version": binding.contract_version,
+            "engine_source_revision": binding.engine_source_revision,
+        }
+        if (
+            run.owner_user_id != message.owner_user_id
+            or run.result_origin != "ENGINE"
+            or run.status != "PENDING"
+            or binding.execution_status != "PENDING"
+            or binding.owner_deletion_epoch != message.owner_deletion_epoch
+            or owner.deletion_epoch != message.owner_deletion_epoch
+            or owner.account_status != "ACTIVE"
+            or not isinstance(payload, dict)
+            or set(payload) != {*expected, "schema_manifest_sha256"}
+            or any(payload.get(key) != value for key, value in expected.items())
+            or not isinstance(payload.get("schema_manifest_sha256"), str)
+        ):
+            raise OutboxPayloadError("OUTBOX_W4_RECOMMENDATION_REFERENCE_STALE")
+        return binding, run
+
+    @staticmethod
     def _validate_commit_gate_message(
         *, session: Session, message: OutboxMessage, command: JobCommand, job: Job
     ) -> None:
@@ -519,10 +610,7 @@ class OutboxRelay:
                 and payload.get("purge_owner_deletion_epoch")
                 != operation.purge_owner_deletion_epoch
             )
-            or (
-                action != "PURGE"
-                and "purge_owner_deletion_epoch" in payload
-            )
+            or (action != "PURGE" and "purge_owner_deletion_epoch" in payload)
             # ABORT/PURGE are deliberately emitted after a W1 cancellation or
             # deletion fence.  Their original W2 command may therefore already
             # be INVALIDATED/CONSUMED, unlike PREPARE/FINALIZE.
@@ -594,9 +682,7 @@ class OutboxRelay:
                 else "W2_SOURCE_COLLECTION"
             )
             pin_key = (
-                "direct_source_registration_pin"
-                if is_direct_registration
-                else "core_decision_pin"
+                "direct_source_registration_pin" if is_direct_registration else "core_decision_pin"
             )
             if command.command_type != expected_command_type:
                 raise OutboxPayloadError("OUTBOX_W2_COMMAND_TYPE_INVALID")
@@ -646,9 +732,7 @@ class OutboxRelay:
                     resolved_company_id = None
                     if dispatch_pin.get("decision_scope") == QUESTION_MATCHING_SCOPE:
                         owner = session.scalar(
-                            select(User)
-                            .where(User.id == job.owner_user_id)
-                            .with_for_update()
+                            select(User).where(User.id == job.owner_user_id).with_for_update()
                         )
                         binding = session.scalar(
                             select(JobCoreDecisionBinding)
@@ -820,6 +904,40 @@ class OutboxRelay:
             raise OutboxPayloadError("OUTBOX_DISPATCH_TOO_LARGE")
         return body
 
+    @staticmethod
+    def _serialize_w4_recommendation_dispatch(
+        *,
+        message: OutboxMessage,
+        binding: RecommendationExecutionBinding,
+        issued_at: datetime,
+    ) -> str:
+        payload = message.payload
+        dispatch: dict[str, object] = {
+            "schema_version": _W4_RECOMMENDATION_EXECUTION_SCHEMA_VERSION,
+            "message_id": str(message.id),
+            "message_type": _W4_RECOMMENDATION_EXECUTION_MESSAGE_TYPE,
+            "producer": "w1",
+            "occurred_at": issued_at.isoformat().replace("+00:00", "Z"),
+            "owner_user_id": str(binding.owner_user_id),
+            "run_id": str(binding.run_id),
+            "binding_id": str(binding.id),
+            "contract_version": payload["contract_version"],
+            "engine_source_revision": payload["engine_source_revision"],
+            "schema_manifest_sha256": payload["schema_manifest_sha256"],
+            "correlation_id": str(message.id),
+        }
+        schema_path = Path(__file__).parents[2] / "contracts" / "w4" / "v1" / "dispatch.schema.json"
+        validator = Draft202012Validator(
+            json.loads(schema_path.read_text(encoding="utf-8")),
+            format_checker=FormatChecker(),
+        )
+        if list(validator.iter_errors(dispatch)):
+            raise OutboxPayloadError("OUTBOX_W4_RECOMMENDATION_SCHEMA_INVALID")
+        body = json.dumps(dispatch, ensure_ascii=False, separators=(",", ":"))
+        if len(body.encode("utf-8")) > _MAX_SQS_BODY_BYTES:
+            raise OutboxPayloadError("OUTBOX_DISPATCH_TOO_LARGE")
+        return body
+
     def _mark_published(self, *, claim: RelayClaim) -> bool:
         with self._session_factory.begin() as session:
             message = self._get_current_claim_for_update(session=session, claim=claim)
@@ -891,7 +1009,8 @@ class OutboxRelay:
 
     @staticmethod
     def _get_current_claim_for_update(
-        *, session: Session,
+        *,
+        session: Session,
         claim: RelayClaim,
     ) -> OutboxMessage | None:
         message = session.scalar(
@@ -907,7 +1026,8 @@ class OutboxRelay:
 
     @staticmethod
     def _read_current_job_command(
-        *, session: Session,
+        *,
+        session: Session,
         message: OutboxMessage,
     ) -> tuple[JobCommand | None, Job | None]:
         command = (

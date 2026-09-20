@@ -7,6 +7,9 @@ from uuid import uuid4
 
 import pytest
 
+RETENTION_SECONDS = "1209600"
+POLICY_REVISION = "w3.retention/1.1"
+
 
 @pytest.mark.skipif(
     os.getenv("W3_RUNTIME_DOCKER_TEST") != "YES",
@@ -29,7 +32,14 @@ def test_w3_sqlite_state_survives_container_recreation() -> None:
             image,
         ]
         initialized = subprocess.run(
-            [*base, "init", "--db", "/state/core.db", "--retention-seconds", "3600"],
+            [
+                *base,
+                "init",
+                "--db",
+                "/state/core.db",
+                "--retention-seconds",
+                RETENTION_SECONDS,
+            ],
             check=True,
             capture_output=True,
             text=True,
@@ -39,9 +49,21 @@ def test_w3_sqlite_state_survives_container_recreation() -> None:
         first = _inspect(base)
         second = _inspect(base)
         assert first == second
+        assert first["policy_revision"] == POLICY_REVISION
+        assert first["migration_blockers"] == {
+            "owner_tombstone_without_deleted_at": 0
+        }
+        assert isinstance(first["deliveries"], list)
 
         repeated_init = subprocess.run(
-            [*base, "init", "--db", "/state/core.db", "--retention-seconds", "3600"],
+            [
+                *base,
+                "init",
+                "--db",
+                "/state/core.db",
+                "--retention-seconds",
+                RETENTION_SECONDS,
+            ],
             check=False,
             capture_output=True,
             text=True,
@@ -59,7 +81,14 @@ def test_w3_sqlite_state_survives_container_recreation() -> None:
 
 def _inspect(base: list[str]) -> dict[str, object]:
     completed = subprocess.run(
-        [*base, "inspect", "--db", "/state/core.db", "--retention-seconds", "3600"],
+        [
+            *base,
+            "inspect",
+            "--db",
+            "/state/core.db",
+            "--retention-seconds",
+            RETENTION_SECONDS,
+        ],
         check=True,
         capture_output=True,
         text=True,

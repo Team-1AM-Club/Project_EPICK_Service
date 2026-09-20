@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.schemas.common import ApiErrorResponse
 from app.api.v1.account import router as account_router
 from app.api.v1.activities import router as activities_router
+from app.api.v1.auth import router as auth_router
 from app.api.v1.companies import router as companies_router
 from app.api.v1.episodes import router as episodes_router
 from app.api.v1.inferences import router as inferences_router
@@ -29,6 +30,7 @@ API_ERROR_RESPONSES = {
 
 
 router = APIRouter(prefix="/api/v1", responses=API_ERROR_RESPONSES)
+router.include_router(auth_router)
 router.include_router(account_router)
 router.include_router(activities_router)
 router.include_router(episodes_router)

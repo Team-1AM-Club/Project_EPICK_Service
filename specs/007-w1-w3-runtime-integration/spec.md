@@ -128,7 +128,8 @@ W1 currentness 차단, 다른 owner 무영향 및 durable retry를 검증한다.
 - Authority가 401/403/404/409/503 또는 timeout을 반환해도 caller body로 우회하지 않는다.
 - W3 relay가 SQS 성공 후 SQLite commit 전에 종료돼도 같은 bytes 재전송으로 수렴한다.
 - 삭제 dispatcher가 중복 실행되거나 더 낮은 deletion epoch를 전달해도 상태가 후퇴하지 않는다.
-- retention은 `TRANSPORT_HANDOFF` event에만 적용하며 PENDING/RETRY/HELD를 시간만으로 제거하지 않는다.
+- `w3.retention/1.1`은 PENDING/RETRY/HELD 본문을 절대 최대 기한에, `TRANSPORT_HANDOFF` 본문을
+  handoff 기한과 절대 최대 중 이른 시점에 안전하게 제거하되 delivery metadata를 즉시 없애지 않는다.
 - raw SQLite DB, Docker volume 또는 filesystem/EBS snapshot을 live primary로 복원하지 않는다.
 - W3 actual role과 T043 합성 sender role을 혼용하지 않는다.
 
@@ -136,8 +137,9 @@ W1 currentness 차단, 다른 owner 무영향 및 durable retry를 검증한다.
 
 ### Functional Requirements
 
-- **FR-001**: W1은 W3 source full SHA `c7e6788168c048941bdabe7ed8cb01007edeecec`와
-  locked dependencies로 재현 가능한 container image recipe를 제공해야 한다.
+- **FR-001**: W1은 독립 clone의 W3 runtime 구현 SHA
+  `3b23e0843a134fb341e6a256576ccf52fedbf4a8`와 locked dependencies로 재현 가능한 container
+  image recipe를 제공하고 receipt HEAD `34660343f197c74cc03459a93e0160e46adbcd2b`를 별도 기록해야 한다.
 - **FR-002**: W3 image는 non-root로 실행되고 root filesystem은 read-only이며 writable state는
   `/state` named volume과 제한된 tmpfs에만 존재해야 한다.
 - **FR-003**: 모든 W3 runtime process는 같은 host의 `/state/core.db`를 사용해야 하며 다중 host,
@@ -152,11 +154,14 @@ W1 currentness 차단, 다른 owner 무영향 및 durable retry를 검증한다.
   실패를 fail-closed로 처리해야 한다.
 - **FR-008**: W1은 삭제 확정과 함께 durable deletion dispatch를 생성하고 W3 `delete_owner`에
   적어도 한 번 전달하되 owner/epoch 단위로 idempotent하게 수렴해야 한다.
-- **FR-009**: 삭제 dispatcher는 다른 owner나 공유 company/Source revision counter를 제거해서는 안 된다.
+- **FR-009**: 삭제 dispatcher는 다른 owner나 공유 company/Source revision counter를 제거해서는
+  안 되며, W1 Source registry가 영구 폐기를 확정한 경우에만 W3 `retire_source`를 내구성 있게
+  호출해야 한다. 일시 unavailable/unknown은 영구 폐기로 변환해서는 안 된다.
 - **FR-010**: 운영 runner는 bounded relay retry, expire와 inspect를 실행하고 `HELD`를 경보하되
   사람의 판정 없이 자동 replay하지 않아야 한다.
-- **FR-011**: production retention/tombstone 기간과 replay/폐기 승인은 제품·개인정보 승인 revision이
-  존재하기 전까지 GATE로 남아야 한다.
+- **FR-011**: runtime은 승인된 `w3.retention/1.1`의 handoff 14일, private body 절대 최대 30일,
+  terminal metadata/retired counter 90일, owner tombstone 365일, quarantine backup 최대 30일을
+  변경 없이 적용하고 replay가 절대 최대 기한을 연장하지 못하게 해야 한다.
 - **FR-012**: W3 workload IAM role은 지정 Main Queue의 `SendMessage`만 허용하고 W1 worker role은
   수신·삭제·visibility 변경에 필요한 최소 권한만 가져야 한다.
 - **FR-013**: W3 STS Role ID, W3 expected role ID와 W1 expected SenderId는 동일해야 하며 body
@@ -171,8 +176,9 @@ W1 currentness 차단, 다른 owner 무영향 및 durable retry를 검증한다.
   1건이어야 한다.
 - **FR-018**: 종료 증거는 양측 source SHA/image digest/role identity, W3 inspect counts, SQS outcome,
   W1 row/action/command counts와 cleanup 결과를 포함해야 한다.
-- **FR-019**: M2는 W3-A/B, M3는 W3-C/E 및 retention 승인, M4는 M1/M2, M5는 M1–M4와 W3-F가
-  충족되기 전 READY 또는 완료로 표시해서는 안 된다.
+- **FR-019**: M2 actual cutover는 W3-A/B, M3 dispatcher closure는 W3-C, M4는 M1/M2, M5는
+  M1–M4와 W3-F가 충족되기 전 READY 또는 완료로 표시해서는 안 된다. W3-E retention policy는
+  `w3.retention/1.1` 구현 pin으로 VERIFIED 상태다.
 - **FR-020**: W2 CT-15, W4 Question Core CT-12와 Neo4j 저장소 선택은 이 기능의 완료 조건이 아니다.
 
 ### Key Entities
@@ -201,8 +207,10 @@ W1 currentness 차단, 다른 owner 무영향 및 durable retry를 검증한다.
 
 ## Assumptions and External Gates
 
-- W3 source pin과 기존 wire contract `w3.private.core-decision/0.1-candidate`는 변경하지 않는다.
+- W3 implementation pin `3b23e084...`, receipt HEAD `34660343...`와 기존 wire contract
+  `w3.private.core-decision/0.1-candidate`는 변경하지 않는다.
 - W1 W3 inbound consumer와 T043 격리 검증은 완료됐으며 이 기능은 actual W3 runtime 연결에 집중한다.
 - M1은 즉시 착수 가능하지만 최종 digest 확정 전 W3-D review가 필요하다.
-- M2는 W3-A/B, M3는 W3-C/E와 제품·개인정보 retention 승인, M5는 W3-F 공동 실행자가 필요하다.
-- 실제 분석 caller의 소유 서비스와 production retention 숫자는 현재 미정이며 구현에서 추측하지 않는다.
+- M2 actual cutover는 W3-A/B, M3 dispatcher closure는 W3-C, M5는 W3-F 공동 실행자가 필요하다.
+- 실제 분석 caller의 소유 서비스는 현재 미정이며 구현에서 추측하지 않는다. Production retention
+  숫자는 `w3.retention/1.1`로 확정됐으므로 다른 환경값으로 재정의하지 않는다.

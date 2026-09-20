@@ -8,6 +8,7 @@ These contracts design the M1–M5 integration boundary without changing the ado
 | `authority-request.schema.json` | W1 | Minimal W3→W1 currentness lookup input | W3-B |
 | `authority-response.schema.json` | W1 | W1-derived fields matching W3 `Authorization` | W3-B |
 | `deletion-command.schema.json` | W1 | Durable owner/epoch deletion delivery to W3 | W3-C |
+| `source-retirement-command.schema.json` | W1 | Durable permanent Source-retirement delivery to W3 | W3-C |
 | `runtime-readiness.schema.json` | Joint | Non-secret M1–M4 readiness record | W3-D/E |
 | `joint-ct12-scenarios.md` | Joint | M5 execution and evidence matrix | W3-F |
 

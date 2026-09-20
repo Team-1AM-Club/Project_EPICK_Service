@@ -382,6 +382,64 @@ def test_runtime_privilege_manifest_is_role_scoped_and_deny_by_default(
             migrated_engine, "epick_lookup", "job_core_decision_bindings", "SELECT"
         )
 
+        for table_name, column_name in (
+            ("users", "id"),
+            ("users", "account_status"),
+            ("users", "deletion_epoch"),
+            ("jobs", "owner_user_id"),
+            ("jobs", "status"),
+            ("jobs", "owner_deletion_epoch"),
+            ("jobs", "analysis_input_version"),
+            ("job_source_links", "job_id"),
+            ("job_source_links", "owner_user_id"),
+            ("job_source_links", "source_id"),
+            ("job_source_links", "analysis_input_version"),
+            ("sources", "id"),
+            ("sources", "company_id"),
+        ):
+            assert _has_column_privilege(
+                migrated_engine,
+                "epick_w3_authority",
+                table_name,
+                column_name,
+                "SELECT",
+            )
+        for table_name, column_name in (
+            ("users", "email"),
+            ("users", "display_name"),
+            ("jobs", "safe_failure_message"),
+            ("job_source_links", "command_id"),
+            ("sources", "canonical_url"),
+        ):
+            assert not _has_column_privilege(
+                migrated_engine,
+                "epick_w3_authority",
+                table_name,
+                column_name,
+                "SELECT",
+            )
+        assert not _has_table_privilege(
+            migrated_engine, "epick_w3_authority", "users", "UPDATE"
+        )
+        assert not _has_table_privilege(
+            migrated_engine, "epick_w3_authority", "outbox_messages", "SELECT"
+        )
+
+        with migrated_engine.begin() as authority_connection:
+            authority_connection.execute(text("SET LOCAL ROLE epick_w3_authority"))
+            authority_connection.execute(
+                text(
+                    "SELECT u.id, u.account_status, u.deletion_epoch, "
+                    "j.id, j.owner_user_id, j.status, j.owner_deletion_epoch, "
+                    "j.analysis_input_version "
+                    "FROM users u JOIN jobs j ON j.owner_user_id = u.id LIMIT 1"
+                )
+            )
+        with pytest.raises(DBAPIError):
+            with migrated_engine.begin() as authority_connection:
+                authority_connection.execute(text("SET LOCAL ROLE epick_w3_authority"))
+                authority_connection.execute(text("SELECT email FROM users LIMIT 1"))
+
         assert _has_table_privilege(migrated_engine, "epick_deleter", "deletion_requests", "UPDATE")
         assert _has_table_privilege(migrated_engine, "epick_deleter", "users", "DELETE")
         assert not _has_table_privilege(migrated_engine, "epick_deleter", "sources", "DELETE")

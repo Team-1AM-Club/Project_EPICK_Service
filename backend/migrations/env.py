@@ -20,6 +20,7 @@ from app.models import (  # noqa: F401
     privacy_controls,
     projection,
     question_analysis,
+    recommendation_execution,
     recommendations,
     sources,
     w2_commit_operations,

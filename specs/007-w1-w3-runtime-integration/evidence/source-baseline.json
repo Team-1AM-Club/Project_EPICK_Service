@@ -1,16 +1,33 @@
 {
   "recorded_at": "2026-09-20",
-  "w1_source_sha": "08f03594201bb972089b12d9998d3518098e903b",
-  "w3_source_sha": "c7e6788168c048941bdabe7ed8cb01007edeecec",
-  "w3_handoff_path": "w3/docs/w3-core-runtime-handoff-2026-09-18.md",
-  "w3_handoff_sha256": "917ff83a93e29740f7e92452be61e3cefb7ff964531e1ed2847971814671ea24",
+  "w1_source_sha": "6352347748f3cfb664672e3a5b35c92e14570aca",
+  "w3_clone_path": "w3/Project_EPICK_Service",
+  "w3_branch": "feat/w3-knowledge-validation",
+  "w3_implementation_sha": "3b23e0843a134fb341e6a256576ccf52fedbf4a8",
+  "w3_receipt_head_sha": "34660343f197c74cc03459a93e0160e46adbcd2b",
+  "w3_runtime_drift_from_implementation_to_receipt": false,
+  "w3_readiness_path": "w3/Project_EPICK_Service/contracts/core-runtime/readiness.json",
   "adopted_event_schema": "w3.private.core-decision/0.1-candidate",
+  "adopted_policy_revision": "w3.retention/1.1",
+  "focused_verification": {
+    "test_files": [
+      "tests/integration/test_core_runtime.py",
+      "tests/integration/test_retention_policy.py"
+    ],
+    "passed": 32,
+    "failed": 0
+  },
+  "superseded_m1": {
+    "w3_source_sha": "c7e6788168c048941bdabe7ed8cb01007edeecec",
+    "local_image_digest": "sha256:441d97ad515e0fcceb1cca39fcbaa96a16a6144dfad9366c2f5cc6fd1e3a3fe9",
+    "disposition": "HISTORICAL_DO_NOT_PUBLISH_OR_DEPLOY"
+  },
   "gates": {
-    "W3-A": "analysis pipeline owner / integration coordinator",
-    "W3-B": "W3 runtime owner",
-    "W3-C": "W3 runtime owner",
-    "W3-D": "W3 runtime owner",
-    "W3-E": "W3 runtime owner + product/privacy approver",
-    "W3-F": "W3/analysis runtime owner"
+    "W3-A": {"status": "OPEN", "owner": "analysis pipeline owner / integration coordinator"},
+    "W3-B": {"status": "OPEN", "owner": "W3 runtime owner + W1 integration owner"},
+    "W3-C": {"status": "RECEIVED", "owner": "W3 runtime owner + W1 integration owner"},
+    "W3-D": {"status": "OPEN", "owner": "W3 runtime owner"},
+    "W3-E": {"status": "VERIFIED", "owner": "W3 runtime owner + product/privacy approver"},
+    "W3-F": {"status": "OPEN", "owner": "W3/analysis runtime owner"}
   }
 }

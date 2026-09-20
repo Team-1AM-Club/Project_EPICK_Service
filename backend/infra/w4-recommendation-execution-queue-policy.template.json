@@ -1,0 +1,20 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyInsecureTransport",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "sqs:*",
+      "Resource": "${W4_RECOMMENDATION_MAIN_QUEUE_ARN}",
+      "Condition": {"Bool": {"aws:SecureTransport": "false"}}
+    },
+    {
+      "Sid": "AllowOnlyW1RecommendationSender",
+      "Effect": "Allow",
+      "Principal": {"AWS": "${W1_RECOMMENDATION_SENDER_ROLE_ARN}"},
+      "Action": "sqs:SendMessage",
+      "Resource": "${W4_RECOMMENDATION_MAIN_QUEUE_ARN}"
+    }
+  ]
+}

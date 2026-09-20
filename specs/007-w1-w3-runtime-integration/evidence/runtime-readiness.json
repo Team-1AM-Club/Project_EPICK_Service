@@ -1,24 +1,23 @@
 {
   "schema_version": "w1-w3.runtime-readiness.v1",
   "status": "M1_IN_PROGRESS",
-  "w1_source_sha": "08f03594201bb972089b12d9998d3518098e903b",
-  "w3_source_sha": "c7e6788168c048941bdabe7ed8cb01007edeecec",
+  "w1_source_sha": "6352347748f3cfb664672e3a5b35c92e14570aca",
+  "w3_source_sha": "3b23e0843a134fb341e6a256576ccf52fedbf4a8",
   "w1_image_digest": null,
   "w3_image_digest": null,
   "milestones": {
     "M1": {
       "status": "IN_PROGRESS",
       "evidence_refs": [
-        "evidence/source-baseline.json",
-        "evidence/m1-image-state.json"
+        "evidence/source-baseline.json"
       ]
     },
     "M2": {
-      "status": "BLOCKED",
+      "status": "NOT_STARTED",
       "evidence_refs": []
     },
     "M3": {
-      "status": "BLOCKED",
+      "status": "NOT_STARTED",
       "evidence_refs": []
     },
     "M4": {
@@ -33,9 +32,9 @@
   "gates": [
     {"id": "W3-A", "status": "OPEN", "owner": "analysis pipeline owner / integration coordinator", "evidence_ref": null},
     {"id": "W3-B", "status": "OPEN", "owner": "W3 runtime owner", "evidence_ref": null},
-    {"id": "W3-C", "status": "OPEN", "owner": "W3 runtime owner", "evidence_ref": null},
+    {"id": "W3-C", "status": "RECEIVED", "owner": "W3 runtime owner + W1 integration owner", "evidence_ref": "w3/Project_EPICK_Service/contracts/core-runtime/readiness.json"},
     {"id": "W3-D", "status": "OPEN", "owner": "W3 runtime owner", "evidence_ref": null},
-    {"id": "W3-E", "status": "OPEN", "owner": "W3 runtime owner + product/privacy approver", "evidence_ref": null},
+    {"id": "W3-E", "status": "VERIFIED", "owner": "W3 runtime owner + product/privacy approver", "evidence_ref": "w3/Project_EPICK_Service/docs/w3-retention-1.1-implementation-handoff-2026-09-20.md"},
     {"id": "W3-F", "status": "OPEN", "owner": "W3/analysis runtime owner", "evidence_ref": null}
   ]
 }

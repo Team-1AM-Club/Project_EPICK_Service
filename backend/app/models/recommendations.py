@@ -268,7 +268,9 @@ class RecommendationCandidate(Base):
     limitation_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     internal_rank: Mapped[int | None] = mapped_column(Integer, nullable=True)
     validation_status: Mapped[str] = mapped_column(String(32), server_default="PENDING")
-    result_version: Mapped[str] = mapped_column(String(64))
+    # W4 publishes ``w4-`` plus a 64-character SHA-256 digest. Keep this in
+    # sync with recommendation_publications.result_version and its contract.
+    result_version: Mapped[str] = mapped_column(String(128))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

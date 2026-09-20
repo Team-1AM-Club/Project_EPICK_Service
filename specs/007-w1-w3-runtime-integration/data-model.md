@@ -6,7 +6,8 @@ Deployment metadata, not authoritative user state.
 
 | Field | Type | Rules |
 | --- | --- | --- |
-| `w3_source_sha` | 40-char git SHA | Must equal reviewed W3 full SHA |
+| `w3_implementation_sha` | 40-char git SHA | Must equal `3b23e0843a134fb341e6a256576ccf52fedbf4a8`; image source pin |
+| `w3_receipt_head_sha` | 40-char git SHA | Documentation/readiness successor recorded separately; not substituted for image source |
 | `image_repository` | string | Logical ECR repository; no credentials |
 | `image_digest` | `sha256:<64 hex>` | Required before M1 closure; deploy by digest |
 | `runtime_host_class` | enum | `PRIVATE_WORKER_EC2` only for this plan |
@@ -92,18 +93,26 @@ W3-owned SQLite state described by the handed-off runtime; W1 does not migrate o
 `TRANSPORT_HANDOFF` is not evidence of W1 application. `w3_core_counters` survives body expiry and
 owner deletion as documented by W3. Other owners and shared company/Source counters remain intact.
 
-## 6. Runtime Configuration
+## 6. W3 Source Retirement Dispatch
+
+W1's authoritative Source registry distinguishes permanent retirement from transient unavailable
+or unknown. Only a durable permanent transition dispatches `(company_id, source_id, retired_at)` to
+W3 `retire_source`; retry is idempotent and the identifier pair is never reused. The dispatch carries
+no Source content or URL. Transient failures remain retryable W1 state and never create a W3 retired
+Source tombstone.
+
+## 7. Runtime Configuration
 
 Root-owned mode `600`, absent from Git/image/logs.
 
 | Name class | Examples | Rule |
 | --- | --- | --- |
-| W3 state | DB path, approved retention, max attempts | DB path fixed to `/state/core.db`; retention requires approval |
+| W3 state | DB path, policy revision, handoff seconds, max attempts | DB path fixed to `/state/core.db`; revision `w3.retention/1.1`; handoff seconds exactly `1209600` |
 | AWS | region, Main Queue URL, expected stable Role ID | workload credential chain only |
 | Authority | private URL, bearer/identity material, timeout | final names/auth gated on W3-B |
-| Operations | relay/expire cadence, HELD alert target | production values gated on W3-E/approval |
+| Operations | relay/expire cadence, HELD alert target, quarantine backup | five-minute expire runner and fifteen-minute logical-deletion SLO; alert destination remains deployment configuration |
 
-## 7. Joint CT-12 Evidence Manifest
+## 8. Joint CT-12 Evidence Manifest
 
 Non-secret durable integration record.
 
@@ -131,6 +140,8 @@ Actual Analysis Caller
                                     ├─ W3 Delivery State ──> SQS ──> W1 inbound/PostgreSQL
 W1 Deletion Request
   └─ W3 Deletion Target/Dispatch ──> W3 delete_owner/tombstone
+W1 Permanent Source Retirement
+  └─ W3 Source Retirement Dispatch ──> W3 retire_source/counter tombstone
 
 Joint CT-12 Evidence Manifest references every immutable revision and count boundary above.
 ```

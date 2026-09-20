@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w1/v1/core-source-decision.schema.json",
+  "title": "EPICK W1 core Source decision private payload v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "decision_id",
+    "decision_scope",
+    "company_id",
+    "question_version_id",
+    "source_id",
+    "analysis_input_version",
+    "decision_version",
+    "is_core",
+    "decision_code",
+    "reason_code"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "w1.core-source-decision.v1"
+    },
+    "decision_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "decision_scope": {
+      "enum": ["COMPANY_KNOWLEDGE", "QUESTION_MATCHING"]
+    },
+    "company_id": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "question_version_id": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "source_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "analysis_input_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "decision_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "is_core": {
+      "type": "boolean"
+    },
+    "decision_code": {
+      "enum": ["CORE_REQUIRED", "NON_CORE_OPTIONAL"]
+    },
+    "reason_code": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "decision_scope": {
+            "const": "COMPANY_KNOWLEDGE"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "company_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "question_version_id": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "company_id": {
+            "type": "null"
+          },
+          "question_version_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision_code": {
+            "const": "CORE_REQUIRED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "is_core": {
+            "const": true
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "is_core": {
+            "const": false
+          }
+        }
+      }
+    }
+  ]
+}

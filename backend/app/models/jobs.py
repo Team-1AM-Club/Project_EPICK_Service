@@ -268,6 +268,12 @@ class OutboxMessage(Base):
             name="deletion_target_id",
             ondelete="RESTRICT",
         ),
+        ForeignKeyConstraint(
+            ["recommendation_run_id", "owner_user_id"],
+            ["recommendation_runs.id", "recommendation_runs.owner_user_id"],
+            name="recommendation_run_owner_scope",
+            ondelete="RESTRICT",
+        ),
         CheckConstraint(
             f"visibility_scope IN ({VISIBILITY_SCOPE_VALUES})", name="visibility_scope_allowed"
         ),
@@ -289,15 +295,21 @@ class OutboxMessage(Base):
         CheckConstraint(
             "(visibility_scope = 'PUBLIC' AND owner_user_id IS NULL AND job_id IS NULL "
             "AND command_id IS NULL AND execution_fence IS NULL AND owner_deletion_epoch IS NULL "
-            "AND deletion_request_id IS NULL AND deletion_target_id IS NULL) "
+            "AND deletion_request_id IS NULL AND deletion_target_id IS NULL "
+            "AND recommendation_run_id IS NULL) "
             "OR (visibility_scope = 'PRIVATE' AND owner_user_id IS NOT NULL AND job_id IS NOT NULL "
             "AND command_id IS NOT NULL AND execution_fence IS NOT NULL "
             "AND owner_deletion_epoch IS NOT NULL AND deletion_request_id IS NULL "
-            "AND deletion_target_id IS NULL) "
+            "AND deletion_target_id IS NULL AND recommendation_run_id IS NULL) "
             "OR (visibility_scope = 'PRIVATE' AND owner_user_id IS NOT NULL AND job_id IS NULL "
             "AND command_id IS NULL AND execution_fence IS NULL "
             "AND owner_deletion_epoch IS NOT NULL "
-            "AND deletion_request_id IS NOT NULL AND deletion_target_id IS NOT NULL)",
+            "AND deletion_request_id IS NOT NULL AND deletion_target_id IS NOT NULL "
+            "AND recommendation_run_id IS NULL) "
+            "OR (visibility_scope = 'PRIVATE' AND owner_user_id IS NOT NULL "
+            "AND recommendation_run_id IS NOT NULL AND job_id IS NULL AND command_id IS NULL "
+            "AND execution_fence IS NULL AND owner_deletion_epoch IS NOT NULL "
+            "AND deletion_request_id IS NULL AND deletion_target_id IS NULL)",
             name="visibility_reference_scope",
         ),
     )
@@ -315,6 +327,9 @@ class OutboxMessage(Base):
         PostgreSQLUUID(as_uuid=True), nullable=True
     )
     deletion_target_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), nullable=True
+    )
+    recommendation_run_id: Mapped[UUID | None] = mapped_column(
         PostgreSQLUUID(as_uuid=True), nullable=True
     )
     owner_user_id: Mapped[UUID | None] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=True)
@@ -452,9 +467,7 @@ class JobCoreDecisionBinding(Base):
         ),
     )
 
-    id: Mapped[UUID] = mapped_column(
-        PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4
-    )
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
     job_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
     owner_user_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
     source_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
@@ -473,9 +486,7 @@ class JobCoreDecisionBinding(Base):
     decision_version: Mapped[int] = mapped_column(Integer)
     decision_code: Mapped[str] = mapped_column(String(64))
     owner_deletion_epoch: Mapped[int] = mapped_column(BigInteger)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class OwnerExecutionSlot(Base):

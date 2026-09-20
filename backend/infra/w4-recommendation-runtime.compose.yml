@@ -1,0 +1,74 @@
+name: epick-w4-recommendation
+
+services:
+  w1-w4-recommendation-private:
+    image: ${BACKEND_IMAGE:?set BACKEND_IMAGE to an immutable digest}
+    command: ["python", "scripts/run_w4_recommendation_private_adapter.py"]
+    env_file:
+      - ${W1_W4_RECOMMENDATION_ENV_FILE:?set the root-owned W1 private env file}
+    expose:
+      - "8012"
+    networks: [recommendation-private]
+    read_only: true
+    tmpfs:
+      - "/tmp:rw,noexec,nosuid,nodev,size=16m"
+    volumes:
+      - type: bind
+        source: ${RDS_CA_BUNDLE_PATH:?set the host RDS CA bundle}
+        target: /run/epick/rds-ca.pem
+        read_only: true
+        bind:
+          create_host_path: false
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    profiles: ["w4-recommendation"]
+
+  w1-w4-recommendation-relay:
+    image: ${BACKEND_IMAGE:?set BACKEND_IMAGE to an immutable digest}
+    command: ["python", "scripts/run_outbox_relay.py"]
+    env_file:
+      - ${W1_W4_RECOMMENDATION_ENV_FILE:?set the root-owned W1 relay env file}
+    depends_on:
+      - w1-w4-recommendation-private
+    networks: [recommendation-private]
+    read_only: true
+    tmpfs:
+      - "/tmp:rw,noexec,nosuid,nodev,size=16m"
+    volumes:
+      - type: bind
+        source: ${RDS_CA_BUNDLE_PATH:?set the host RDS CA bundle}
+        target: /run/epick/rds-ca.pem
+        read_only: true
+        bind:
+          create_host_path: false
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    profiles: ["w4-recommendation"]
+
+  w4-recommendation-worker:
+    image: ${W4_RECOMMENDATION_IMAGE:?set W4_RECOMMENDATION_IMAGE to an immutable digest}
+    command: ["python", "-m", "epick_w4.w1_runtime"]
+    env_file:
+      - ${W4_RECOMMENDATION_ENV_FILE:?set the root-owned W4 worker env file}
+    volumes:
+      - type: bind
+        source: ${W4_RECOMMENDATION_DISPATCH_SCHEMA_PATH:?set the adopted dispatch schema path}
+        target: /contracts/dispatch.schema.json
+        read_only: true
+    depends_on:
+      - w1-w4-recommendation-private
+      - w1-w4-recommendation-relay
+    networks: [recommendation-private]
+    read_only: true
+    tmpfs:
+      - "/tmp:rw,noexec,nosuid,nodev,size=16m"
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    profiles: ["w4-recommendation"]
+
+networks:
+  recommendation-private:
+    driver: bridge

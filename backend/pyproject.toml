@@ -9,8 +9,10 @@ description = "EPICK job-application material selection service backend"
 requires-python = ">=3.10"
 dependencies = [
     "alembic>=1.19.2",
+    "Authlib>=1.6,<2",
     "boto3>=1.42,<2",
     "fastapi[standard]>=0.141.1",
+    "httpx>=0.28.1,<1",
     "jsonschema>=4.23,<5",
     "pydantic-settings>=2.15.0",
     "psycopg[binary]>=3.3.5",
@@ -19,7 +21,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "httpx>=0.28.1",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",

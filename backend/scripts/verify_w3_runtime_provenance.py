@@ -1,14 +1,28 @@
-"""Verify the received W3 runtime package without network access or mutation."""
+"""Verify the independent W3 Git clone without network access or mutation."""
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
+import re
+import subprocess
 from pathlib import Path
 from typing import Any
 
-EXPECTED_W3_SHA = "c7e6788168c048941bdabe7ed8cb01007edeecec"
+EXPECTED_IMPLEMENTATION_SHA = "3b23e0843a134fb341e6a256576ccf52fedbf4a8"
+EXPECTED_RECEIPT_HEAD_SHA = "34660343f197c74cc03459a93e0160e46adbcd2b"
+EXPECTED_REMOTE = "https://github.com/Team-1AM-Club/Project_EPICK_Service.git"
+EXPECTED_CONTRACT = "w3.private.core-decision/0.1-candidate"
+EXPECTED_POLICY_REVISION = "w3.retention/1.1"
+READINESS_PATH = Path("contracts/core-runtime/readiness.json")
+ARCHIVE_PATHS = (
+    "pyproject.toml",
+    "uv.lock",
+    "src",
+    "tests",
+    "specs/001-source-knowledge-validation/spec.md",
+)
+_FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
 
 
 class W3ProvenanceError(ValueError):
@@ -16,54 +30,157 @@ class W3ProvenanceError(ValueError):
 
 
 def verify_w3_runtime_provenance(
-    *, w3_root: Path, expected_sha: str = EXPECTED_W3_SHA
+    *,
+    w3_root: Path,
+    expected_implementation_sha: str = EXPECTED_IMPLEMENTATION_SHA,
+    expected_receipt_head_sha: str = EXPECTED_RECEIPT_HEAD_SHA,
+    expected_remote: str = EXPECTED_REMOTE,
 ) -> dict[str, Any]:
     root = w3_root.resolve()
-    receipt_path = root / "HANDOFF_RECEIPT.json"
-    try:
-        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as error:
-        raise W3ProvenanceError("W3 handoff receipt is unreadable") from error
-    if not isinstance(receipt, dict):
-        raise W3ProvenanceError("W3 handoff receipt must be an object")
-    if receipt.get("full_commit") != expected_sha or receipt.get("remote_head") != expected_sha:
-        raise W3ProvenanceError("W3 source SHA does not match the pinned revision")
-    if receipt.get("pushed") is not True or receipt.get("remote_fetch_verified") is not True:
-        raise W3ProvenanceError("W3 receipt does not prove the pinned remote revision")
+    _validate_expected_sha(expected_implementation_sha, "implementation")
+    _validate_expected_sha(expected_receipt_head_sha, "receipt HEAD")
+    if not root.is_dir():
+        raise W3ProvenanceError("W3 clone directory is unavailable")
+    if _git(root, "rev-parse", "--is-inside-work-tree") != "true":
+        raise W3ProvenanceError("W3 source is not an independent Git worktree")
 
-    canonical_value = receipt.get("canonical_path")
-    expected_digest = receipt.get("canonical_sha256")
-    if not isinstance(canonical_value, str) or not isinstance(expected_digest, str):
-        raise W3ProvenanceError("W3 canonical handoff metadata is incomplete")
-    canonical = (root / canonical_value).resolve()
-    if root not in canonical.parents or not canonical.is_file():
-        raise W3ProvenanceError("W3 canonical handoff path is invalid")
-    actual_digest = hashlib.sha256(canonical.read_bytes()).hexdigest()
-    if actual_digest != expected_digest:
-        raise W3ProvenanceError("W3 canonical SHA-256 does not match the receipt")
+    remote = _git(root, "remote", "get-url", "origin")
+    if remote != expected_remote:
+        raise W3ProvenanceError("W3 origin remote does not match the approved remote")
+    if _git(root, "cat-file", "-t", expected_implementation_sha) != "commit":
+        raise W3ProvenanceError("W3 implementation object is not a commit")
+    if _git(root, "cat-file", "-t", expected_receipt_head_sha) != "commit":
+        raise W3ProvenanceError("W3 receipt HEAD object is not a commit")
+    if _git(root, "rev-parse", "HEAD") != expected_receipt_head_sha:
+        raise W3ProvenanceError("W3 checkout HEAD does not match the receipt pin")
+    if not _git_succeeds(
+        root,
+        "merge-base",
+        "--is-ancestor",
+        expected_implementation_sha,
+        expected_receipt_head_sha,
+    ):
+        raise W3ProvenanceError("W3 implementation is not an ancestor of receipt HEAD")
 
-    contract = receipt.get("contract")
-    if contract != "w3.private.core-decision/0.1-candidate":
-        raise W3ProvenanceError("W3 runtime contract does not match the adopted version")
+    readiness = _load_readiness(root / READINESS_PATH)
+    if readiness.get("w3_full_sha") != expected_implementation_sha:
+        raise W3ProvenanceError("W3 readiness implementation pin does not match")
+    if readiness.get("contract") != EXPECTED_CONTRACT:
+        raise W3ProvenanceError("W3 readiness contract does not match")
+    retention = readiness.get("retention")
+    if not isinstance(retention, dict) or retention.get("policy_revision") != EXPECTED_POLICY_REVISION:
+        raise W3ProvenanceError("W3 readiness policy revision does not match")
+
+    if _git(root, "status", "--porcelain=v1", "--untracked-files=all"):
+        raise W3ProvenanceError("W3 working tree is not clean")
+    runtime_drift = _git(
+        root,
+        "diff",
+        "--name-only",
+        expected_implementation_sha,
+        expected_receipt_head_sha,
+        "--",
+        *ARCHIVE_PATHS,
+    )
+    if runtime_drift:
+        raise W3ProvenanceError("W3 runtime source drift exists after the implementation pin")
+
+    archive_paths = _archive_manifest(root, expected_implementation_sha)
     return {
         "status": "ok",
-        "contract": contract,
-        "source_sha": expected_sha,
-        "canonical_path": canonical_value,
-        "canonical_sha256": actual_digest,
+        "contract": EXPECTED_CONTRACT,
+        "policy_revision": EXPECTED_POLICY_REVISION,
+        "implementation_sha": expected_implementation_sha,
+        "receipt_head_sha": expected_receipt_head_sha,
+        "runtime_drift": False,
+        "worktree_clean": True,
+        "archive_paths": archive_paths,
         "network_calls": 0,
     }
+
+
+def _archive_manifest(root: Path, implementation_sha: str) -> list[str]:
+    output = _git(
+        root,
+        "ls-tree",
+        "-r",
+        "--name-only",
+        implementation_sha,
+        "--",
+        *ARCHIVE_PATHS,
+    )
+    paths = sorted(path for path in output.splitlines() if path)
+    required = {"pyproject.toml", "uv.lock", "specs/001-source-knowledge-validation/spec.md"}
+    if not required.issubset(paths):
+        raise W3ProvenanceError("W3 archive is missing required build metadata")
+    if not any(path.startswith("src/w3_knowledge/") for path in paths):
+        raise W3ProvenanceError("W3 archive is missing runtime source")
+    forbidden = (".git/", ".venv/", ".env", "venv/")
+    if any(path.startswith(forbidden) for path in paths):
+        raise W3ProvenanceError("W3 archive allowlist contains a forbidden path")
+    return paths
+
+
+def _load_readiness(path: Path) -> dict[str, Any]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise W3ProvenanceError("W3 readiness metadata is unreadable") from error
+    if not isinstance(value, dict):
+        raise W3ProvenanceError("W3 readiness metadata must be an object")
+    return value
+
+
+def _validate_expected_sha(value: str, label: str) -> None:
+    if not _FULL_SHA.fullmatch(value):
+        raise W3ProvenanceError(f"expected W3 {label} SHA is invalid")
+
+
+def _git(root: Path, *arguments: str) -> str:
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(root), *arguments],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError) as error:
+        raise W3ProvenanceError("W3 Git provenance command failed") from error
+    return completed.stdout.strip()
+
+
+def _git_succeeds(root: Path, *arguments: str) -> bool:
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(root), *arguments],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError as error:
+        raise W3ProvenanceError("W3 Git provenance command failed") from error
+    if completed.returncode not in {0, 1}:
+        raise W3ProvenanceError("W3 Git provenance command failed")
+    return completed.returncode == 0
 
 
 def main() -> None:
     repo_root = Path(__file__).resolve().parents[2]
     parser = argparse.ArgumentParser()
-    parser.add_argument("--w3-root", type=Path, default=repo_root / "w3")
-    parser.add_argument("--expected-sha", default=EXPECTED_W3_SHA)
+    parser.add_argument(
+        "--w3-root", type=Path, default=repo_root / "w3" / "Project_EPICK_Service"
+    )
+    parser.add_argument(
+        "--expected-implementation-sha", default=EXPECTED_IMPLEMENTATION_SHA
+    )
+    parser.add_argument("--expected-receipt-head-sha", default=EXPECTED_RECEIPT_HEAD_SHA)
+    parser.add_argument("--expected-remote", default=EXPECTED_REMOTE)
     args = parser.parse_args()
     result = verify_w3_runtime_provenance(
         w3_root=args.w3_root,
-        expected_sha=args.expected_sha,
+        expected_implementation_sha=args.expected_implementation_sha,
+        expected_receipt_head_sha=args.expected_receipt_head_sha,
+        expected_remote=args.expected_remote,
     )
     print(json.dumps(result, separators=(",", ":"), sort_keys=True))
 

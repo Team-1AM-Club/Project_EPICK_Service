@@ -1,0 +1,24 @@
+[project]
+name = "epick-w4"
+version = "0.1.0"
+description = "Local prototype of EPICK's question-to-experience recommendation pipeline"
+requires-python = ">=3.10"
+dependencies = ["pydantic>=2.10,<3", "jsonschema[format]>=4.26,<5"]
+
+[project.optional-dependencies]
+api = ["fastapi>=0.115,<1"]
+test = ["httpx>=0.27,<1", "boto3>=1.43.97,<2", "pytest>=8,<9"]
+transport = ["boto3>=1.43.97,<2"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["epick_w4*"]
+
+[tool.setuptools.package-data]
+epick_w4 = ["synthetic_allowlist.json", "extraction_allowlist.json", "evaluation_allowlist.json", "criteria_catalog.json", "company_allowlist.json", "c01_allowlist.json", "c01_schemas/*.json", "core_decision_schemas/*.json"]
+
+[tool.ruff]
+line-length = 100

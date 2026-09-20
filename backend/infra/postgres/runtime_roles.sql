@@ -24,6 +24,10 @@ BEGIN
         CREATE ROLE epick_w4_context NOLOGIN NOSUPERUSER NOBYPASSRLS;
     END IF;
 
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'epick_w3_authority') THEN
+        CREATE ROLE epick_w3_authority NOLOGIN NOSUPERUSER NOBYPASSRLS;
+    END IF;
+
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'epick_deleter') THEN
         CREATE ROLE epick_deleter NOLOGIN NOSUPERUSER NOBYPASSRLS;
     END IF;
@@ -33,7 +37,7 @@ $$;
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 GRANT USAGE, CREATE ON SCHEMA public TO epick_migrator;
 GRANT USAGE ON SCHEMA public
-    TO epick_runtime, epick_worker, epick_lookup, epick_w4_context, epick_deleter;
+    TO epick_runtime, epick_worker, epick_lookup, epick_w3_authority, epick_w4_context, epick_deleter;
 
 -- Table, sequence, and default-privilege grants are applied after each migration by the
 -- migration principal through runtime_privileges.sql. Runtime group roles never receive

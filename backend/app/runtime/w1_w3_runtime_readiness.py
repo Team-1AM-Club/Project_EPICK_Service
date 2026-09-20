@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -23,6 +24,13 @@ _MILESTONE_TRANSITIONS = {
     "IN_PROGRESS": {"IN_PROGRESS", "BLOCKED", "COMPLETE"},
     "COMPLETE": {"COMPLETE"},
 }
+_GATE_TRANSITIONS = {
+    "OPEN": {"OPEN", "RECEIVED", "VERIFIED", "REJECTED"},
+    "RECEIVED": {"RECEIVED", "VERIFIED", "REJECTED"},
+    "VERIFIED": {"VERIFIED"},
+    "REJECTED": {"REJECTED", "RECEIVED"},
+}
+_FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
 
 
 class W1W3ReadinessError(ValueError):
@@ -91,6 +99,24 @@ def assert_gates_verified(value: Mapping[str, Any], *gate_ids: str) -> None:
     _assert_gate_map_verified(gate_by_id, *gate_ids)
 
 
+def validate_runtime_source_pins(
+    readiness: Mapping[str, Any], baseline: Mapping[str, Any]
+) -> None:
+    """Bind deployable readiness to the implementation pin, not the receipt commit."""
+    implementation_sha = baseline.get("w3_implementation_sha")
+    receipt_head_sha = baseline.get("w3_receipt_head_sha")
+    if not isinstance(implementation_sha, str) or not _FULL_SHA.fullmatch(
+        implementation_sha
+    ):
+        raise W1W3ReadinessError("W3 implementation SHA is missing or invalid")
+    if not isinstance(receipt_head_sha, str) or not _FULL_SHA.fullmatch(receipt_head_sha):
+        raise W1W3ReadinessError("W3 receipt HEAD SHA is missing or invalid")
+    if readiness.get("w3_source_sha") != implementation_sha:
+        raise W1W3ReadinessError("runtime readiness does not match the W3 implementation SHA")
+    if baseline.get("w3_runtime_drift_from_implementation_to_receipt") is not False:
+        raise W1W3ReadinessError("W3 implementation-to-receipt runtime drift is not cleared")
+
+
 def validate_runtime_readiness_transition(
     before: Mapping[str, Any],
     after: Mapping[str, Any],
@@ -107,8 +133,11 @@ def validate_runtime_readiness_transition(
     before_gates = {row["id"]: row["status"] for row in valid_before["gates"]}
     after_gates = {row["id"]: row["status"] for row in valid_after["gates"]}
     for gate_id, old in before_gates.items():
-        if old == "VERIFIED" and after_gates[gate_id] != "VERIFIED":
-            raise W1W3ReadinessError(f"{gate_id} cannot move backwards after verification")
+        new = after_gates[gate_id]
+        if new not in _GATE_TRANSITIONS[old]:
+            raise W1W3ReadinessError(
+                f"{gate_id} readiness cannot move backwards from {old} to {new}"
+            )
 
 
 def _assert_gate_map_verified(gate_by_id: Mapping[str, Any], *gate_ids: str) -> None:

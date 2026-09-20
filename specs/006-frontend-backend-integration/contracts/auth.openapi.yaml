@@ -1,0 +1,149 @@
+openapi: 3.1.0
+info:
+  title: EPICK Authentication Additive Contract
+  version: 0.1.0
+  description: >-
+    Additive browser authentication surface for the existing W1 public API.
+    Existing /api/v1 resource schemas and error envelopes remain authoritative.
+paths:
+  /api/v1/auth/google/start:
+    get:
+      operationId: startGoogleLogin
+      summary: Start Google OIDC Authorization Code Flow
+      parameters:
+        - in: query
+          name: return_to
+          schema:
+            type: string
+            maxLength: 512
+            default: /
+          description: Relative frontend path only; absolute and protocol-relative values are rejected.
+      responses:
+        "302":
+          description: Redirect to Google's authorization endpoint and set a short-lived OIDC transaction cookie.
+          headers:
+            Location:
+              schema: { type: string, format: uri }
+            Set-Cookie:
+              schema: { type: string }
+        "422":
+          $ref: "#/components/responses/ApiError"
+
+  /api/v1/auth/google/callback:
+    get:
+      operationId: completeGoogleLogin
+      summary: Validate Google callback and establish an EPICK refresh session
+      parameters:
+        - in: query
+          name: code
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 4096 }
+        - in: query
+          name: state
+          required: true
+          schema: { type: string, minLength: 16, maxLength: 512 }
+      responses:
+        "302":
+          description: >-
+            Set the opaque HttpOnly refresh cookie, clear the OIDC transaction cookie,
+            and redirect to the validated frontend return path.
+          headers:
+            Location:
+              schema: { type: string, format: uri-reference }
+            Set-Cookie:
+              schema: { type: string }
+        "401":
+          $ref: "#/components/responses/ApiError"
+        "409":
+          $ref: "#/components/responses/ApiError"
+
+  /api/v1/auth/refresh:
+    post:
+      operationId: refreshEpikAccessToken
+      summary: Rotate the opaque refresh token and issue a short-lived EPICK access token
+      parameters:
+        - in: header
+          name: Origin
+          required: true
+          schema: { type: string, format: uri }
+      security:
+        - refreshCookie: []
+      responses:
+        "200":
+          description: Access token issued and refresh cookie rotated.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+            Set-Cookie:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessTokenResponse"
+        "401":
+          $ref: "#/components/responses/ApiError"
+
+  /api/v1/auth/logout:
+    post:
+      operationId: logoutEpikSession
+      summary: Revoke the current refresh session and clear authentication cookies
+      parameters:
+        - in: header
+          name: Origin
+          required: true
+          schema: { type: string, format: uri }
+      security:
+        - refreshCookie: []
+      responses:
+        "204":
+          description: Session revoked or already absent; cookie cleared idempotently.
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+
+components:
+  securitySchemes:
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-epick-refresh
+  schemas:
+    AccessTokenResponse:
+      type: object
+      additionalProperties: false
+      required: [access_token, token_type, expires_in]
+      properties:
+        access_token:
+          type: string
+          minLength: 1
+          description: Short-lived EPICK token; frontend keeps it in memory only.
+        token_type:
+          type: string
+          const: Bearer
+        expires_in:
+          type: integer
+          minimum: 1
+          description: Remaining access-token lifetime in seconds.
+    ApiErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message_ko, retryable, actions, correlation_id, fields]
+          properties:
+            code: { type: string }
+            message_ko: { type: string }
+            retryable: { type: boolean }
+            actions: { type: array, items: { type: string } }
+            correlation_id: { type: string }
+            fields: { type: array, items: { type: object } }
+  responses:
+    ApiError:
+      description: Standard W1 public API error envelope.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiErrorResponse"

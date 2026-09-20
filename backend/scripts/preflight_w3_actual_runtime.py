@@ -23,12 +23,17 @@ from app.runtime.w3_runtime_preflight import (  # noqa: E402
     verify_w3_actual_runtime,
 )
 
+RETENTION_SECONDS = "1209600"
+POLICY_REVISION = "w3.retention/1.1"
+
 
 def main() -> None:
     image_ref = _required_env("W3_IMAGE")
     compose_path = Path(_required_env("W3_RUNTIME_COMPOSE_FILE")).resolve()
     config = W3RuntimePreflightConfig(
-        expected_source_sha=_required_env("W3_EXPECTED_SOURCE_SHA"),
+        expected_implementation_sha=_required_env("W3_EXPECTED_IMPLEMENTATION_SHA"),
+        expected_receipt_head_sha=_required_env("W3_EXPECTED_RECEIPT_HEAD_SHA"),
+        expected_policy_revision=POLICY_REVISION,
         expected_image_digest=_required_env("W3_EXPECTED_IMAGE_DIGEST"),
         expected_runtime_uid=int(os.getenv("W3_RUNTIME_UID", "10001")),
         expected_state_volume=os.getenv(
@@ -59,7 +64,9 @@ def _inspect_image(image_ref: str, expected_digest: str) -> W3RuntimeImageInspec
     if expected_digest not in candidates:
         raise W3RuntimePreflightError("W3 image digest does not match the pinned image")
     return W3RuntimeImageInspection(
-        source_sha=labels.get("org.opencontainers.image.revision", ""),
+        implementation_sha=labels.get("org.opencontainers.image.revision", ""),
+        receipt_head_sha=labels.get("io.epick.w3.receipt-head", ""),
+        policy_revision=labels.get("io.epick.w3.policy-revision", ""),
         image_digest=expected_digest,
         runtime_user=item.get("Config", {}).get("User", ""),
     )
@@ -68,7 +75,6 @@ def _inspect_image(image_ref: str, expected_digest: str) -> W3RuntimeImageInspec
 def _inspect_compose(compose_path: Path, image_ref: str) -> W3RuntimeComposeInspection:
     env = os.environ.copy()
     env["W3_IMAGE"] = image_ref
-    env.setdefault("W3_RETENTION_SECONDS", "3600")
     raw = _run_json(
         [
             "docker",
@@ -129,15 +135,28 @@ def _inspect_ephemeral_persistence(image_ref: str) -> W3RuntimePersistenceInspec
             ]
         )
         initialized = _run_json(
-            [*base, "init", "--db", "/state/core.db", "--retention-seconds", "3600"]
+            [
+                *base,
+                "init",
+                "--db",
+                "/state/core.db",
+                "--retention-seconds",
+                RETENTION_SECONDS,
+            ]
         )
-        before = _count_only(_run_json(_inspect_command(base)))
-        after = _count_only(_run_json(_inspect_command(base)))
+        before_report = _run_json(_inspect_command(base))
+        after_report = _run_json(_inspect_command(base))
+        before = _count_only(before_report)
+        after = _count_only(after_report)
+        policy_revision = _policy_revision(before_report, after_report)
+        migration_blockers = _migration_blockers(before_report, after_report)
         return W3RuntimePersistenceInspection(
             database_path="/state/core.db",
             initialized=initialized.get("status") == "INITIALIZED_NOT_DEPLOYED",
             smoke_status=str(smoke.get("status", "")),
             smoke_aws_calls=int(smoke.get("aws_calls", -1)),
+            policy_revision=policy_revision,
+            migration_blockers=migration_blockers,
             before_counts=before,
             after_counts=after,
         )
@@ -151,7 +170,14 @@ def _inspect_ephemeral_persistence(image_ref: str) -> W3RuntimePersistenceInspec
 
 
 def _inspect_command(base: list[str]) -> list[str]:
-    return [*base, "inspect", "--db", "/state/core.db", "--retention-seconds", "3600"]
+    return [
+        *base,
+        "inspect",
+        "--db",
+        "/state/core.db",
+        "--retention-seconds",
+        RETENTION_SECONDS,
+    ]
 
 
 def _count_only(value: dict[str, Any]) -> dict[str, int]:
@@ -165,6 +191,29 @@ def _count_only(value: dict[str, Any]) -> dict[str, int]:
             key = f"state_{state.lower()}"
             counts[key] = counts.get(key, 0) + 1
     return counts
+
+
+def _policy_revision(before: dict[str, Any], after: dict[str, Any]) -> str:
+    before_revision = before.get("policy_revision")
+    after_revision = after.get("policy_revision")
+    if before_revision != after_revision or not isinstance(before_revision, str):
+        raise W3RuntimePreflightError("W3 inspect policy revision is invalid")
+    return before_revision
+
+
+def _migration_blockers(
+    before: dict[str, Any], after: dict[str, Any]
+) -> dict[str, int]:
+    before_blockers = before.get("migration_blockers")
+    after_blockers = after.get("migration_blockers")
+    if before_blockers != after_blockers or not isinstance(before_blockers, dict):
+        raise W3RuntimePreflightError("W3 inspect migration blockers are invalid")
+    if any(
+        not isinstance(name, str) or type(value) is not int
+        for name, value in before_blockers.items()
+    ):
+        raise W3RuntimePreflightError("W3 inspect migration blockers are invalid")
+    return dict(before_blockers)
 
 
 def _required_env(name: str) -> str:
