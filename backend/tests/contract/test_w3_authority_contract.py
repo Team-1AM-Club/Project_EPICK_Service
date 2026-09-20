@@ -96,6 +96,10 @@ def test_authority_schemas_fail_closed_on_invalid_values(
     assert not _validator(contract_root, schema).is_valid(payload)
 
 
+@pytest.mark.skipif(
+    not (W3_ROOT / ".git").exists(),
+    reason="independent W3 Git clone is not available in this CI job",
+)
 def test_authority_response_fields_match_pinned_w3_models(contract_root: Path) -> None:
     schema = _load(contract_root / RESPONSE_SCHEMA)
     context_schema = schema["properties"]["context"]
