@@ -10,8 +10,15 @@ export const metadata: Metadata = {
     "codex-preview": "development",
   },
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
+    icon: [
+      {
+        url: "/epick-favicon.png",
+        type: "image/png",
+        sizes: "110x110",
+      },
+    ],
+    shortcut: "/epick-favicon.png",
+    apple: "/epick-favicon.png",
   },
 };
 
