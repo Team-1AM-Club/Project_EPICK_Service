@@ -1,6 +1,6 @@
 {
   "status": "W3_RETENTION_1_1_LOCAL_VERIFIED_ENVIRONMENT_PENDING",
-  "w3_full_sha": null,
+  "w3_full_sha": "3b23e0843a134fb341e6a256576ccf52fedbf4a8",
   "contract": "w3.private.core-decision/0.1-candidate",
   "analysis_supplier": {
     "status": "LOCAL_VERIFIED_AUTHORITY_AND_ANALYSIS_CALLER_INTEGRATION_PENDING",
@@ -30,5 +30,5 @@
   },
   "joint_window": null,
   "joint_ct12": "NOT_RUN",
-  "evidence": "docs/w3-retention-1.1-implementation-handoff-2026-09-20.md; docs/w3-integration-input-request-2026-09-20.md; source SHA pending commit"
+  "evidence": "Implementation pin 3b23e0843a134fb341e6a256576ccf52fedbf4a8; docs/w3-retention-1.1-implementation-handoff-2026-09-20.md; docs/w3-integration-input-request-2026-09-20.md"
 }

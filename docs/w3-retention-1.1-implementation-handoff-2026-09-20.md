@@ -2,6 +2,8 @@
 
 상태: **LOCAL_VERIFIED / LIVE_INTEGRATION_PENDING / DEPLOYMENT_NOT_RUN / JOINT_CT12_NOT_RUN**
 
+구현 source SHA: `3b23e0843a134fb341e6a256576ccf52fedbf4a8`
+
 ## 구현 범위
 
 - 승인 정책 revision과 대상별 초 단위 기간을 코드로 고정했다.
@@ -32,7 +34,8 @@ delivery metadata를 제거하고, event가 유효하지 않으면 본문을 제
 - restriction export: **19 files, mismatch 0**
 - readiness JSON parse: **PASS**
 
-구현 source SHA는 commit 후 이 문서에 갱신한다.
+이 SHA가 `w3.retention/1.1` runtime·migration·테스트 구현 pin이다. 이후 문서-only receipt commit은
+이미지 source pin을 대체하지 않는다.
 
 ## 실환경 미완료
 
