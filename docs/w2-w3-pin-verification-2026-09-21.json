@@ -1,0 +1,29 @@
+{
+  "status": "W2_TRANSPORT_ADAPTER_BLOCKED",
+  "actual_environment": false,
+  "w2_sha": "2cc9153b8401c04c93a2f5a069904ee32ac79cb2",
+  "w3_sha": "35933e8037dc899f646b7b9af36909ae0e4b8f34",
+  "fixture_sha256": "1a3e8986e08adf8247de9b9b686335ab3d96751d32bd7ab56cbcf2176517787e",
+  "w2_internal_events_valid": 4,
+  "w2_outbox_rebuilt_deliverable_types": [
+    "source.version.available",
+    "source.version.available",
+    "source.observation.changed"
+  ],
+  "w2_restriction_delivery": "REJECTED_NOT_DELIVERABLE",
+  "raw_w2_wire_rejected_by_w3": 4,
+  "agreed_envelope_validated_by_w3": 4,
+  "w3_local_consume_outcomes": [
+    "APPLIED",
+    "APPLIED",
+    "APPLIED",
+    "APPLIED"
+  ],
+  "w3_local_status": {
+    "event_cursor": 4,
+    "restriction_revision": 1,
+    "index_ack": false,
+    "reason": "OBSERVATION_BLOCKED"
+  },
+  "live_transport": "NOT_RUN"
+}

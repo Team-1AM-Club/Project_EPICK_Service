@@ -1,6 +1,6 @@
 {
   "status": "W3_LIFECYCLE_LOCAL_VERIFIED_ENVIRONMENT_PENDING",
-  "w3_full_sha": "66a0e3e1b087bf7f9d1b6d7730934ea27f55e94b",
+  "w3_full_sha": "35933e8037dc899f646b7b9af36909ae0e4b8f34",
   "contract": "w3.private.core-decision/0.1-candidate",
   "analysis_supplier": {
     "status": "LOCAL_VERIFIED_AUTHORITY_AND_ANALYSIS_CALLER_INTEGRATION_PENDING",
@@ -27,6 +27,15 @@
     "ack": "Delete inbound command only after receipt SendMessage returns HTTP 200 and MessageId; uncertain DB or transport result is not acknowledged",
     "live_e2e": "NOT_RUN"
   },
+  "c01_w2_integration": {
+    "status": "W3_LOCAL_READY_W2_TRANSPORT_ADAPTER_BLOCKED",
+    "entrypoint": "python -m w3_knowledge.c01.http",
+    "source_authority": "Required module:factory implementing is_registered(UUID); checked before event, replay, snapshot, and index; errors fail closed",
+    "w2_full_sha": "2cc9153b8401c04c93a2f5a069904ee32ac79cb2",
+    "fixture_sha256": "1a3e8986e08adf8247de9b9b686335ab3d96751d32bd7ab56cbcf2176517787e",
+    "compatibility": "Raw W2 internal wire rejected 4/4; explicit agreed-envelope mapping accepted 4/4; W2 restriction event is not deliverable at the pinned SHA",
+    "live_e2e": "NOT_RUN"
+  },
   "iam": {
     "role_arn": null,
     "stable_role_id": null,
@@ -51,5 +60,5 @@
   },
   "joint_window": null,
   "joint_ct12": "NOT_RUN",
-  "evidence": "Implementation pin 66a0e3e1b087bf7f9d1b6d7730934ea27f55e94b; docs/w3-lifecycle-dispatch-handoff-2026-09-20.md; docs/w3-integration-input-request-2026-09-20.md"
+  "evidence": "Implementation pin 35933e8037dc899f646b7b9af36909ae0e4b8f34; docs/w3-lifecycle-dispatch-handoff-2026-09-20.md; docs/w3-integration-input-request-2026-09-20.md; docs/w2-w3-integration-completion-response-2026-09-21.md"
 }
