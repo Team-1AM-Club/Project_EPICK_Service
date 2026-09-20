@@ -1,8 +1,10 @@
 # W3 실제 연결 입력 요청
 
-상태: **INPUTS_REQUIRED / LOCAL_RETENTION_IMPLEMENTATION_AVAILABLE / LIVE_INTEGRATION_NOT_STARTED**  
-기준 정책: `w3.retention/1.1`  
-W3 baseline: `c7e6788168c048941bdabe7ed8cb01007edeecec` 이후 정책 구현 branch
+상태: **INPUTS_REQUIRED / LOCAL_LIFECYCLE_IMPLEMENTATION_AVAILABLE / LIVE_INTEGRATION_NOT_STARTED**
+
+기준 정책: `w3.retention/1.1`
+
+W3 구현 pin: `9581a8e9ab2317fd8f74b07b5d886be97f8727b0`
 
 실제 값이 제공되지 않은 endpoint, factory, 담당자, role, queue, registry 경로를 W3가 임의로
 만들지 않는다. 아래 값이 확보되면 실제 adapter와 caller 연결을 시작한다.
@@ -55,17 +57,21 @@ W3는 supply와 매 relay/replay 직전에 전체 context, owner, epoch, active�
 
 ## 3. 사용자 삭제 dispatcher
 
+로컬 consumer, strict schema, command ledger와 receipt outbox는 구현·검증됐다. 실제 연결에는 아래
+인프라 입력과 W1 계약 채택이 필요하다. 세부 전달은
+`docs/w3-lifecycle-dispatch-handoff-2026-09-20.md`를 따른다.
+
 | 항목 | 필요한 값 |
 |---|---|
-| source pin | 실제 command consumer의 저장소 SHA와 파일·함수 경로 |
-| 전달 방식 | endpoint/queue/in-process adapter와 인증 방식 |
-| schema | command ID, owner ID, deletion epoch, target type/ref의 정확한 의미 |
+| source pin | W3 `9581a8e9ab2317fd8f74b07b5d886be97f8727b0`; W1 producer의 채택 SHA는 미제공 |
+| 전달 방식 | 전용 private Standard SQS 두 개의 실제 URL과 queue policy |
+| schema | W1 owner deletion target type 확장과 W3 lifecycle receipt의 W1 채택 pin |
 | epoch | higher-epoch 판정의 authoritative source와 등록 전 삭제 규칙 |
-| 멱등성 | 중복·지연·순서 역전 command 처리와 ACK/error 규칙 |
-| 재처리 | dispatcher 실패·runtime 재시작 뒤 redelivery 방식 |
+| 인증 | W1 sender와 W3 consumer의 stable Role ID, workload 설정 전달 경로 |
+| W1 처리 | W3 receipt consumer, idempotent 최종 수용 상태와 오류 운영 규칙 |
 
-검증된 높은 epoch 삭제만 `CoreRuntime.delete_owner(..., now=trusted_clock)`로 연결한다. 사용자 삭제는
-상태·보관기한보다 우선하고 transaction 안에서 본문을 제거한다.
+`LifecycleSqsWorker`는 검증된 command만 `CoreRuntime.apply_lifecycle_command`로 연결한다. 사용자
+삭제는 상태·보관기한보다 우선하고 상태 변경과 receipt outbox를 한 transaction에 기록한다.
 
 ## 4. Source registry
 
@@ -74,13 +80,14 @@ W3는 supply와 매 relay/replay 직전에 전체 context, owner, epoch, active�
 - 조회 인증, timeout, not-found/error 의미와 source pin
 - 영구 종료를 `CoreRuntime.retire_source`에 전달하는 adapter/재처리 규칙
 
-로컬 retired marker와 counter purge는 구현되어 있다. 실제 registry adapter 없이는 실환경 완료로 표시하지 않는다.
+`command_id`가 결속된 Source 종료, receipt outbox, retired marker와 counter purge는 구현되어 있다.
+실제 W1 producer·queue·role 입력 없이는 실환경 완료로 표시하지 않는다.
 
 ## 5. W1 실행·배포 입력
 
 - workload host와 동일 SQLite DB를 공유하는 영구 volume
 - 새 W3 full SHA를 고정한 image recipe, registry와 manifest digest
-- `AWS_DEFAULT_REGION`, main queue URL, stable expected Role ID의 안전한 전달 경로
+- `AWS_DEFAULT_REGION`, main/lifecycle command/lifecycle receipt queue URL, stable Role ID의 안전한 전달 경로
 - 전용 main queue `SendMessage`와 queue policy 증거
 - 5분 expire runner, 15분 DB 논리 삭제 SLO, HELD·scheduler 실패 경보
 - metadata-only 로그 30일 lifecycle
@@ -95,4 +102,3 @@ W3는 supply와 매 relay/replay 직전에 전체 context, owner, epoch, active�
 4. 새 W3 full SHA로 immutable image를 빌드하고 source SHA와 manifest digest를 기록한다.
 5. 실제 workload identity/config를 확인한 뒤 공동 CT12-01~12를 실행한다.
 6. 미실행 항목은 `PENDING`/`NOT_RUN`으로 유지한다.
-

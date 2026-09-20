@@ -1,6 +1,6 @@
 {
-  "status": "W3_RETENTION_1_1_LOCAL_VERIFIED_ENVIRONMENT_PENDING",
-  "w3_full_sha": "3b23e0843a134fb341e6a256576ccf52fedbf4a8",
+  "status": "W3_LIFECYCLE_LOCAL_VERIFIED_ENVIRONMENT_PENDING",
+  "w3_full_sha": "9581a8e9ab2317fd8f74b07b5d886be97f8727b0",
   "contract": "w3.private.core-decision/0.1-candidate",
   "analysis_supplier": {
     "status": "LOCAL_VERIFIED_AUTHORITY_AND_ANALYSIS_CALLER_INTEGRATION_PENDING",
@@ -14,7 +14,24 @@
     "durable_outbox": "Shared local SQLite w3_core_decision_outbox/core_delivery/w3_core_counters; retry same bytes with bounded backoff, then HELD",
     "send_success_semantics": "TRANSPORT_HANDOFF_NOT_W1_ACCEPTANCE"
   },
-  "iam": {"role_arn": null, "stable_role_id": null, "main_queue_send_only": null},
+  "lifecycle_dispatch": {
+    "status": "LOCAL_VERIFIED_W1_INFRA_AND_ADOPTION_PENDING",
+    "entrypoint": "python -m w3_knowledge.core_runtime_cli lifecycle-once --consume",
+    "owner_command_schema": "contracts/core-runtime/owner-deletion-command.schema.json",
+    "source_command_schema": "contracts/core-runtime/source-retirement-command.schema.json",
+    "receipt_schema": "contracts/core-runtime/lifecycle-receipt.schema.json",
+    "transaction": "State mutation, command digest, exact receipt, and receipt outbox commit in the same SQLite transaction",
+    "ack": "Delete inbound command only after receipt SendMessage returns HTTP 200 and MessageId; uncertain DB or transport result is not acknowledged",
+    "live_e2e": "NOT_RUN"
+  },
+  "iam": {
+    "role_arn": null,
+    "stable_role_id": null,
+    "main_queue_send_only": null,
+    "w1_sender_stable_role_id": null,
+    "lifecycle_command_queue_url": null,
+    "lifecycle_receipt_queue_url": null
+  },
   "retention": {
     "policy_revision": "w3.retention/1.1",
     "status": "LOCAL_VERIFIED_SCHEDULER_AND_STORAGE_LIFECYCLE_PENDING",
@@ -25,10 +42,11 @@
     "retired_source_counter_seconds": 7776000,
     "backup_max_seconds": 2592000,
     "published_event_retention": "min(last_successful_published_at + 1209600, created_at + 2592000); replay never extends the absolute maximum",
-    "user_deletion_behavior": "Trusted higher-epoch delete_owner immediately purges event/request and preserves first deleted_at; actual dispatcher integration pending",
+    "user_deletion_behavior": "Authenticated lifecycle consumer applies higher-epoch deletion, immediately purges event/request, persists the exact receipt atomically, and preserves first deleted_at; live Queue/Role integration pending",
+    "source_retirement_behavior": "command_id-bound retire_source preserves the first authoritative retired_at, rejects later supply, and persists the exact receipt atomically; live Queue/Role integration pending",
     "backup_replay_behavior": "Supported backup redacts before disk write, records a capped expiry, and is quarantined; supply/relay/replay disabled. Raw snapshot restore unsupported."
   },
   "joint_window": null,
   "joint_ct12": "NOT_RUN",
-  "evidence": "Implementation pin 3b23e0843a134fb341e6a256576ccf52fedbf4a8; docs/w3-retention-1.1-implementation-handoff-2026-09-20.md; docs/w3-integration-input-request-2026-09-20.md"
+  "evidence": "Implementation pin 9581a8e9ab2317fd8f74b07b5d886be97f8727b0; docs/w3-lifecycle-dispatch-handoff-2026-09-20.md; docs/w3-integration-input-request-2026-09-20.md"
 }
