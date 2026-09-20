@@ -5,6 +5,17 @@ import pytest
 
 from w3_knowledge.core_decision import DecisionContext
 from w3_knowledge.core_runtime import AnalysisPlan, Authorization, CoreRuntime
+from w3_knowledge.retention import RetentionPolicy
+
+
+TEST_POLICY = RetentionPolicy(
+    handoff_body_seconds=60,
+    private_body_max_seconds=10_000,
+    terminal_metadata_seconds=10_000,
+    owner_tombstone_seconds=10_000,
+    retired_counter_seconds=10_000,
+    backup_seconds=10_000,
+)
 
 
 def auth():
@@ -24,6 +35,8 @@ def auth():
 def plan(required=True):
     return AnalysisPlan(
         context=auth().context,
+        analysis_request_id=UUID(int=10),
+        analysis_request_issued_at=100,
         required_sources=[UUID(int=3)] if required else [],
         optional_sources=[] if required else [UUID(int=3)],
     )
@@ -50,7 +63,7 @@ class Transport:
 
 
 def runtime(tmp_path):
-    return CoreRuntime(tmp_path / "runtime.db", retention_seconds=60, max_attempts=3)
+    return CoreRuntime(tmp_path / "runtime.db", policy=TEST_POLICY, max_attempts=3)
 
 
 def test_supplier_core_and_noncore(tmp_path):
@@ -65,9 +78,19 @@ def test_supplier_core_and_noncore(tmp_path):
 def test_unknown_and_ambiguous_dependencies_fail_without_outbox(tmp_path):
     r = runtime(tmp_path)
     for p in [
-        AnalysisPlan(context=auth().context, required_sources=[], optional_sources=[]),
         AnalysisPlan(
-            context=auth().context, required_sources=[UUID(int=3)], optional_sources=[UUID(int=3)]
+            context=auth().context,
+            analysis_request_id=UUID(int=10),
+            analysis_request_issued_at=100,
+            required_sources=[],
+            optional_sources=[],
+        ),
+        AnalysisPlan(
+            context=auth().context,
+            analysis_request_id=UUID(int=10),
+            analysis_request_issued_at=100,
+            required_sources=[UUID(int=3)],
+            optional_sources=[UUID(int=3)],
         ),
     ]:
         with pytest.raises(ValueError, match="SOURCE_DEPENDENCY_UNRESOLVED"):
@@ -92,7 +115,7 @@ def test_retry_restart_same_body_transport_not_acceptance(tmp_path):
 def test_deleted_owner_cannot_resend_or_recreate_and_counter_survives(tmp_path):
     r, authority, transport = runtime(tmp_path), Authority(), Transport()
     first = r.supply(plan(), authority, "first", now=100)
-    assert r.delete_owner(UUID(int=4), deletion_epoch=2) == 1
+    assert r.delete_owner(UUID(int=4), deletion_epoch=2, now=100) == 1
     assert r.relay_once(authority, transport, now=100) == "IDLE"
     with pytest.raises(ValueError, match="OWNER_DELETED"):
         r.supply(plan(), authority, "again", now=101)
@@ -112,8 +135,8 @@ def test_retention_purges_body_not_idempotency_or_counter(tmp_path):
     r, authority = runtime(tmp_path), Authority()
     r.supply(plan(), authority, "first", now=100)
     r.relay_once(authority, Transport(), now=100)
-    assert r.expire(now=159) == 0
-    assert r.expire(now=160) == 1
+    assert r.expire(now=159)["bodies"] == 0
+    assert r.expire(now=160)["bodies"] == 1
     with pytest.raises(ValueError, match="EVENT_RETIRED"):
         r.supply(plan(), authority, "first", now=161)
     assert r.supply(plan(), authority, "second", now=161).decision_version == 2
@@ -132,8 +155,8 @@ def test_supported_backup_never_relays(tmp_path):
     r, authority, transport = runtime(tmp_path), Authority(), Transport()
     r.supply(plan(), authority, "first", now=100)
     backup = tmp_path / "backup.db"
-    r.backup(backup)
-    restored = CoreRuntime(backup, retention_seconds=60, max_attempts=3)
+    r.backup(backup, now=100)
+    restored = CoreRuntime(backup, policy=TEST_POLICY, max_attempts=3)
     with pytest.raises(ValueError, match="RESTORE_QUARANTINED"):
         restored.relay_once(authority, transport, now=100)
     with pytest.raises(ValueError, match="RESTORE_QUARANTINED"):
@@ -188,7 +211,7 @@ def test_authority_outage_retries_without_send(tmp_path):
 
 def test_delete_before_any_event_blocks_later_creation(tmp_path):
     r = runtime(tmp_path)
-    assert r.delete_owner(UUID(int=4), deletion_epoch=2) == 0
+    assert r.delete_owner(UUID(int=4), deletion_epoch=2, now=100) == 0
     with pytest.raises(ValueError, match="OWNER_DELETED"):
         r.supply(plan(), Authority(), "first", now=100)
 
@@ -271,7 +294,7 @@ def test_interrupted_backup_never_writes_private_body_to_disk(tmp_path, monkeypa
 
     monkeypatch.setattr(sqlite3, "connect", connect)
     with pytest.raises(RuntimeError):
-        r.backup(tmp_path / "backup.db")
+        r.backup(tmp_path / "backup.db", now=100)
     assert observed == [(0, "1")]
 
 
@@ -293,7 +316,7 @@ def test_deletion_serializes_with_inflight_send(tmp_path):
 
     def delete():
         deleting.set()
-        return runtime(tmp_path).delete_owner(UUID(int=4), deletion_epoch=2)
+        return runtime(tmp_path).delete_owner(UUID(int=4), deletion_epoch=2, now=100)
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         sending = pool.submit(r.relay_once, authority, transport, now=100)
@@ -319,7 +342,7 @@ def test_stale_delete_cannot_purge_active_owner(tmp_path):
     r = runtime(tmp_path)
     r.supply(plan(), Authority(), "first", now=100)
     with pytest.raises(ValueError, match="STALE_DELETION_EPOCH"):
-        r.delete_owner(UUID(int=4), deletion_epoch=1)
+        r.delete_owner(UUID(int=4), deletion_epoch=1, now=100)
     assert r.relay_once(Authority(), Transport(), now=100) == "TRANSPORT_HANDOFF"
 
 

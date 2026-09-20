@@ -1,10 +1,11 @@
 {
-  "status": "W3_LOCAL_IMPLEMENTATION_VERIFIED_ENVIRONMENT_PENDING",
+  "status": "W3_RETENTION_1_1_LOCAL_VERIFIED_ENVIRONMENT_PENDING",
   "w3_full_sha": null,
   "contract": "w3.private.core-decision/0.1-candidate",
   "analysis_supplier": {
     "status": "LOCAL_VERIFIED_AUTHORITY_AND_ANALYSIS_CALLER_INTEGRATION_PENDING",
     "entrypoint": "w3_knowledge.core_runtime.CoreRuntime.supply",
+    "trusted_request_binding": "AnalysisPlan requires immutable analysis_request_id and trusted analysis_request_issued_at; actual caller/currentness adapter source pin pending",
     "synthetic_input_procedure": "python -m w3_knowledge.core_runtime_cli smoke --directory .runtime/core-relay-smoke"
   },
   "relay": {
@@ -15,11 +16,19 @@
   },
   "iam": {"role_arn": null, "stable_role_id": null, "main_queue_send_only": null},
   "retention": {
-    "published_event_retention": "Required operator retention_seconds, expiry at published_at + retention_seconds; production duration not configured",
-    "user_deletion_behavior": "Trusted delete_owner with higher epoch purges event/request, preserves hashed suppression metadata and public revision counter; actual deletion dispatcher integration pending",
-    "backup_replay_behavior": "Supported backup redacts before disk write and is quarantined; supply/relay/replay disabled. Raw snapshot restore unsupported."
+    "policy_revision": "w3.retention/1.1",
+    "status": "LOCAL_VERIFIED_SCHEDULER_AND_STORAGE_LIFECYCLE_PENDING",
+    "private_body_absolute_max_seconds": 2592000,
+    "transport_handoff_seconds": 1209600,
+    "terminal_metadata_seconds": 7776000,
+    "owner_tombstone_seconds": 31536000,
+    "retired_source_counter_seconds": 7776000,
+    "backup_max_seconds": 2592000,
+    "published_event_retention": "min(last_successful_published_at + 1209600, created_at + 2592000); replay never extends the absolute maximum",
+    "user_deletion_behavior": "Trusted higher-epoch delete_owner immediately purges event/request and preserves first deleted_at; actual dispatcher integration pending",
+    "backup_replay_behavior": "Supported backup redacts before disk write, records a capped expiry, and is quarantined; supply/relay/replay disabled. Raw snapshot restore unsupported."
   },
   "joint_window": null,
   "joint_ct12": "NOT_RUN",
-  "evidence": "docs/w3-core-runtime-handoff-2026-09-18.md; final commit and tests in delivered HANDOFF_RECEIPT.json"
+  "evidence": "docs/w3-retention-1.1-implementation-handoff-2026-09-20.md; docs/w3-integration-input-request-2026-09-20.md; source SHA pending commit"
 }

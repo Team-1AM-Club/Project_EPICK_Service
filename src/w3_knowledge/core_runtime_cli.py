@@ -9,6 +9,7 @@ import time
 from uuid import UUID
 
 from .core_runtime import AnalysisPlan, CoreRuntime, SqsTransport
+from .retention import POLICY_REVISION
 
 
 def load_authority(spec):
@@ -122,18 +123,22 @@ def main():
                     raise ValueError("DELETION_BINDING_REQUIRED")
                 result = {
                     "deleted": runtime.delete_owner(
-                        args.owner_id, deletion_epoch=args.deletion_epoch
+                        args.owner_id, deletion_epoch=args.deletion_epoch, now=now
                     )
                 }
             elif args.command == "expire":
-                result = {"expired": runtime.expire(now=now)}
+                result = {"policy_revision": POLICY_REVISION, "expired": runtime.expire(now=now)}
             elif args.command == "inspect":
-                result = {"deliveries": runtime.inspect()}
+                result = runtime.inspect_report()
             else:
                 if args.destination is None:
                     raise ValueError("DESTINATION_REQUIRED")
-                runtime.backup(args.destination)
-                result = {"status": "REDACTED_QUARANTINED_BACKUP"}
+                lifecycle = runtime.backup(args.destination, now=now)
+                result = {
+                    "status": "REDACTED_QUARANTINED_BACKUP",
+                    "policy_revision": POLICY_REVISION,
+                    **lifecycle,
+                }
         print(json.dumps(result))
     except Exception:
         # SDK/validation errors may contain endpoint, credentials or submitted private input.

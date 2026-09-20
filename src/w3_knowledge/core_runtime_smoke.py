@@ -6,6 +6,7 @@ from uuid import UUID
 
 from .core_decision import DecisionContext
 from .core_runtime import AnalysisPlan, Authorization, CoreRuntime
+from .retention import POLICY_REVISION, RetentionPolicy
 
 
 def run(directory: Path):
@@ -32,9 +33,23 @@ def run(directory: Path):
             return "synthetic-transport-id"
 
     authority, transport = SyntheticAuthority(), LocalTransport()
-    runtime = CoreRuntime(directory / "outbox.db", retention_seconds=60, max_attempts=3)
+    policy = RetentionPolicy(
+        handoff_body_seconds=60,
+        private_body_max_seconds=600,
+        terminal_metadata_seconds=600,
+        owner_tombstone_seconds=600,
+        retired_counter_seconds=600,
+        backup_seconds=600,
+    )
+    runtime = CoreRuntime(directory / "outbox.db", policy=policy, max_attempts=3)
     event = runtime.supply(
-        AnalysisPlan(context=context, required_sources=[context.source_id], optional_sources=[]),
+        AnalysisPlan(
+            context=context,
+            analysis_request_id=UUID(int=5),
+            analysis_request_issued_at=100,
+            required_sources=[context.source_id],
+            optional_sources=[],
+        ),
         authority,
         "synthetic-1",
         now=100,
@@ -46,8 +61,8 @@ def run(directory: Path):
     runtime.replay(event.message_id, authority, now=104)
     if runtime.relay_once(authority, transport, now=104) != "TRANSPORT_HANDOFF":
         raise RuntimeError("SMOKE_REPLAY_FAILED")
-    runtime.backup(directory / "redacted-backup.db")
-    if runtime.delete_owner(UUID(int=4), deletion_epoch=2) != 1:
+    runtime.backup(directory / "redacted-backup.db", now=104)
+    if runtime.delete_owner(UUID(int=4), deletion_epoch=2, now=105) != 1:
         raise RuntimeError("SMOKE_DELETION_FAILED")
     if runtime.relay_once(authority, transport, now=105) != "IDLE":
         raise RuntimeError("SMOKE_DELETION_REPLAY_FAILED")
@@ -58,6 +73,7 @@ def run(directory: Path):
         "joint_ct12": "NOT_RUN",
         "same_body_retry": len(set(transport.bodies)) == 1,
         "send_success_semantics": "TRANSPORT_HANDOFF_NOT_W1_ACCEPTANCE",
+        "policy_revision": POLICY_REVISION,
         "deleted_state": runtime.inspect()[0]["state"],
         "aws_calls": 0,
     }
