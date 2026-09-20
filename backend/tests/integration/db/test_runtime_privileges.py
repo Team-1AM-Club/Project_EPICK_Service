@@ -263,6 +263,13 @@ def test_runtime_privilege_manifest_is_role_scoped_and_deny_by_default(
                 command="UPDATE",
             )
 
+        assert _has_rls_policy(
+            migrated_engine,
+            table_name="recommendation_runs",
+            policy_name="recommendation_runs_worker_execution_policy",
+            command="ALL",
+        )
+
         with migrated_engine.begin() as worker_connection:
             worker_connection.execute(text("SET LOCAL ROLE epick_worker"))
             for table_name in (

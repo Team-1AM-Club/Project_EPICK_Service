@@ -114,7 +114,7 @@ RLS_POLICY_EXPECTATIONS = tuple(
         "project_questions",
         "question_versions",
     )
-)
+) + (("recommendation_runs", "recommendation_runs_worker_execution_policy", "ALL"),)
 
 W3_AUTHORITY_RLS_POLICY_EXPECTATIONS = tuple(
     (table_name, f"{table_name}_w3_authority_read_policy", "SELECT")

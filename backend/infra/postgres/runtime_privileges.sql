@@ -195,6 +195,30 @@ GRANT SELECT, INSERT, UPDATE ON TABLE
     projection_sync_states
 TO epick_worker;
 
+-- The recommendation outbox relay locks the referenced run before publishing
+-- its W4 dispatch, and the private W4 adapter later finalizes that same run.
+-- The original owner-only policy hides the row when no interactive
+-- app.current_user_id is set, so grant the operational worker an explicit
+-- all-row policy. Keep this idempotent because this manifest is deliberately
+-- re-applied after forward-only migrations in existing environments.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = 'recommendation_runs'
+          AND policyname = 'recommendation_runs_worker_execution_policy'
+    ) THEN
+        CREATE POLICY recommendation_runs_worker_execution_policy
+        ON recommendation_runs
+        FOR ALL TO epick_worker
+        USING (true)
+        WITH CHECK (true);
+    END IF;
+END
+$$;
+
 -- Inbound delivery receipts are append-first. Existing workers may finalize
 -- only the outcome column after a durable transaction; digest/provenance are
 -- immutable. Core Decision bindings are append-only audit pins.  Revision 028
