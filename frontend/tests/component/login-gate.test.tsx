@@ -16,6 +16,7 @@ describe("LoginGate", () => {
       "href",
       expect.stringContaining("/api/v1/auth/google/start"),
     );
+    expect(screen.getByText("Google로 계속하기")).toBeVisible();
   });
 
   it("renders private children only for an authenticated session", () => {

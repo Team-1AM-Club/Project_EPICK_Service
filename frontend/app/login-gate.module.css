@@ -1,0 +1,296 @@
+.page {
+  --login-background: #111213;
+  --login-foreground: #f4f5f5;
+  --login-primary: #3aedde;
+  --login-muted: #979e9e;
+  --login-border: #ffffff1a;
+  position: relative;
+  display: flex;
+  min-height: 100svh;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--login-foreground);
+  background:
+    radial-gradient(ellipse at 19% 70%, #213c3828, transparent 47%),
+    linear-gradient(125deg, var(--login-background) 45%, #1b1e1f);
+}
+
+.header,
+.footer {
+  display: flex;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding-right: 64px;
+  padding-left: 64px;
+  align-items: center;
+}
+
+.header {
+  height: 116px;
+  flex-shrink: 0;
+}
+
+.brand {
+  display: block;
+  width: 104px;
+  height: 27px;
+}
+
+.layout {
+  display: flex;
+  width: 100%;
+  flex: 1;
+  padding: 36px 24px 52px;
+  align-items: center;
+  justify-content: center;
+}
+
+.panel {
+  position: relative;
+  width: 424px;
+  max-width: 100%;
+  padding: 44px 36px 32px;
+  overflow: hidden;
+  border: 1px solid var(--login-border);
+  border-radius: 20px;
+  background: linear-gradient(145deg, #2b303166, #1a1d1e88);
+  box-shadow: 0 24px 80px #00000012;
+  backdrop-filter: blur(18px);
+}
+
+.topline {
+  position: absolute;
+  top: 0;
+  right: 36px;
+  left: 36px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #3aedde66, transparent);
+}
+
+.title {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 550;
+  line-height: 1.35;
+  letter-spacing: -1.1px;
+  word-break: keep-all;
+}
+
+.description {
+  margin: 17px 0 0;
+  color: var(--login-muted);
+  font-size: 14px;
+  line-height: 1.85;
+  word-break: keep-all;
+}
+
+.googleButton,
+.retryButton {
+  display: flex;
+  width: 100%;
+  height: 54px;
+  margin-top: 36px;
+  padding: 0 21px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ffffff26;
+  border-radius: 30px;
+  color: #e9eded;
+  background: #ffffff07;
+  text-decoration: none;
+  transition: border-color 180ms ease, background 180ms ease;
+}
+
+.googleButton {
+  gap: 12px;
+}
+
+.googleButton:hover,
+.retryButton:hover {
+  border-color: #ffffff40;
+  background: #ffffff0e;
+}
+
+.googleButton:focus-visible,
+.retryButton:focus-visible {
+  outline: 2px solid var(--login-primary);
+  outline-offset: 4px;
+}
+
+.googleButton:active,
+.retryButton:active {
+  background: #ffffff14;
+}
+
+.googleButton > span {
+  flex: 1;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.retryButton {
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.googleMark {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.arrow {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  color: #9da7a4;
+}
+
+.divider {
+  height: 1px;
+  margin: 32px 0 24px;
+  background: var(--login-border);
+}
+
+.footnote {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  color: #7d9089;
+}
+
+.footnote svg {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.footnote p {
+  margin: 0;
+  color: #9ba7a2;
+  font-size: 11px;
+  line-height: 1.85;
+}
+
+.footnote span {
+  color: #788781;
+}
+
+.progress {
+  position: relative;
+  height: 3px;
+  margin-top: 36px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #ffffff0d;
+}
+
+.progress span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 38%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, var(--login-primary), transparent);
+  animation: login-progress 1.15s ease-in-out infinite;
+}
+
+.footer {
+  min-height: 76px;
+  justify-content: center;
+  color: #65706d;
+  font-size: 10px;
+  letter-spacing: 0.2px;
+}
+
+@keyframes login-progress {
+  from { transform: translateX(-105%); }
+  to { transform: translateX(265%); }
+}
+
+@media (max-width: 800px) {
+  .header {
+    height: 96px;
+    padding: 0 28px;
+  }
+
+  .layout {
+    padding: 24px 28px 48px;
+  }
+
+  .panel {
+    padding: 30px 28px 28px;
+  }
+
+  .title {
+    font-size: 28px;
+  }
+
+  .description {
+    margin-top: 13px;
+    font-size: 13px;
+  }
+
+  .googleButton,
+  .retryButton {
+    margin-top: 27px;
+  }
+
+  .divider {
+    margin: 27px 0 20px;
+  }
+
+  .footnote p {
+    font-size: 10px;
+  }
+
+  .footer {
+    min-height: 66px;
+    padding: 0 28px 25px;
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 360px) {
+  .header {
+    padding: 0 22px;
+  }
+
+  .brand {
+    width: 94px;
+    height: auto;
+  }
+
+  .layout {
+    padding: 18px 20px 32px;
+  }
+
+  .panel {
+    padding: 27px 22px 24px;
+  }
+
+  .title {
+    font-size: 25px;
+  }
+
+  .footer {
+    padding: 0 22px 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .googleButton,
+  .retryButton {
+    transition: none;
+  }
+
+  .progress span {
+    width: 100%;
+    animation: none;
+    opacity: 0.75;
+  }
+}
