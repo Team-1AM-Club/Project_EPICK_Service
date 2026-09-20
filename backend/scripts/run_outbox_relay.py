@@ -14,12 +14,17 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from app.core.config import settings  # noqa: E402
+from app.models.registry import load_all_models  # noqa: E402
 from app.runtime.outbox_relay import OutboxRelay, QueueUrlRegistry  # noqa: E402
 from app.runtime.session import create_worker_session_factory  # noqa: E402
 from app.runtime.sqs import Boto3SqsPort  # noqa: E402
 
 
 def _build_relay() -> OutboxRelay:
+    # This narrow worker entrypoint does not import the API router graph. Load
+    # every mapped table before SQLAlchemy resolves OutboxMessage's string
+    # foreign keys (notably deletion_requests.id) during the first flush.
+    load_all_models()
     if not any(
         (
             settings.w1_execution_queue_url,
