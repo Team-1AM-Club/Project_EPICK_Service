@@ -1,6 +1,7 @@
 """Bounded operator commands. Credentials use the AWS workload provider chain."""
 
 import argparse
+from dataclasses import asdict
 import importlib
 import json
 import os
@@ -9,6 +10,7 @@ import time
 from uuid import UUID
 
 from .core_runtime import AnalysisPlan, CoreRuntime, SqsTransport
+from .lifecycle_worker import LifecycleSqsWorker
 from .retention import POLICY_REVISION
 
 
@@ -41,6 +43,33 @@ def aws_transport():
     return SqsTransport(session.client("sqs", config=config), queue)
 
 
+def aws_lifecycle_worker(runtime):
+    import boto3
+    from botocore.config import Config
+
+    region = os.environ["AWS_DEFAULT_REGION"]
+    command_queue = os.environ["W3_LIFECYCLE_COMMAND_QUEUE_URL"]
+    receipt_queue = os.environ["W3_LIFECYCLE_RECEIPT_QUEUE_URL"]
+    expected_w1_role_id = os.environ["W3_LIFECYCLE_EXPECTED_W1_ROLE_ID"]
+    own_role_id = os.environ["W3_CORE_DECISION_EXPECTED_ROLE_ID"]
+    if not expected_w1_role_id or not own_role_id:
+        raise ValueError("LIFECYCLE_WORKLOAD_ROLES_REQUIRED")
+    config = Config(connect_timeout=3, read_timeout=5, retries={"total_max_attempts": 1})
+    session = boto3.Session(region_name=region)
+    identity = session.client("sts", config=config).get_caller_identity()
+    if identity.get("UserId", "").split(":", 1)[
+        0
+    ] != own_role_id or ":assumed-role/" not in identity.get("Arn", ""):
+        raise ValueError("WORKLOAD_ROLE_MISMATCH")
+    return LifecycleSqsWorker(
+        runtime=runtime,
+        client=session.client("sqs", config=config),
+        command_queue_url=command_queue,
+        receipt_queue_url=receipt_queue,
+        expected_sender_id=expected_w1_role_id,
+    )
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -54,6 +83,7 @@ def main():
             "expire",
             "inspect",
             "backup",
+            "lifecycle-once",
             "smoke",
         ],
     )
@@ -71,6 +101,9 @@ def main():
     parser.add_argument("--destination", type=Path)
     parser.add_argument("--directory", type=Path)
     parser.add_argument("--send", action="store_true", help="Explicitly enable one live SQS send")
+    parser.add_argument(
+        "--consume", action="store_true", help="Explicitly enable one live lifecycle receive"
+    )
     args = parser.parse_args()
     try:
         if args.command == "smoke":
@@ -130,6 +163,10 @@ def main():
                 result = {"policy_revision": POLICY_REVISION, "expired": runtime.expire(now=now)}
             elif args.command == "inspect":
                 result = runtime.inspect_report()
+            elif args.command == "lifecycle-once":
+                if not args.consume:
+                    raise ValueError("EXPLICIT_CONSUME_REQUIRED")
+                result = asdict(aws_lifecycle_worker(runtime).drain_once(now=now))
             else:
                 if args.destination is None:
                     raise ValueError("DESTINATION_REQUIRED")

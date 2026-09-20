@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0",
+  "command_id": "99999999-9999-4999-8999-999999999999",
+  "owner_id": "44444444-4444-4444-8444-444444444444",
+  "owner_deletion_epoch": 2,
+  "target_type": "W3_CORE_RUNTIME",
+  "target_ref": "77777777-7777-4777-8777-777777777777"
+}

@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w3/core-runtime/lifecycle-receipt.schema.json",
+  "title": "W3 private lifecycle receipt for W1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "message_type",
+    "receipt_id",
+    "occurred_at",
+    "visibility_scope",
+    "producer",
+    "command_id",
+    "target_ref",
+    "operation",
+    "outcome",
+    "affected_count",
+    "applied_epoch",
+    "effective_at"
+  ],
+  "properties": {
+    "schema_version": {"const": "w3.private.w1-lifecycle-receipt/1.0"},
+    "message_type": {"const": "w3.private.w1.lifecycle-receipt"},
+    "receipt_id": {"type": "string", "format": "uuid"},
+    "occurred_at": {"type": "string", "format": "date-time"},
+    "visibility_scope": {"const": "PRIVATE"},
+    "producer": {"const": "w3"},
+    "command_id": {"type": "string", "format": "uuid"},
+    "target_ref": {"type": "string", "format": "uuid"},
+    "operation": {"enum": ["DELETE_OWNER", "RETIRE_SOURCE"]},
+    "outcome": {"enum": ["APPLIED", "DUPLICATE", "STALE"]},
+    "affected_count": {"type": "integer", "minimum": 0},
+    "applied_epoch": {"type": ["integer", "null"], "minimum": 0},
+    "effective_at": {"type": ["string", "null"], "format": "date-time"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"operation": {"const": "DELETE_OWNER"}}},
+      "then": {
+        "properties": {
+          "applied_epoch": {"type": "integer", "minimum": 0},
+          "effective_at": {"type": "null"}
+        }
+      },
+      "else": {
+        "properties": {
+          "applied_epoch": {"type": "null"},
+          "effective_at": {"type": "string", "format": "date-time"}
+        }
+      }
+    }
+  ]
+}

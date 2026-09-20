@@ -12,6 +12,15 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, Field
 
 from .core_decision import CoreDecisionEvent, CoreDecisionProducer, DecisionContext
+from .lifecycle import (
+    LifecycleApplyResult,
+    LifecycleCommand,
+    LifecycleReceipt,
+    OwnerDeletionCommand,
+    SourceRetirementCommand,
+    command_digest,
+    utc_from_timestamp,
+)
 from .retention import DEFAULT_RETENTION_POLICY, POLICY_REVISION, RetentionPolicy
 
 
@@ -84,6 +93,13 @@ class CoreRuntime:
                 CREATE TABLE IF NOT EXISTS core_retired_sources (
                     company_id TEXT NOT NULL, source_id TEXT NOT NULL, retired_at REAL NOT NULL,
                     PRIMARY KEY(company_id,source_id));
+                CREATE TABLE IF NOT EXISTS core_lifecycle_commands (
+                    command_id TEXT PRIMARY KEY, digest TEXT NOT NULL,
+                    receipt TEXT NOT NULL, created_at REAL NOT NULL);
+                CREATE TABLE IF NOT EXISTS core_lifecycle_receipts (
+                    command_id TEXT PRIMARY KEY, body TEXT NOT NULL, digest TEXT NOT NULL,
+                    state TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0,
+                    next_attempt REAL NOT NULL, published_at REAL);
             """)
             self._add_column(db, "core_delivery", "created_at", "REAL")
             self._add_column(db, "core_delivery", "held_at", "REAL")
@@ -178,7 +194,13 @@ class CoreRuntime:
         )
 
     def _expire_locked(self, db, now):
-        counts = {"bodies": 0, "metadata": 0, "tombstones": 0, "counters": 0}
+        counts = {
+            "bodies": 0,
+            "metadata": 0,
+            "tombstones": 0,
+            "counters": 0,
+            "lifecycle_metadata": 0,
+        }
         rows = db.execute(
             """SELECT event_id,state,created_at,published_at FROM core_delivery
             WHERE state IN ('PENDING','RETRY','HELD','TRANSPORT_HANDOFF')"""
@@ -216,6 +238,15 @@ class CoreRuntime:
             (self.policy.retired_counter_seconds, now),
         )
         counts["counters"] = cursor.rowcount
+        command_ids = db.execute(
+            """SELECT command_id FROM core_lifecycle_receipts
+            WHERE state='TRANSPORT_HANDOFF' AND published_at + ? <= ?""",
+            (self.policy.terminal_metadata_seconds, now),
+        ).fetchall()
+        if command_ids:
+            db.executemany("DELETE FROM core_lifecycle_commands WHERE command_id=?", command_ids)
+            db.executemany("DELETE FROM core_lifecycle_receipts WHERE command_id=?", command_ids)
+        counts["lifecycle_metadata"] = len(command_ids)
         return counts
 
     def supply(self, plan: AnalysisPlan, authority: Authority, idempotency_key: str, *, now: float):
@@ -382,44 +413,196 @@ class CoreRuntime:
                 (now, str(event_id)),
             )
 
-    def delete_owner(self, owner_id: UUID, *, deletion_epoch: int, now: float) -> int:
+    def _delete_owner_locked(self, db, owner_id: UUID, deletion_epoch: int, now: float):
         owner_hash = _hash(str(UUID(str(owner_id))))
         if type(deletion_epoch) is not int or deletion_epoch < 0:
             raise ValueError("INVALID_DELETION_EPOCH")
-        with self.producer._connect() as db:
-            db.execute("BEGIN IMMEDIATE")
-            maximum = db.execute(
-                "SELECT MAX(epoch) FROM core_delivery WHERE owner_hash=?", (owner_hash,)
-            ).fetchone()[0]
-            tombstone = db.execute(
-                "SELECT epoch FROM core_deleted_owners WHERE owner_hash=?", (owner_hash,)
-            ).fetchone()
-            if tombstone is not None:
-                maximum = max(maximum if maximum is not None else -1, tombstone[0])
-            if maximum is not None and deletion_epoch <= maximum:
-                raise ValueError("STALE_DELETION_EPOCH")
-            db.execute(
-                """INSERT INTO core_deleted_owners(owner_hash,epoch,deleted_at) VALUES (?,?,?)
-                ON CONFLICT(owner_hash) DO UPDATE SET
-                epoch=MAX(epoch,excluded.epoch),deleted_at=core_deleted_owners.deleted_at""",
-                (owner_hash, deletion_epoch, now),
-            )
-            rows = db.execute(
-                "SELECT event_id FROM core_delivery WHERE owner_hash=? AND state!='DELETED'",
-                (owner_hash,),
-            ).fetchall()
-            for (event_id,) in rows:
-                self._purge(db, event_id, "DELETED", terminal_at=now)
-            return len(rows)
+        maximum = db.execute(
+            "SELECT MAX(epoch) FROM core_delivery WHERE owner_hash=?", (owner_hash,)
+        ).fetchone()[0]
+        tombstone = db.execute(
+            "SELECT epoch FROM core_deleted_owners WHERE owner_hash=?", (owner_hash,)
+        ).fetchone()
+        if tombstone is not None:
+            if deletion_epoch < tombstone[0]:
+                return "STALE", 0, tombstone[0]
+            if deletion_epoch == tombstone[0]:
+                return "DUPLICATE", 0, tombstone[0]
+        elif maximum is not None and deletion_epoch <= maximum:
+            return "STALE", 0, maximum
+        db.execute(
+            """INSERT INTO core_deleted_owners(owner_hash,epoch,deleted_at) VALUES (?,?,?)
+            ON CONFLICT(owner_hash) DO UPDATE SET
+            epoch=MAX(epoch,excluded.epoch),deleted_at=core_deleted_owners.deleted_at""",
+            (owner_hash, deletion_epoch, now),
+        )
+        rows = db.execute(
+            "SELECT event_id FROM core_delivery WHERE owner_hash=? AND state!='DELETED'",
+            (owner_hash,),
+        ).fetchall()
+        for (event_id,) in rows:
+            self._purge(db, event_id, "DELETED", terminal_at=now)
+        return "APPLIED", len(rows), deletion_epoch
 
-    def retire_source(self, company_id: UUID, source_id: UUID, *, now: float) -> None:
+    def delete_owner(self, owner_id: UUID, *, deletion_epoch: int, now: float) -> int:
         with self.producer._connect() as db:
             db.execute("BEGIN IMMEDIATE")
-            db.execute(
-                """INSERT INTO core_retired_sources(company_id,source_id,retired_at)
-                VALUES (?,?,?) ON CONFLICT(company_id,source_id) DO NOTHING""",
-                (str(company_id), str(source_id), now),
+            outcome, affected, _ = self._delete_owner_locked(db, owner_id, deletion_epoch, now)
+            if outcome != "APPLIED":
+                raise ValueError("STALE_DELETION_EPOCH")
+            return affected
+
+    @staticmethod
+    def _retire_source_locked(db, company_id: UUID, source_id: UUID, retired_at: float):
+        existing = db.execute(
+            "SELECT retired_at FROM core_retired_sources WHERE company_id=? AND source_id=?",
+            (str(company_id), str(source_id)),
+        ).fetchone()
+        if existing is not None:
+            if existing[0] == retired_at:
+                return "DUPLICATE", existing[0]
+            return "STALE", existing[0]
+        db.execute(
+            "INSERT INTO core_retired_sources(company_id,source_id,retired_at) VALUES (?,?,?)",
+            (str(company_id), str(source_id), retired_at),
+        )
+        return "APPLIED", retired_at
+
+    def retire_source(
+        self, command: SourceRetirementCommand, *, now: float
+    ) -> LifecycleApplyResult:
+        """Apply a command-id-bound retirement and persist its receipt atomically."""
+        command = SourceRetirementCommand.model_validate(command.model_dump())
+        return self.apply_lifecycle_command(command, now=now)
+
+    def apply_lifecycle_command(
+        self, command: LifecycleCommand, *, now: float
+    ) -> LifecycleApplyResult:
+        digest = command_digest(command)
+        command_id = str(command.command_id)
+        with self.producer._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            self._enabled(db)
+            self._expire_locked(db, now)
+            previous = db.execute(
+                "SELECT digest,receipt FROM core_lifecycle_commands WHERE command_id=?",
+                (command_id,),
+            ).fetchone()
+            if previous is not None:
+                if previous[0] != digest:
+                    raise ValueError("LIFECYCLE_COMMAND_ID_CONFLICT")
+                receipt = LifecycleReceipt.model_validate_json(previous[1])
+                state = db.execute(
+                    "SELECT state FROM core_lifecycle_receipts WHERE command_id=?",
+                    (command_id,),
+                ).fetchone()[0]
+                return LifecycleApplyResult(receipt, True, state)
+
+            if isinstance(command, OwnerDeletionCommand):
+                outcome, affected, applied_epoch = self._delete_owner_locked(
+                    db, command.owner_id, command.owner_deletion_epoch, now
+                )
+                receipt = LifecycleReceipt(
+                    schema_version="w3.private.w1-lifecycle-receipt/1.0",
+                    message_type="w3.private.w1.lifecycle-receipt",
+                    receipt_id=uuid4(),
+                    occurred_at=utc_from_timestamp(now),
+                    visibility_scope="PRIVATE",
+                    producer="w3",
+                    command_id=command.command_id,
+                    target_ref=command.target_ref,
+                    operation="DELETE_OWNER",
+                    outcome=outcome,
+                    affected_count=affected,
+                    applied_epoch=applied_epoch,
+                    effective_at=None,
+                )
+            elif isinstance(command, SourceRetirementCommand):
+                retired_at = command.retired_at.timestamp()
+                if retired_at > now:
+                    raise ValueError("SOURCE_RETIREMENT_FROM_FUTURE")
+                outcome, effective_at = self._retire_source_locked(
+                    db, command.company_id, command.source_id, retired_at
+                )
+                receipt = LifecycleReceipt(
+                    schema_version="w3.private.w1-lifecycle-receipt/1.0",
+                    message_type="w3.private.w1.lifecycle-receipt",
+                    receipt_id=uuid4(),
+                    occurred_at=utc_from_timestamp(now),
+                    visibility_scope="PRIVATE",
+                    producer="w3",
+                    command_id=command.command_id,
+                    target_ref=command.target_ref,
+                    operation="RETIRE_SOURCE",
+                    outcome=outcome,
+                    affected_count=1 if outcome == "APPLIED" else 0,
+                    applied_epoch=None,
+                    effective_at=utc_from_timestamp(effective_at),
+                )
+            else:  # pragma: no cover - the validated union is exhaustive.
+                raise ValueError("LIFECYCLE_COMMAND_UNSUPPORTED")
+
+            body = receipt.model_dump_json()
+            receipt_digest = _hash(
+                json.dumps(
+                    json.loads(body),
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    ensure_ascii=False,
+                    allow_nan=False,
+                )
             )
+            db.execute(
+                "INSERT INTO core_lifecycle_commands VALUES (?,?,?,?)",
+                (command_id, digest, body, now),
+            )
+            db.execute(
+                """INSERT INTO core_lifecycle_receipts
+                (command_id,body,digest,state,next_attempt) VALUES (?,?,?,'PENDING',?)""",
+                (command_id, body, receipt_digest, now),
+            )
+            return LifecycleApplyResult(receipt, False, "PENDING")
+
+    def relay_lifecycle_receipt(self, command_id: UUID, transport: Transport, *, now: float):
+        with self.producer._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            self._enabled(db)
+            row = db.execute(
+                """SELECT body,state,attempts,next_attempt FROM core_lifecycle_receipts
+                WHERE command_id=?""",
+                (str(command_id),),
+            ).fetchone()
+            if row is None:
+                raise ValueError("LIFECYCLE_RECEIPT_NOT_FOUND")
+            body, state, attempts, next_attempt = row
+            if state == "TRANSPORT_HANDOFF":
+                return "ALREADY_HANDOFF"
+            if state == "HELD":
+                return "HELD"
+            if next_attempt > now:
+                return "RETRY_WAIT"
+            try:
+                receipt = transport.send(body)
+                if not isinstance(receipt, str) or not receipt:
+                    raise ValueError("INVALID_TRANSPORT_RECEIPT")
+            except Exception:
+                next_state = "HELD" if attempts + 1 >= self.max_attempts else "RETRY"
+                db.execute(
+                    """UPDATE core_lifecycle_receipts
+                    SET state=?,attempts=attempts+1,next_attempt=? WHERE command_id=?""",
+                    (
+                        next_state,
+                        now + min(300, 2 ** min(attempts + 1, 9)),
+                        str(command_id),
+                    ),
+                )
+                return next_state
+            db.execute(
+                """UPDATE core_lifecycle_receipts SET state='TRANSPORT_HANDOFF',
+                attempts=attempts+1,published_at=? WHERE command_id=?""",
+                (now, str(command_id)),
+            )
+            return "TRANSPORT_HANDOFF"
 
     def expire(self, *, now: float) -> dict[str, int]:
         with self.producer._connect() as db:
@@ -450,9 +633,15 @@ class CoreRuntime:
             missing_tombstone_dates = db.execute(
                 "SELECT COUNT(*) FROM core_deleted_owners WHERE deleted_at IS NULL"
             ).fetchone()[0]
+            lifecycle_receipts = dict(
+                db.execute(
+                    "SELECT state,COUNT(*) FROM core_lifecycle_receipts GROUP BY state"
+                ).fetchall()
+            )
         return {
             "policy_revision": POLICY_REVISION,
             "migration_blockers": {"owner_tombstone_without_deleted_at": missing_tombstone_dates},
+            "lifecycle_receipts": lifecycle_receipts,
             "deliveries": self.inspect(),
         }
 

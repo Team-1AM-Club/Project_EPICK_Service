@@ -1,10 +1,12 @@
 import sqlite3
+from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
 
 from w3_knowledge.core_decision import CoreDecisionProducer, DecisionContext
 from w3_knowledge.core_runtime import AnalysisPlan, Authorization, CoreRuntime
+from w3_knowledge.lifecycle import SourceRetirementCommand
 from w3_knowledge.retention import RetentionPolicy
 
 
@@ -134,7 +136,19 @@ def test_retired_source_counter_expires_but_source_identifier_stays_blocked(tmp_
     path = tmp_path / "runtime.db"
     r = runtime(tmp_path)
     r.supply(analysis_plan(), Authority(), "first", now=100)
-    r.retire_source(UUID(int=2), UUID(int=3), now=200)
+    r.retire_source(
+        SourceRetirementCommand(
+            schema_version="w1.private.w3-source-retirement/1.0",
+            command_id=UUID(int=20),
+            operation="RETIRE_SOURCE",
+            company_id=UUID(int=2),
+            source_id=UUID(int=3),
+            retired_at=datetime.fromtimestamp(200, UTC),
+            target_type="W3_CORE_RUNTIME",
+            target_ref=UUID(int=21),
+        ),
+        now=200,
+    )
 
     assert r.expire(now=289.999)["counters"] == 0
     assert r.expire(now=290)["counters"] == 1
@@ -246,6 +260,7 @@ def test_cli_exposes_policy_and_rejects_unapproved_retention_value(tmp_path):
     assert json.loads(inspected.stdout) == {
         "policy_revision": "w3.retention/1.1",
         "migration_blockers": {"owner_tombstone_without_deleted_at": 0},
+        "lifecycle_receipts": {},
         "deliveries": [],
     }
 
