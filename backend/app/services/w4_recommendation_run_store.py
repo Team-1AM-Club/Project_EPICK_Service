@@ -75,6 +75,8 @@ class W4RecommendationRunStoreService:
         # canonical user/run tables. Scope only this transaction to the owner
         # supplied by the opaque dispatch reference before looking up any
         # owner data; the exact run/binding checks below remain authoritative.
+        if not self.session.in_transaction():
+            self.session.begin()
         set_local_owner_context(self.session, owner_user_id)
         owner = self.repository.lock_owner(owner_user_id=owner_user_id)
         run = self.repository.lock_run(owner_user_id=owner_user_id, run_id=run_id)

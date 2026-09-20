@@ -22,6 +22,11 @@ _EXECUTION_TABLES = (
     "recommendation_publications",
     "recommendation_source_dependencies",
 )
+PUBLIC_PAYLOAD_FORBIDDEN_KEYS = (
+    "ARRAY['owner_id', 'owner_user_id', 'job_id', 'command_id', "
+    "'authenticated_owner_ref', 'project_id', 'auth_subject', 'email', "
+    "'checkpoint', 'prompt', 'response', 'secret', 'token']"
+)
 
 
 def upgrade() -> None:
@@ -217,19 +222,22 @@ def upgrade() -> None:
         "(visibility_scope = 'PUBLIC' AND owner_user_id IS NULL AND job_id IS NULL "
         "AND command_id IS NULL AND execution_fence IS NULL AND owner_deletion_epoch IS NULL "
         "AND deletion_request_id IS NULL AND deletion_target_id IS NULL "
-        "AND recommendation_run_id IS NULL) OR "
+        "AND recommendation_run_id IS NULL AND jsonb_typeof(payload) = 'object' "
+        f"AND NOT (payload ?| {PUBLIC_PAYLOAD_FORBIDDEN_KEYS})) OR "
         "(visibility_scope = 'PRIVATE' AND owner_user_id IS NOT NULL AND job_id IS NOT NULL "
         "AND command_id IS NOT NULL AND execution_fence IS NOT NULL "
         "AND owner_deletion_epoch IS NOT NULL AND deletion_request_id IS NULL "
-        "AND deletion_target_id IS NULL AND recommendation_run_id IS NULL) OR "
+        "AND deletion_target_id IS NULL AND recommendation_run_id IS NULL "
+        "AND jsonb_typeof(payload) = 'object') OR "
         "(visibility_scope = 'PRIVATE' AND owner_user_id IS NOT NULL AND job_id IS NULL "
         "AND command_id IS NULL AND execution_fence IS NULL AND owner_deletion_epoch IS NOT NULL "
         "AND deletion_request_id IS NOT NULL AND deletion_target_id IS NOT NULL "
-        "AND recommendation_run_id IS NULL) OR "
+        "AND recommendation_run_id IS NULL AND jsonb_typeof(payload) = 'object') OR "
         "(visibility_scope = 'PRIVATE' AND owner_user_id IS NOT NULL "
         "AND recommendation_run_id IS NOT NULL AND job_id IS NULL AND command_id IS NULL "
         "AND execution_fence IS NULL AND owner_deletion_epoch IS NOT NULL "
-        "AND deletion_request_id IS NULL AND deletion_target_id IS NULL)",
+        "AND deletion_request_id IS NULL AND deletion_target_id IS NULL "
+        "AND jsonb_typeof(payload) = 'object')",
     )
 
     for table_name in _EXECUTION_TABLES:
@@ -264,14 +272,17 @@ def downgrade() -> None:
         "outbox_messages",
         "(visibility_scope = 'PUBLIC' AND owner_user_id IS NULL AND job_id IS NULL "
         "AND command_id IS NULL AND execution_fence IS NULL AND owner_deletion_epoch IS NULL "
-        "AND deletion_request_id IS NULL AND deletion_target_id IS NULL) OR "
+        "AND deletion_request_id IS NULL AND deletion_target_id IS NULL "
+        "AND jsonb_typeof(payload) = 'object' "
+        f"AND NOT (payload ?| {PUBLIC_PAYLOAD_FORBIDDEN_KEYS})) OR "
         "(visibility_scope = 'PRIVATE' AND owner_user_id IS NOT NULL AND job_id IS NOT NULL "
         "AND command_id IS NOT NULL AND execution_fence IS NOT NULL "
         "AND owner_deletion_epoch IS NOT NULL AND deletion_request_id IS NULL "
-        "AND deletion_target_id IS NULL) OR "
+        "AND deletion_target_id IS NULL AND jsonb_typeof(payload) = 'object') OR "
         "(visibility_scope = 'PRIVATE' AND owner_user_id IS NOT NULL AND job_id IS NULL "
         "AND command_id IS NULL AND execution_fence IS NULL AND owner_deletion_epoch IS NOT NULL "
-        "AND deletion_request_id IS NOT NULL AND deletion_target_id IS NOT NULL)",
+        "AND deletion_request_id IS NOT NULL AND deletion_target_id IS NOT NULL "
+        "AND jsonb_typeof(payload) = 'object')",
     )
     op.drop_constraint("recommendation_run_owner_scope", "outbox_messages", type_="foreignkey")
     op.drop_column("outbox_messages", "recommendation_run_id")
