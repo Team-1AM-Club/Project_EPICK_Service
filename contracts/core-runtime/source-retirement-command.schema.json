@@ -22,6 +22,10 @@
     "source_id": {"type": "string", "format": "uuid"},
     "retired_at": {"type": "string", "format": "date-time"},
     "target_type": {"const": "W3_CORE_RUNTIME"},
-    "target_ref": {"type": "string", "format": "uuid"}
+    "target_ref": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Must equal source_id; the authoritative W1 Source.id. Enforced by the W3 command model."
+    }
   }
 }

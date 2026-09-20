@@ -35,6 +35,12 @@ class SourceRetirementCommand(BaseModel):
     target_type: Literal["W3_CORE_RUNTIME"]
     target_ref: UUID
 
+    @model_validator(mode="after")
+    def target_ref_is_source_id(self):
+        if self.target_ref != self.source_id:
+            raise ValueError("SOURCE_TARGET_REF_MISMATCH")
+        return self
+
 
 LifecycleCommand = OwnerDeletionCommand | SourceRetirementCommand
 

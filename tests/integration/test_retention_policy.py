@@ -145,7 +145,7 @@ def test_retired_source_counter_expires_but_source_identifier_stays_blocked(tmp_
             source_id=UUID(int=3),
             retired_at=datetime.fromtimestamp(200, UTC),
             target_type="W3_CORE_RUNTIME",
-            target_ref=UUID(int=21),
+            target_ref=UUID(int=3),
         ),
         now=200,
     )

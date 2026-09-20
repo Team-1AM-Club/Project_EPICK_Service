@@ -604,6 +604,20 @@ class CoreRuntime:
             )
             return "TRANSPORT_HANDOFF"
 
+    def next_unfinished_lifecycle_receipt(self) -> UUID | None:
+        """Return the oldest receipt that must be settled before accepting new commands."""
+        with self.producer._connect() as db:
+            self._enabled(db)
+            row = db.execute(
+                """SELECT receipt.command_id
+                FROM core_lifecycle_receipts receipt
+                JOIN core_lifecycle_commands command USING(command_id)
+                WHERE receipt.state != 'TRANSPORT_HANDOFF'
+                ORDER BY command.created_at, receipt.command_id
+                LIMIT 1"""
+            ).fetchone()
+        return UUID(row[0]) if row is not None else None
+
     def expire(self, *, now: float) -> dict[str, int]:
         with self.producer._connect() as db:
             db.execute("BEGIN IMMEDIATE")

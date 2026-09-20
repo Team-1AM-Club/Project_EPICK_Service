@@ -18,6 +18,7 @@ class LifecycleWorkerResult:
     duplicate: int = 0
     stale: int = 0
     terminal_rejected: int = 0
+    receipt_relayed: int = 0
 
 
 class LifecycleSqsWorker:
@@ -51,6 +52,18 @@ class LifecycleSqsWorker:
         self.wait_time_seconds = wait_time_seconds
 
     def drain_once(self, *, now: float) -> LifecycleWorkerResult:
+        try:
+            unfinished = self.runtime.next_unfinished_lifecycle_receipt()
+            if unfinished is not None:
+                handoff = self.runtime.relay_lifecycle_receipt(
+                    unfinished, self.receipt_transport, now=now
+                )
+                if handoff in {"TRANSPORT_HANDOFF", "ALREADY_HANDOFF"}:
+                    return LifecycleWorkerResult(receipt_relayed=1)
+                return LifecycleWorkerResult(retry_scheduled=1)
+        except (sqlite3.Error, OSError, TimeoutError):
+            return LifecycleWorkerResult(retry_scheduled=1)
+
         try:
             response = self.client.receive_message(
                 QueueUrl=self.command_queue_url,

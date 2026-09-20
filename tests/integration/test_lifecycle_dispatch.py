@@ -72,7 +72,7 @@ def owner_command(*, command_id=20, epoch=2):
     )
 
 
-def source_command(*, command_id=40, retired_at=200):
+def source_command(*, command_id=40, retired_at=200, target_ref=3):
     return SourceRetirementCommand(
         schema_version="w1.private.w3-source-retirement/1.0",
         command_id=UUID(int=command_id),
@@ -81,7 +81,7 @@ def source_command(*, command_id=40, retired_at=200):
         source_id=UUID(int=3),
         retired_at=datetime.fromtimestamp(retired_at, UTC),
         target_type="W3_CORE_RUNTIME",
-        target_ref=UUID(int=50),
+        target_ref=UUID(int=target_ref),
     )
 
 
@@ -114,6 +114,11 @@ def test_same_command_id_with_changed_payload_is_terminal_conflict(tmp_path):
     r.apply_lifecycle_command(owner_command(), now=100)
     with pytest.raises(ValueError, match="LIFECYCLE_COMMAND_ID_CONFLICT"):
         r.apply_lifecycle_command(owner_command(epoch=3), now=101)
+
+
+def test_source_retirement_target_ref_must_equal_source_id():
+    with pytest.raises(ValueError, match="SOURCE_TARGET_REF_MISMATCH"):
+        source_command(target_ref=50)
 
 
 def test_source_retirement_uses_authoritative_first_time_and_blocks_supply(tmp_path):
@@ -225,6 +230,26 @@ class FakeSqsClient:
         self.calls.append(("delete", kwargs))
 
 
+def test_sqs_worker_relays_existing_pending_receipt_before_receiving_new_command(tmp_path):
+    r = runtime(tmp_path)
+    pending = owner_command(command_id=20, epoch=2)
+    r.apply_lifecycle_command(pending, now=100)
+    client = FakeSqsClient(owner_command(command_id=21, epoch=3).model_dump_json())
+
+    result = LifecycleSqsWorker(
+        runtime=r,
+        client=client,
+        command_queue_url="https://sqs.ap-northeast-2.amazonaws.com/1/w3-lifecycle-command",
+        receipt_queue_url="https://sqs.ap-northeast-2.amazonaws.com/1/w3-lifecycle-receipt",
+        expected_sender_id="AROAW1ROLE",
+    ).drain_once(now=100)
+
+    assert result.receipt_relayed == 1
+    assert [call[0] for call in client.calls] == ["send"]
+    receipt = json.loads(client.calls[0][1]["MessageBody"])
+    assert receipt["command_id"] == str(pending.command_id)
+
+
 def test_sqs_worker_sends_durable_receipt_before_acknowledging_command(tmp_path):
     command = owner_command()
     client = FakeSqsClient(command.model_dump_json())
@@ -287,6 +312,28 @@ def test_sqs_worker_terminally_rejects_untrusted_sender_without_receipt(tmp_path
         receipt_queue_url="https://sqs.ap-northeast-2.amazonaws.com/1/w3-lifecycle-receipt",
         expected_sender_id="AROAW1ROLE",
     ).drain_once(now=100)
+
+    assert result.terminal_rejected == 1
+    assert result.acknowledged == 1
+    assert [call[0] for call in client.calls] == ["receive", "delete"]
+
+
+def test_sqs_worker_terminally_rejects_command_id_conflict_without_receipt(tmp_path):
+    r = runtime(tmp_path)
+    command = owner_command(command_id=20, epoch=2)
+    r.apply_lifecycle_command(command, now=100)
+    assert r.relay_lifecycle_receipt(command.command_id, ReceiptTransport(), now=100) == (
+        "TRANSPORT_HANDOFF"
+    )
+    client = FakeSqsClient(owner_command(command_id=20, epoch=3).model_dump_json())
+
+    result = LifecycleSqsWorker(
+        runtime=r,
+        client=client,
+        command_queue_url="https://sqs.ap-northeast-2.amazonaws.com/1/w3-lifecycle-command",
+        receipt_queue_url="https://sqs.ap-northeast-2.amazonaws.com/1/w3-lifecycle-receipt",
+        expected_sender_id="AROAW1ROLE",
+    ).drain_once(now=101)
 
     assert result.terminal_rejected == 1
     assert result.acknowledged == 1
