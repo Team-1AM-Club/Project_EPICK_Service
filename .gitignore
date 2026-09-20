@@ -16,6 +16,9 @@ __pycache__/
 htmlcov/
 
 build/
+!frontend/build/
+!frontend/build/sites-vite-plugin.ts
+!frontend/build/sites-vite-plugin.LICENSE
 dist/
 *.egg-info/
 .runtime/
