@@ -1,8 +1,16 @@
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
-from test_c01 import SOURCE, allowed_version, index_request, parse, released, store_at
+from test_c01 import (
+    SOURCE,
+    SourceAuthority,
+    allowed_version,
+    index_request,
+    parse,
+    released,
+    store_at,
+)
 
 
 def test_retired_source_wide_mode_is_rejected(tmp_path):
@@ -18,19 +26,17 @@ def test_replacement_must_be_source_uuid_not_uri(replacement):
         parse(value)
 
 
-def test_replacement_requires_previously_observed_w2_source(tmp_path):
-    with store_at(tmp_path / "replacement.db", scope="version") as store:
+def test_replacement_requires_authoritative_w2_source(tmp_path):
+    authority = SourceAuthority(allowed={UUID(SOURCE)})
+    with store_at(tmp_path / "replacement.db", scope="version", authority=authority) as store:
         store.consume(parse(allowed_version()))
         event = released()
         target = str(uuid4())
         event["payload"]["replacement_ref"] = target
-        with pytest.raises(ValueError, match="REPLACEMENT_SOURCE_UNREGISTERED"):
+        with pytest.raises(ValueError, match="SOURCE_NOT_REGISTERED"):
             store.consume(parse(event))
         assert store.status(SOURCE)["event_cursor"] == 1
-        registered = allowed_version()
-        registered["event_id"] = str(uuid4())
-        registered["aggregate_id"] = registered["payload"]["source_id"] = target
-        store.consume(parse(registered))
+        authority.allowed.add(UUID(target))
         result = store.consume(parse(event))
         assert result["event_cursor"] == 2
 
@@ -41,9 +47,10 @@ def test_snapshot_and_replay_cannot_bypass_replacement_registration(tmp_path):
 
     event = released()
     event["payload"]["replacement_ref"] = str(uuid4())
-    with store_at(tmp_path / "recovery.db", scope="version") as store:
+    authority = SourceAuthority(allowed={UUID(SOURCE)})
+    with store_at(tmp_path / "recovery.db", scope="version", authority=authority) as store:
         store.consume(parse(allowed_version()))
-        with pytest.raises(ValueError, match="REPLACEMENT_SOURCE_UNREGISTERED"):
+        with pytest.raises(ValueError, match="SOURCE_NOT_REGISTERED"):
             store.snapshot(snapshot_value(2, restrictions=[event], restriction_revision=1))
         replay = Replay.model_validate(
             dict(
@@ -55,7 +62,7 @@ def test_snapshot_and_replay_cannot_bypass_replacement_registration(tmp_path):
                 events=[event],
             )
         )
-        with pytest.raises(ValueError, match="REPLACEMENT_SOURCE_UNREGISTERED"):
+        with pytest.raises(ValueError, match="SOURCE_NOT_REGISTERED"):
             store.replay(replay)
         assert store.status(SOURCE)["required_event_cursor"] == 1
 

@@ -8,6 +8,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from ..restriction.store import Store as BaseStore, encode, utc_now
+from .authority import require_registered
 from .contracts import Event, IndexKey, Signal, VERSION
 
 
@@ -44,14 +45,25 @@ def projection(event):
 
 
 class Store(BaseStore):
-    def __init__(self, path, *, restriction_scope, max_ttl_seconds, clock=utc_now):
+    def __init__(
+        self,
+        path,
+        *,
+        restriction_scope,
+        max_ttl_seconds,
+        source_authority=None,
+        clock=utc_now,
+    ):
         if (
             restriction_scope != "version"
             or type(max_ttl_seconds) is not int
             or max_ttl_seconds <= 0
         ):
             raise ValueError("EXPLICIT_SCOPE_AND_POSITIVE_TTL_REQUIRED")
+        if not callable(getattr(source_authority, "is_registered", None)):
+            raise ValueError("SOURCE_AUTHORITY_REQUIRED")
         self.scope, self.max_ttl_seconds = restriction_scope, max_ttl_seconds
+        self.source_authority = source_authority
         super().__init__(path, consumer_id="w3-c01/0.2-candidate/r2", clock=clock)
         self.db.executescript("""
             CREATE TABLE IF NOT EXISTS c01_settings (id INTEGER PRIMARY KEY, scope TEXT, ttl INTEGER);
@@ -252,7 +264,6 @@ class Store(BaseStore):
     def _consume(self, event):
         # Revalidate nested mutable dicts even when caller hands us an existing model.
         event = Event.model_validate(event.model_dump(mode="json"))
-        self._validate_replacement(event)
         source = event.aggregate_id.lower()
         original_hash = digest(event.model_dump(mode="json"))
         same_id = self.db.execute(
@@ -287,7 +298,6 @@ class Store(BaseStore):
                 encode(projection(event)),
             ),
         )
-        self.db.execute("INSERT OR IGNORE INTO c01_registered_sources VALUES (?)", (source,))
         state["required"] = max(state["required"], event.revision)
         if event.event_type == "source.restriction.changed":
             state["required_restriction"] = max(
@@ -315,6 +325,11 @@ class Store(BaseStore):
         )
 
     def consume(self, event):
+        refs = [event.aggregate_id]
+        replacement = event.payload.get("replacement_ref")
+        if replacement is not None:
+            refs.append(replacement)
+        self._require_registered_sources(*refs)
         with self.transaction():
             outcome = self._consume(event)
             return dict(
@@ -324,15 +339,9 @@ class Store(BaseStore):
                 outcome=outcome,
             )
 
-    def _validate_replacement(self, event):
-        replacement = event.payload.get("replacement_ref")
-        if (
-            replacement is not None
-            and not self.db.execute(
-                "SELECT 1 FROM c01_registered_sources WHERE source=?", (replacement.lower(),)
-            ).fetchone()
-        ):
-            raise ValueError("REPLACEMENT_SOURCE_UNREGISTERED")
+    def _require_registered_sources(self, *source_ids):
+        for source_id in sorted({value.lower() for value in source_ids}):
+            require_registered(self.source_authority, source_id)
 
     def purge(self):
         with self.transaction():
@@ -353,6 +362,12 @@ class Store(BaseStore):
             return self._status(source, self._state(source))
 
     def replay(self, batch):
+        replacements = [
+            event.payload["replacement_ref"]
+            for event in batch.events
+            if event.payload.get("replacement_ref") is not None
+        ]
+        self._require_registered_sources(batch.source_id, *replacements)
         with self.transaction():
             state = self._state(batch.source_id)
             if batch.after_cursor > state["cursor"]:
@@ -380,9 +395,13 @@ class Store(BaseStore):
 
     def snapshot(self, snapshot):
         source = snapshot.source_id
+        replacements = [
+            event.payload["replacement_ref"]
+            for event in snapshot.restrictions
+            if event.payload.get("replacement_ref") is not None
+        ]
+        self._require_registered_sources(source, *replacements)
         with self.transaction():
-            for event in snapshot.restrictions:
-                self._validate_replacement(event)
             old = self._state(source)
             if snapshot.event_cursor < max(
                 old["cursor"], old["required"]
@@ -509,13 +528,13 @@ class Store(BaseStore):
                 "INSERT OR REPLACE INTO c01_checkpoints VALUES (?,?,?)",
                 (source, snapshot.event_cursor, snapshot_hash),
             )
-            self.db.execute("INSERT OR IGNORE INTO c01_registered_sources VALUES (?)", (source,))
             self._clear_index(source)
             self._emit(source, state)
             return dict(self._status(source, state), outcome="SNAPSHOT_APPLIED")
 
     def index(self, request):
         source = request.source_id
+        self._require_registered_sources(source)
         try:
             with self.transaction():
                 state = self._state(source)

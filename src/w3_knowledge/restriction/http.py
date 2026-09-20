@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from pydantic import ValidationError
 
+from ..c01.authority import SourceAuthorityUnavailable, SourceNotRegistered
 from .contracts import VERSION
 from . import contracts as legacy_contracts
 from .store import Store
@@ -145,6 +146,10 @@ def make_server(store, tokens, *, port=8763, contracts=legacy_contracts, prefix=
                     if result.get("outcome") in {"CONFLICT", "STALE_SNAPSHOT", "CURSOR_AHEAD"}:
                         code = 409
                     self.reply(code, result)
+            except SourceAuthorityUnavailable:
+                self.reply(503, {"error": "SOURCE_AUTHORITY_UNAVAILABLE", "index_ack": False})
+            except SourceNotRegistered:
+                self.reply(422, {"error": "SOURCE_NOT_REGISTERED", "index_ack": False})
             except (ValidationError, ValueError, TypeError):
                 self.reply(422, {"error": "CONTRACT_INVALID", "index_ack": False})
             except sqlite3.Error:

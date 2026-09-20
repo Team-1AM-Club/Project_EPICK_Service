@@ -1,13 +1,26 @@
 import copy
 import json
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
 FIXTURES = Path(__file__).parents[2] / "contracts/c01/v0.2-candidate/fixtures"
 SOURCE = "10000000-0000-4000-8000-000000000005"
 NAMES = ["version-available", "version-partial", "observation-changed", "restriction-changed"]
+
+
+class SourceAuthority:
+    def __init__(self, allowed=None, error=None):
+        self.allowed = allowed
+        self.error = error
+        self.calls = []
+
+    def is_registered(self, source_id: UUID) -> bool:
+        self.calls.append(source_id)
+        if self.error:
+            raise self.error
+        return self.allowed is None or source_id in self.allowed
 
 
 def fixture(name):
@@ -20,10 +33,21 @@ def parse(value):
     return Event.model_validate(value)
 
 
-def store_at(path, scope="version", clock=lambda: "2026-09-16T00:00:00Z"):
+def store_at(
+    path,
+    scope="version",
+    clock=lambda: "2026-09-16T00:00:00Z",
+    authority=None,
+):
     from w3_knowledge.c01.store import Store
 
-    return Store(path, restriction_scope=scope, max_ttl_seconds=3600, clock=clock)
+    return Store(
+        path,
+        restriction_scope=scope,
+        max_ttl_seconds=3600,
+        clock=clock,
+        source_authority=authority or SourceAuthority(),
+    )
 
 
 def released(revision=2, restriction_revision=1):
@@ -82,6 +106,64 @@ def test_original_invalid_payload_is_rejected(name):
     value = json.loads((FIXTURES / f"invalid-source-event-{name}.json").read_text())
     with pytest.raises(ValueError):
         validate_payload(value)
+
+
+def test_source_authority_is_required_and_rejects_unknown_before_storage(tmp_path):
+    from w3_knowledge.c01.authority import SourceNotRegistered
+    from w3_knowledge.c01.store import Store
+
+    with pytest.raises(ValueError, match="SOURCE_AUTHORITY_REQUIRED"):
+        Store(tmp_path / "missing.db", restriction_scope="version", max_ttl_seconds=3600)
+
+    authority = SourceAuthority(allowed=set())
+    with store_at(tmp_path / "unknown.db", authority=authority) as store:
+        with pytest.raises(SourceNotRegistered):
+            store.consume(parse(allowed_version()))
+        assert authority.calls == [UUID(SOURCE)]
+        assert store.db.execute("SELECT count(*) FROM c01_events").fetchone()[0] == 0
+        assert store.signals() == []
+
+
+def test_source_authority_timeout_fails_closed_without_local_registration(tmp_path):
+    from w3_knowledge.c01.authority import SourceAuthorityUnavailable
+
+    authority = SourceAuthority(error=TimeoutError("synthetic timeout"))
+    with store_at(tmp_path / "timeout.db", authority=authority) as store:
+        with pytest.raises(SourceAuthorityUnavailable):
+            store.consume(parse(allowed_version()))
+        assert store.db.execute("SELECT count(*) FROM c01_events").fetchone()[0] == 0
+        assert store.db.execute("SELECT count(*) FROM c01_registered_sources").fetchone()[0] == 0
+
+
+def test_source_authority_is_rechecked_before_replay_snapshot_and_index(tmp_path):
+    from w3_knowledge.c01.authority import SourceNotRegistered
+    from w3_knowledge.c01.contracts import Replay, VERSION
+
+    authority = SourceAuthority()
+    with store_at(tmp_path / "recheck.db", authority=authority) as store:
+        store.consume(parse(allowed_version()))
+        request = index_request(store)
+        replay = Replay.model_validate(
+            {
+                "schema_version": VERSION,
+                "source_id": SOURCE,
+                "after_cursor": 1,
+                "high_watermark": 1,
+                "retention_floor_cursor": 0,
+                "events": [],
+            }
+        )
+        snapshot = snapshot_value()
+        authority.allowed = set()
+
+        for operation in (
+            lambda: store.replay(replay),
+            lambda: store.snapshot(snapshot),
+            lambda: store.index(request),
+        ):
+            with pytest.raises(SourceNotRegistered):
+                operation()
+        assert authority.calls == [UUID(SOURCE)] * 4
 
 
 @pytest.mark.parametrize(
