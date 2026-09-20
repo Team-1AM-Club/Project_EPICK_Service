@@ -50,6 +50,10 @@ export function parsePublicRuntimeConfig(env: PublicEnvironment): PublicRuntimeC
 let cachedConfig: PublicRuntimeConfig | undefined;
 
 export function getPublicRuntimeConfig(): PublicRuntimeConfig {
-  cachedConfig ??= parsePublicRuntimeConfig(process.env);
+  cachedConfig ??= parsePublicRuntimeConfig({
+    NEXT_PUBLIC_W1_API_URL: process.env.NEXT_PUBLIC_W1_API_URL,
+    NEXT_PUBLIC_EPICK_JOB_POLL_MS: process.env.NEXT_PUBLIC_EPICK_JOB_POLL_MS,
+    NEXT_PUBLIC_EPICK_RESULT_MODE: process.env.NEXT_PUBLIC_EPICK_RESULT_MODE,
+  });
   return cachedConfig;
 }

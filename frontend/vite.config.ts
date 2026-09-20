@@ -47,6 +47,27 @@ export default defineConfig(async () => {
   process.env.WRANGLER_REGISTRY_PATH ??= ".wrangler/dev-registry";
   process.env.MINIFLARE_REGISTRY_PATH ??= ".wrangler/registry";
 
+  const vercelBuild =
+    process.env.VERCEL === "1" || process.env.NITRO_PRESET === "vercel";
+
+  if (vercelBuild) {
+    const { nitro } = await import("nitro/vite");
+
+    return {
+      server: {
+        ...(managedLinux ? { host: "0.0.0.0", allowedHosts: ["terminal.local"] } : {}),
+        ...(isCodexSeatbeltSandbox
+          ? { watch: { useFsEvents: false, usePolling: true } }
+          : {}),
+      },
+      plugins: [
+        vinext(),
+        sites({ mockAuth: !managedLinux }),
+        ...nitro({ preset: "vercel" }),
+      ],
+    };
+  }
+
   // Wrangler snapshots its log path while the Cloudflare plugin is imported.
   const { cloudflare } = await import("@cloudflare/vite-plugin");
 
