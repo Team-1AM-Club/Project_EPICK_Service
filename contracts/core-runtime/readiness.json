@@ -1,6 +1,6 @@
 {
   "status": "W3_LIFECYCLE_LOCAL_VERIFIED_ENVIRONMENT_PENDING",
-  "w3_full_sha": "9581a8e9ab2317fd8f74b07b5d886be97f8727b0",
+  "w3_full_sha": "66a0e3e1b087bf7f9d1b6d7730934ea27f55e94b",
   "contract": "w3.private.core-decision/0.1-candidate",
   "analysis_supplier": {
     "status": "LOCAL_VERIFIED_AUTHORITY_AND_ANALYSIS_CALLER_INTEGRATION_PENDING",
@@ -21,6 +21,9 @@
     "source_command_schema": "contracts/core-runtime/source-retirement-command.schema.json",
     "receipt_schema": "contracts/core-runtime/lifecycle-receipt.schema.json",
     "transaction": "State mutation, command digest, exact receipt, and receipt outbox commit in the same SQLite transaction",
+    "restart_ordering": "Relay every unfinished receipt before receiving a new command; RETRY_WAIT or HELD receipt blocks new intake",
+    "command_id_conflict": "Terminal reject and acknowledge without emitting a receipt",
+    "source_target_ref": "Must equal source_id, the authoritative W1 Source.id",
     "ack": "Delete inbound command only after receipt SendMessage returns HTTP 200 and MessageId; uncertain DB or transport result is not acknowledged",
     "live_e2e": "NOT_RUN"
   },
@@ -48,5 +51,5 @@
   },
   "joint_window": null,
   "joint_ct12": "NOT_RUN",
-  "evidence": "Implementation pin 9581a8e9ab2317fd8f74b07b5d886be97f8727b0; docs/w3-lifecycle-dispatch-handoff-2026-09-20.md; docs/w3-integration-input-request-2026-09-20.md"
+  "evidence": "Implementation pin 66a0e3e1b087bf7f9d1b6d7730934ea27f55e94b; docs/w3-lifecycle-dispatch-handoff-2026-09-20.md; docs/w3-integration-input-request-2026-09-20.md"
 }

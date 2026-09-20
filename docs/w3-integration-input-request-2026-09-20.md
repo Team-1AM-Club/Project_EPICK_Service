@@ -4,7 +4,7 @@
 
 기준 정책: `w3.retention/1.1`
 
-W3 구현 pin: `9581a8e9ab2317fd8f74b07b5d886be97f8727b0`
+W3 구현 pin: `66a0e3e1b087bf7f9d1b6d7730934ea27f55e94b`
 
 실제 값이 제공되지 않은 endpoint, factory, 담당자, role, queue, registry 경로를 W3가 임의로
 만들지 않는다. 아래 값이 확보되면 실제 adapter와 caller 연결을 시작한다.
@@ -63,9 +63,9 @@ W3는 supply와 매 relay/replay 직전에 전체 context, owner, epoch, active�
 
 | 항목 | 필요한 값 |
 |---|---|
-| source pin | W3 `9581a8e9ab2317fd8f74b07b5d886be97f8727b0`; W1 producer의 채택 SHA는 미제공 |
+| source pin | W3 `66a0e3e1b087bf7f9d1b6d7730934ea27f55e94b`; W1 producer의 채택 SHA는 미제공 |
 | 전달 방식 | 전용 private Standard SQS 두 개의 실제 URL과 queue policy |
-| schema | W1 owner deletion target type 확장과 W3 lifecycle receipt의 W1 채택 pin |
+| schema | W1 owner deletion target type 확장, Source `target_ref = Source.id`, W3 lifecycle receipt의 W1 채택 pin |
 | epoch | higher-epoch 판정의 authoritative source와 등록 전 삭제 규칙 |
 | 인증 | W1 sender와 W3 consumer의 stable Role ID, workload 설정 전달 경로 |
 | W1 처리 | W3 receipt consumer, idempotent 최종 수용 상태와 오류 운영 규칙 |
