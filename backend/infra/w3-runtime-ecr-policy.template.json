@@ -1,0 +1,45 @@
+{
+  "publisher_policy": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "PublisherToken",
+        "Effect": "Allow",
+        "Action": "ecr:GetAuthorizationToken",
+        "Resource": "*"
+      },
+      {
+        "Sid": "PublisherRepository",
+        "Effect": "Allow",
+        "Action": [
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:CompleteLayerUpload",
+          "ecr:InitiateLayerUpload",
+          "ecr:PutImage",
+          "ecr:UploadLayerPart"
+        ],
+        "Resource": "${W3_ECR_REPOSITORY_ARN}"
+      }
+    ]
+  },
+  "worker_pull_policy": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "WorkerPullToken",
+        "Effect": "Allow",
+        "Action": "ecr:GetAuthorizationToken",
+        "Resource": "*"
+      },
+      {
+        "Sid": "WorkerPullRepository",
+        "Effect": "Allow",
+        "Action": [
+          "ecr:BatchGetImage",
+          "ecr:GetDownloadUrlForLayer"
+        ],
+        "Resource": "${W3_ECR_REPOSITORY_ARN}"
+      }
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "schema_version": "w1-w3.runtime-readiness.v1",
+  "status": "M1_IN_PROGRESS",
+  "w1_source_sha": "08f03594201bb972089b12d9998d3518098e903b",
+  "w3_source_sha": "c7e6788168c048941bdabe7ed8cb01007edeecec",
+  "w1_image_digest": null,
+  "w3_image_digest": null,
+  "milestones": {
+    "M1": {
+      "status": "IN_PROGRESS",
+      "evidence_refs": [
+        "evidence/source-baseline.json",
+        "evidence/m1-image-state.json"
+      ]
+    },
+    "M2": {
+      "status": "BLOCKED",
+      "evidence_refs": []
+    },
+    "M3": {
+      "status": "BLOCKED",
+      "evidence_refs": []
+    },
+    "M4": {
+      "status": "BLOCKED",
+      "evidence_refs": []
+    },
+    "M5": {
+      "status": "BLOCKED",
+      "evidence_refs": []
+    }
+  },
+  "gates": [
+    {"id": "W3-A", "status": "OPEN", "owner": "analysis pipeline owner / integration coordinator", "evidence_ref": null},
+    {"id": "W3-B", "status": "OPEN", "owner": "W3 runtime owner", "evidence_ref": null},
+    {"id": "W3-C", "status": "OPEN", "owner": "W3 runtime owner", "evidence_ref": null},
+    {"id": "W3-D", "status": "OPEN", "owner": "W3 runtime owner", "evidence_ref": null},
+    {"id": "W3-E", "status": "OPEN", "owner": "W3 runtime owner + product/privacy approver", "evidence_ref": null},
+    {"id": "W3-F", "status": "OPEN", "owner": "W3/analysis runtime owner", "evidence_ref": null}
+  ]
+}

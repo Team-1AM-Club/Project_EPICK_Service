@@ -1,0 +1,16 @@
+{
+  "recorded_at": "2026-09-20",
+  "w1_source_sha": "08f03594201bb972089b12d9998d3518098e903b",
+  "w3_source_sha": "c7e6788168c048941bdabe7ed8cb01007edeecec",
+  "w3_handoff_path": "w3/docs/w3-core-runtime-handoff-2026-09-18.md",
+  "w3_handoff_sha256": "917ff83a93e29740f7e92452be61e3cefb7ff964531e1ed2847971814671ea24",
+  "adopted_event_schema": "w3.private.core-decision/0.1-candidate",
+  "gates": {
+    "W3-A": "analysis pipeline owner / integration coordinator",
+    "W3-B": "W3 runtime owner",
+    "W3-C": "W3 runtime owner",
+    "W3-D": "W3 runtime owner",
+    "W3-E": "W3 runtime owner + product/privacy approver",
+    "W3-F": "W3/analysis runtime owner"
+  }
+}

@@ -1,0 +1,58 @@
+name: epick-w3-core-runtime
+
+x-w3-runtime: &w3-runtime
+  image: ${W3_IMAGE:?set W3_IMAGE to an immutable W3 image reference}
+  user: "10001:10001"
+  read_only: true
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,nodev,size=16m
+  volumes:
+    - type: volume
+      source: epick-w3-core-runtime-state
+      target: /state
+  restart: "no"
+
+services:
+  w3-core-init:
+    <<: *w3-runtime
+    command:
+      - init
+      - --db
+      - /state/core.db
+      - --retention-seconds
+      - ${W3_RETENTION_SECONDS:?set W3_RETENTION_SECONDS}
+    profiles: ["w3-init"]
+
+  w3-core-smoke:
+    <<: *w3-runtime
+    command: ["smoke", "--directory", "/tmp/smoke"]
+    profiles: ["w3-smoke"]
+
+  w3-core-inspect:
+    <<: *w3-runtime
+    command:
+      - inspect
+      - --db
+      - /state/core.db
+      - --retention-seconds
+      - ${W3_RETENTION_SECONDS:?set W3_RETENTION_SECONDS}
+    profiles: ["w3-inspect"]
+
+  w3-core-command:
+    <<: *w3-runtime
+    command:
+      - inspect
+      - --db
+      - /state/core.db
+      - --retention-seconds
+      - ${W3_RETENTION_SECONDS:?set W3_RETENTION_SECONDS}
+    profiles: ["w3-command"]
+
+volumes:
+  epick-w3-core-runtime-state:
+    name: epick-w3-core-runtime-state
+    driver: local

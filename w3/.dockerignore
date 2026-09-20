@@ -1,0 +1,10 @@
+*
+!pyproject.toml
+!uv.lock
+!src/
+!src/**
+!specs/
+specs/*
+!specs/001-source-knowledge-validation/
+specs/001-source-knowledge-validation/*
+!specs/001-source-knowledge-validation/spec.md

@@ -1,0 +1,24 @@
+{
+  "schema_version": "w1-w3.m1-image-state.v1",
+  "status": "LOCALLY_VERIFIED_AWAITING_W3_D",
+  "w3_source_sha": "c7e6788168c048941bdabe7ed8cb01007edeecec",
+  "image_repository": "epick-staging-w3-core-runtime",
+  "local_image_digest": "sha256:441d97ad515e0fcceb1cca39fcbaa96a16a6144dfad9366c2f5cc6fd1e3a3fe9",
+  "ecr_manifest_digest": null,
+  "runtime_host_class": "PRIVATE_WORKER_EC2",
+  "runtime_uid": 10001,
+  "rootfs_read_only": true,
+  "state_volume": "epick-w3-core-runtime-state",
+  "database_path": "/state/core.db",
+  "smoke_status": "LOCAL_VERIFIED_NOT_DEPLOYED",
+  "smoke_aws_calls": 0,
+  "restart_persistence": "PASSED",
+  "preflight_status": "PASSED",
+  "contract_runtime_tests_passed": 33,
+  "docker_persistence_tests_passed": 1,
+  "w3_review_revision": null,
+  "blockers": [
+    "W3-D_OPEN",
+    "ECR_PUBLISH_AFTER_W3_D"
+  ]
+}

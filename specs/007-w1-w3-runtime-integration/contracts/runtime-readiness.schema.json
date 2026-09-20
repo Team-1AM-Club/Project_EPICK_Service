@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://epick.local/contracts/joint/w1-w3-runtime-readiness.v1.schema.json",
+  "title": "W1 W3 runtime readiness",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "status", "milestones", "gates"],
+  "properties": {
+    "schema_version": {"const": "w1-w3.runtime-readiness.v1"},
+    "status": {
+      "enum": [
+        "M1_IN_PROGRESS",
+        "BLOCKED_ON_W3_INPUTS",
+        "M1_M4_READY_FOR_JOINT_CT12",
+        "JOINT_CT12_COMPLETE"
+      ]
+    },
+    "w1_source_sha": {"type": ["string", "null"], "pattern": "^[0-9a-f]{40}$"},
+    "w3_source_sha": {"type": ["string", "null"], "pattern": "^[0-9a-f]{40}$"},
+    "w1_image_digest": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+    "w3_image_digest": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+    "milestones": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["M1", "M2", "M3", "M4", "M5"],
+      "properties": {
+        "M1": {"$ref": "#/$defs/milestone"},
+        "M2": {"$ref": "#/$defs/milestone"},
+        "M3": {"$ref": "#/$defs/milestone"},
+        "M4": {"$ref": "#/$defs/milestone"},
+        "M5": {"$ref": "#/$defs/milestone"}
+      }
+    },
+    "gates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status", "owner"],
+        "properties": {
+          "id": {"enum": ["W3-A", "W3-B", "W3-C", "W3-D", "W3-E", "W3-F"]},
+          "status": {"enum": ["OPEN", "RECEIVED", "VERIFIED", "REJECTED"]},
+          "owner": {"type": "string", "minLength": 1},
+          "evidence_ref": {"type": ["string", "null"]}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "milestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "evidence_refs"],
+      "properties": {
+        "status": {"enum": ["NOT_STARTED", "IN_PROGRESS", "BLOCKED", "COMPLETE"]},
+        "evidence_refs": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://epick.local/contracts/w1/private/w3-owner-deletion.v1.schema.json",
+  "title": "W1 to W3 owner deletion command",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "command_id",
+    "owner_id",
+    "owner_deletion_epoch",
+    "target_type",
+    "target_ref"
+  ],
+  "properties": {
+    "schema_version": {"const": "w1.private.w3-owner-deletion.v1"},
+    "command_id": {"type": "string", "format": "uuid"},
+    "owner_id": {"type": "string", "format": "uuid"},
+    "owner_deletion_epoch": {"type": "integer", "minimum": 1},
+    "target_type": {"const": "W3_CORE_RUNTIME"},
+    "target_ref": {"type": "string", "format": "uuid"}
+  }
+}
