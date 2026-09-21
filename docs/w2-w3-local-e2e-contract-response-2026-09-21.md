@@ -1,6 +1,6 @@
 # W2 → W3 로컬 공동 E2E 계약 회신 — 2026-09-21
 
-판정: **W3 HTTP client 구현·새 W2 wire 검증 완료 / 합성 양방향 HTTP 통과 / PostgreSQL outbox 공동 E2E 미실행**
+판정(9월 21일 W2 후속 증거 반영): **W2 격리 PostgreSQL outbox ↔ W3 HTTP의 합성 공동 사례 일부 PASS / W3 C-01 로컬 계약 테스트 76 PASS / W2–W3 로컬 Gate 전체 보류**. W3는 이번 PostgreSQL 실행을 재현하지 않았으며, W2가 제공한 실행 결과와 고정 증거를 검토했다.
 
 기준은 W2 Engine `feat/crawler` 코드 SHA
 `40ca63447287432d5a127f6001fc984dc8980dd5`(인계 문서 HEAD
@@ -50,14 +50,16 @@
 
 ## 3. 동일 호스트 실제 실행 경로
 
-W1 image registry·IAM/SQS 없이 **같은 호스트의 loopback HTTP로 연결 가능**하다. 현재 PC에서는
-Docker daemon이 실행 중이지 않고 `127.0.0.1:55439`의 PostgreSQL도 열려 있지 않아 W2 DB를
-포함한 실제 공동 실행은 하지 못했다. 이는 W1 배포 선행 조건이 아니라 **로컬 PostgreSQL
-환경 부재**다.
+W1 image registry·IAM/SQS 없이 **같은 호스트의 loopback HTTP로 연결 가능**하다. 최초 회신 시
+W3 PC의 PostgreSQL 환경이 없어 DB 공동 실행을 하지 못했다. 이후 W2가 별도의 승인된 격리
+loopback PostgreSQL에서 아래 §4의 합성 공동 검증을 실행했다. 현재 W3 환경에는
+`EPICK_TEST_DATABASE_APPROVED`와 `EPICK_TEST_DATABASE_URL`이 없어 그 실행을 독립 재현하지
+않았다. W2 실행은 W1 운영 배포 선행 조건을 검증한 것이 아니다.
 
-실행 순서는 다음과 같다. W2가 승인된 PostgreSQL에 migration을 적용하고 Source/Version/
-Observation/Restriction 합성 producer 데이터를 준비해야 한다. 실제 값은 비밀 설정으로만
-주입한다.
+아래는 최초 회신에서 제시한 수동 프로세스 실행 경로다. W2의 이번 재현 스크립트는 별도
+격리 schema에 migration을 적용하고 합성 `OutboxEvent`를 직접 저장한다. 실제 수집 producer
+검증에는 그 앞단의 Source/Version/Observation/Restriction 저장·outbox 생성 경로를 추가로
+연결해야 한다. 실제 연결값은 비밀 설정으로만 주입한다.
 
 1. W3 DB 디렉터리: `New-Item -ItemType Directory -Force .runtime/local-w2-w3`
 2. W2 Authority: `python -m uvicorn epick_engine.source_collection.source_authority_operator:create_app --factory --host 127.0.0.1 --port 8765`
@@ -79,25 +81,53 @@ W3 `W3_SOURCE_AUTHORITY_ENDPOINT=http://127.0.0.1:8765`다. W3 bind는 `127.0.0.
 W2 Authority bind는 `127.0.0.1:8765`; W3 SQLite 경로는 재시작에도 보존할 로컬 파일이다.
 실제 token·DB URL·Source 원문은 문서와 로그에 기록하지 않는다.
 
-## 4. 공동 완료 사례 현황
+## 4. W2 후속 PostgreSQL/HTTP 증거와 사례별 판정
 
-| 사례 | 현재 증거 | 실제 PostgreSQL outbox 공동 결과 |
+W2 Engine `feat/crawler` HEAD `69f8984dba2f3c56d66c97f8a9edd5de5c4513ff`의
+`src/`, `migrations/`는 위 제품 코드 pin `40ca63447287432d5a127f6001fc984dc8980dd5`와
+동일하다. W2 증거 문서 `docs/w2-w3-postgres-http-e2e-result-2026-09-21.md`의 Git blob
+SHA-256은 `62070AB7CE079F0F3EDA0FABF3C45D45EF8FB128BDD1EBA28EC6DF47C1109E4C`,
+동명 JSON은 `F5F910FD5AE57144FA129873D0536B089E395B8F7D3DFC15C5CF17BE1E5052F2`,
+`scripts/verify_w2_w3_postgres_http.py`는
+`ABD14E3BAB7FFF8D12F6938F84051D520B022AA6B8BC3A61171B016FF537FC9F`로
+인계값과 일치한다. W2 결과 JSON은 `status=PASS`, `outbox_delivered=10`으로 기록한다.
+W2가 W3 fixture 및 추가 합성 이벤트를 **실제 W2 OutboxEvent에 직접 저장**하고 별도 W2/W3
+프로세스와 HTTP로 전달한 검증이다. 실제 수집 producer 전체 경로 또는 운영 환경 검증은 아니다.
+
+| 사례 | W2 격리 PostgreSQL/HTTP 증거 | W3 독립 계약 검증 / 남은 범위 |
 |---|---|---|
-| version 2·observation 1·restriction ACTIVE 1 | W2 wire 4건 W3 schema·합성 양방향 HTTP PASS; cursor 4, restriction 1 | NOT_RUN |
-| restriction CLEARED, 재색인 전후 index ACK | W3 로컬 계약 테스트에서 재색인 전 READY 금지 검증 | NOT_RUN |
-| 미등록 원 Source·대체 Source | W3 HTTP client `registered=false` 및 Store 대체 Source 거부 테스트 PASS | NOT_RUN |
-| W2 Authority 장애·timeout | W3 HTTP client 503·read/total timeout fail-closed 테스트 PASS | NOT_RUN |
-| 동일 이벤트 duplicate, revision gap/conflict | W3 로컬 Store 회귀 테스트 PASS | NOT_RUN |
-| replay·snapshot recovery, F/H | W3 로컬 Store 회귀 테스트 PASS | NOT_RUN |
-| receipt와 index ACK 분리 | 합성 HTTP receipt 4건 `COMMITTED`, 최종 index ACK `false` | NOT_RUN |
-| W3 재시작 후 cursor·restriction 복구 | 영구 SQLite 사용 명령 제공 | NOT_RUN |
+| version 2·observation 1·restriction ACTIVE 1 | **PASS(합성)**: 4건 전달, cursor 4·restriction revision 1 | W3 고정 fixture·wire 검증 PASS. 실제 수집 producer 경로는 미검증 |
+| restriction CLEARED, 재색인 전후 index ACK | **PASS(합성)**: 미등록 대체 Source는 pending, 등록 후 해제; 별도 허용 Source에서 ACTIVE 중 검색·ACK 차단, CLEARED 직후에도 ACK false, 재색인 후 true·검색 복구 | W3 로컬 index fence 계약 PASS |
+| 미등록 원 Source·대체 Source | **부분 PASS**: Authority false 및 미등록 대체 Source pending | W3 로컬 event/replay/snapshot/index 등록 재검사 및 대체 Source 거부 PASS. **원 Source 미등록의 네 경로를 실제 W2 Authority와 공동 실행한 증거는 없음** |
+| W2 Authority 장애·timeout | **부분 PASS**: Authority 중단 중 최초 4건 pending, 복구 후 전달 | W3 HTTP client의 read/total timeout fail-closed PASS. 공동 timeout 주입은 미실행 |
+| 동일 이벤트 duplicate, revision gap/conflict | **부분 PASS**: duplicate cursor 불변; rev 7 선전달 때 cursor 5·required 7, rev 6 후 cursor 7 | W3 동일 event ID의 다른 body conflict 및 revision 충돌 로컬 PASS. **공동 conflict 주입 미실행** |
+| replay·snapshot recovery, F/H | **부분 PASS**: 동일 event ID 재전달과 재시작 상태 보존 | W3 F와 cursor 경계, H 유지, `SNAPSHOT_REQUIRED`·원자 snapshot/reindex 로컬 PASS. **W2 batch replay·snapshot producer 및 공동 복구 미구현/미실행** |
+| receipt와 index ACK 분리 | **PASS(합성)**: outbox delivered 10건과 ACK 별도 확인; 원 fixture Source 최종 ACK false(`OBSERVATION_BLOCKED`) | W3 receipt·index ACK 구분 유지 |
+| W3 재시작 후 cursor·restriction 복구 | **PASS(합성)**: 동일 SQLite 재시작 후 cursor 4·restriction revision 1 유지 | W3 로컬 영속화 테스트 PASS |
 
-모든 `NOT_RUN` 항목의 공통 차단 원인은 **이 PC의 실행 가능한 PostgreSQL 부재와 W2 DB에
-확정된 합성 producer/outbox 데이터가 아직 준비되지 않은 것**이다. W2 담당자는 승인된 로컬
-PostgreSQL·migration·producer fixture 및 기대 revision을 제공하고, W3 담당자는 위 구현 SHA로
-W3 process를 실행해 사례별 receipt/status·재시작 증거를 기록한다. W1 운영 배포 입력은 이
-로컬 Gate의 선행 조건이 아니다. 공동 실행 시간 창은 아직 합의되지 않았다.
+W3 독립 확인: 고정 구현 pin `0c4f01f9537a3129c976fae5e63111a7982c5da6`의
+`test_c01.py`, `test_c01_confirmed_contract.py`, `test_c01_http.py`,
+`test_c01_source_authority_http.py`를 새 임시 경로에서 실행해 **76 passed**. 이는 W3
+소비자 구현·계약의 증거이며, 위 표의 공동 미실행 사례를 PASS로 대체하지 않는다. W2 전체
+회귀는 인계상 `1693 passed, 14 failed, 1 skipped`로, 전체 green이 아니다.
 
-W3 전체 검증은 `288 passed, 1 skipped`(live provider 제외), Ruff check/format 통과,
-C-01 20·core decision 12·restriction 19 생성물 drift 0이다. 실제 PostgreSQL 공동 E2E가
-통과하기 전에는 연동 완료로 표시하지 않는다.
+## 5. W3 로컬 Gate 판정과 남은 최소 작업
+
+**수용:** 위 합성 OutboxEvent → HTTP event 전달, authoritative Source 조회, restriction·index
+차단/재색인, 중복·gap, receipt/ACK 분리, W3 SQLite 재시작의 **검증된 하위 Gate**.
+**보류:** W2–W3 로컬 연동 전체 완료, 실제 수집 producer 경로, replay·snapshot 복구 Gate,
+운영 배포. W3 구현에 지금 추가할 필수 코드 변경은 확인되지 않았다.
+
+- **W2:** 정본 `docs/w3-additional-reply-2026-09-16.md` §5·§7의 확정된 F/H 경계와 원자
+  snapshot 소비 조건에 맞춰 batch replay·snapshot producer를 구현하고, 실제 producer
+  persistence/outbox 연결을 증명한다. 이 소유권과 규칙을 다시 결정할 필요는 없다.
+- **W2·W3 공동:** 같은 pin에서 원 Source 미등록의 event/replay/snapshot/index, Authority
+  timeout, 동일 revision·다른 body conflict, F/H retention-floor 및 snapshot-required·복구를
+  PostgreSQL/HTTP로 실행해 사례별 receipt·cursor·restriction·index ACK와 결과 JSON을 남긴다.
+  W3 로컬 계약 PASS와 공동 미실행을 구분한다.
+- **W1/운영:** registry·IAM/SQS, 영구 DB·volume, 모니터링 및 실제 배포 환경은 별도 Gate다.
+
+W3의 이번 검토 환경에는 승인된 격리 DB 연결 변수가 없어 공동 스크립트를 재실행하지 않았다.
+W2가 기록한 검증의 실행 환경은 격리 loopback PostgreSQL 임시 schema와 별도 W2/W3 HTTP
+프로세스다. W2가 사용한 W3 TTL 300초는 시험값이다. W3 이외의 전체 회귀·생성물 검증은
+이번 후속 검토에서 새로 실행하지 않았다.
