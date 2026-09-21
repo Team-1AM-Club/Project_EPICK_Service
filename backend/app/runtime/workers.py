@@ -46,6 +46,7 @@ from app.services.w2_commit_gate import (
     W2CommitGateError,
     W2CommitGateService,
 )
+
 _EXECUTION_MESSAGE_TYPE = "job.command.dispatch"
 _W2_COMMAND_MESSAGE_TYPE = "w1.private.w2.collection-command.v1"
 _W2_DIRECT_SOURCE_REGISTRATION_MESSAGE_TYPE = "w1.private.w2.direct-source-registration.v1"
@@ -314,6 +315,12 @@ class JobWorker:
                 # All three owner slots are occupied.  Keep the Job queued and let SQS redeliver.
                 return _DeliveryOutcome(acknowledge=False)
 
+            if not self._prepare_w2_resume(
+                session=session, job=job, command=command, lease=lease
+            ):
+                self._block_for_core_decision(session=session, job=job, lease=lease)
+                return _DeliveryOutcome(acknowledge=True, stale=True)
+
             if not self._create_w2_dispatch_or_block(
                 session=session,
                 owner=owner,
@@ -344,6 +351,121 @@ class JobWorker:
             and owner.deletion_epoch == owner_deletion_epoch
             and owner.account_status not in {"DELETION_PENDING", "DELETED"}
         )
+
+    @staticmethod
+    def _prepare_w2_resume(
+        *, session: Session, job: Job, command: JobCommand, lease: JobExecutionLease
+    ) -> bool:
+        del lease
+        payload = command.payload
+        checkpoint_id = payload.get("checkpoint_id") if isinstance(payload, dict) else None
+        if checkpoint_id is None:
+            return True
+        if not isinstance(checkpoint_id, str):
+            return False
+        try:
+            checkpoint_uuid = UUID(checkpoint_id)
+        except ValueError:
+            return False
+        checkpoint = session.scalar(
+            select(JobCheckpoint).where(
+                JobCheckpoint.id == checkpoint_uuid,
+                JobCheckpoint.job_id == job.id,
+                JobCheckpoint.owner_user_id == job.owner_user_id,
+            )
+        )
+        if (
+            checkpoint is None
+            or not checkpoint.resumable
+            or checkpoint.checkpoint_schema_version != "w2.collection.v1"
+            or checkpoint.execution_fence != job.execution_fence - 1
+            or checkpoint.owner_deletion_epoch != job.owner_deletion_epoch
+            or checkpoint.analysis_input_version != job.analysis_input_version
+            or checkpoint.resume_stage not in {"policy", "fetch", "parse", "persist", "deliver"}
+            or (
+                checkpoint.resume_stage != "policy"
+                and (
+                    isinstance(checkpoint.policy_revision, bool)
+                    or not isinstance(checkpoint.policy_revision, int)
+                    or checkpoint.policy_revision < 1
+                )
+            )
+        ):
+            return False
+        previous = session.scalar(
+            select(JobCommand)
+            .where(
+                JobCommand.job_id == job.id,
+                JobCommand.owner_user_id == job.owner_user_id,
+                JobCommand.execution_fence == checkpoint.execution_fence,
+                JobCommand.command_type.in_(
+                    ("W2_SOURCE_COLLECTION", "W2_DIRECT_SOURCE_REGISTRATION")
+                ),
+            )
+            .order_by(JobCommand.command_sequence.desc())
+            .limit(1)
+            .with_for_update()
+        )
+        if previous is None or previous.status != "CONSUMED":
+            return False
+        previous_payload = previous.payload
+        w2_command = (
+            previous_payload.get("w2_command")
+            if isinstance(previous_payload, dict)
+            else None
+        )
+        if not isinstance(w2_command, dict):
+            return False
+        try:
+            source_link_id = UUID(str(w2_command["purpose_ref"]))
+        except (KeyError, TypeError, ValueError):
+            return False
+        source_link = session.scalar(
+            select(JobSourceLink)
+            .where(
+                JobSourceLink.id == source_link_id,
+                JobSourceLink.job_id == job.id,
+                JobSourceLink.owner_user_id == job.owner_user_id,
+                JobSourceLink.command_id == previous.id,
+                JobSourceLink.source_id == UUID(str(w2_command["source_id"])),
+            )
+            .with_for_update()
+        )
+        if (
+            source_link is None
+            or source_link.analysis_input_version != job.analysis_input_version
+            or previous.owner_deletion_epoch != job.owner_deletion_epoch
+        ):
+            return False
+        if previous.command_type == "W2_SOURCE_COLLECTION":
+            pin = previous_payload.get("core_decision_pin")
+            if not isinstance(pin, dict) or previous.analysis_source_decision_id is None:
+                return False
+            command.analysis_source_decision_id = previous.analysis_source_decision_id
+            command.payload = {**payload, "core_decision_pin": dict(pin)}
+        else:
+            pin = previous_payload.get("direct_source_registration_pin")
+            if not isinstance(pin, dict) or previous.analysis_source_decision_id is None:
+                return False
+            command.analysis_source_decision_id = previous.analysis_source_decision_id
+            command.payload = {
+                **payload,
+                "dispatch_kind": DIRECT_SOURCE_REGISTRATION_SCOPE,
+                "direct_source_registration_pin": dict(pin),
+            }
+        session.add(
+            JobSourceLink(
+                job_id=source_link.job_id,
+                owner_user_id=source_link.owner_user_id,
+                source_id=source_link.source_id,
+                source_version_id=source_link.source_version_id,
+                command_id=None,
+                purpose_ref=source_link.purpose_ref,
+                analysis_input_version=source_link.analysis_input_version,
+            )
+        )
+        session.flush()
+        return True
 
     def _create_w2_dispatch_or_block(
         self,
@@ -470,6 +592,7 @@ class JobWorker:
                     JobSourceLink.job_id == job.id,
                     JobSourceLink.owner_user_id == job.owner_user_id,
                     JobSourceLink.source_id == source_id,
+                    JobSourceLink.command_id.is_(None),
                 )
                 .order_by(JobSourceLink.created_at, JobSourceLink.id)
                 .limit(1)
@@ -483,6 +606,11 @@ class JobWorker:
         # command sequence remains an internal ordering value only.
         input_version = decision_version
         w2_command_id = uuid4()
+        resume_context = self._resume_context(session=session, job=job, command=execution_command)
+        if resume_context is None:
+            self._block_for_core_decision(session=session, job=job, lease=lease)
+            return False
+        resume_stage, policy_revision = resume_context
         w2_payload: dict[str, object] = {
             "schema_version": "w2.collection.v1",
             "command_id": str(w2_command_id),
@@ -501,8 +629,8 @@ class JobWorker:
                 "decision_revision": decision_version,
                 "analysis_input_version": input_version,
             },
-            "resume_stage": self._resume_stage(session=session, job=job, command=execution_command),
-            "policy_revision": None,
+            "resume_stage": resume_stage,
+            "policy_revision": policy_revision,
             "owner_deletion_epoch": job.owner_deletion_epoch,
         }
         try:
@@ -643,6 +771,7 @@ class JobWorker:
                 JobSourceLink.owner_user_id == job.owner_user_id,
                 JobSourceLink.source_id == source_id,
                 JobSourceLink.purpose_ref == DIRECT_SOURCE_REGISTRATION_PURPOSE,
+                JobSourceLink.command_id.is_(None),
             )
             .order_by(JobSourceLink.created_at, JobSourceLink.id)
             .limit(1)
@@ -660,6 +789,11 @@ class JobWorker:
         # opaque registration_input_version is preserved only in the W1 decision and pin.
         input_version = decision_version
         w2_command_id = uuid4()
+        resume_context = self._resume_context(session=session, job=job, command=execution_command)
+        if resume_context is None:
+            self._block_for_core_decision(session=session, job=job, lease=lease)
+            return False
+        resume_stage, policy_revision = resume_context
         w2_payload: dict[str, object] = {
             "schema_version": "w2.collection.v1",
             "command_id": str(w2_command_id),
@@ -678,8 +812,8 @@ class JobWorker:
                 "decision_revision": decision_version,
                 "analysis_input_version": input_version,
             },
-            "resume_stage": self._resume_stage(session=session, job=job, command=execution_command),
-            "policy_revision": None,
+            "resume_stage": resume_stage,
+            "policy_revision": policy_revision,
             "owner_deletion_epoch": job.owner_deletion_epoch,
         }
         _validate(
@@ -733,9 +867,13 @@ class JobWorker:
         return True
 
     @staticmethod
-    def _resume_stage(*, session: Session, job: Job, command: JobCommand) -> str:
+    def _resume_context(
+        *, session: Session, job: Job, command: JobCommand
+    ) -> tuple[str, int | None] | None:
         payload = command.payload
         checkpoint_id = payload.get("checkpoint_id") if isinstance(payload, dict) else None
+        if checkpoint_id is None:
+            return "policy", None
         if isinstance(checkpoint_id, str):
             try:
                 checkpoint = session.scalar(
@@ -747,15 +885,27 @@ class JobWorker:
                 )
             except ValueError:
                 checkpoint = None
-            if checkpoint is not None and checkpoint.resume_stage in {
+            if (
+                checkpoint is not None
+                and checkpoint.resumable
+                and checkpoint.checkpoint_schema_version == "w2.collection.v1"
+                and checkpoint.execution_fence == job.execution_fence - 1
+                and checkpoint.owner_deletion_epoch == job.owner_deletion_epoch
+                and checkpoint.analysis_input_version == job.analysis_input_version
+                and checkpoint.resume_stage in {
                 "policy",
                 "fetch",
                 "parse",
                 "persist",
                 "deliver",
-            }:
-                return checkpoint.resume_stage
-        return "policy"
+                }
+            ):
+                if checkpoint.resume_stage == "policy":
+                    return "policy", None
+                revision = checkpoint.policy_revision
+                if isinstance(revision, int) and not isinstance(revision, bool) and revision > 0:
+                    return checkpoint.resume_stage, revision
+        return None
 
     @staticmethod
     def _block_for_core_decision(
@@ -1128,7 +1278,14 @@ class CollectionResultWorker:
         job: Job,
         checkpoint_ref: str,
         resume_stage: str,
+        policy_revision: int | None,
     ) -> None:
+        if resume_stage != "policy" and (
+            isinstance(policy_revision, bool)
+            or not isinstance(policy_revision, int)
+            or policy_revision < 1
+        ):
+            raise RuntimeContractError("W2_CHECKPOINT_POLICY_REVISION_REQUIRED")
         previous_revision = session.scalar(
             select(func.max(JobCheckpoint.checkpoint_revision)).where(
                 JobCheckpoint.job_id == job.id
@@ -1144,6 +1301,7 @@ class CollectionResultWorker:
                 execution_fence=job.execution_fence,
                 owner_deletion_epoch=job.owner_deletion_epoch,
                 resume_stage=resume_stage,
+                policy_revision=policy_revision,
                 state_ref=checkpoint_ref,
                 resume_payload={},
                 resumable=True,
@@ -1163,7 +1321,11 @@ class CollectionResultWorker:
         retry_not_before = result.get("retry_not_before")
         completeness = result["completion_kind"]
         now = datetime.now(UTC)
-        if isinstance(required_actions, list) and required_actions:
+        if (
+            isinstance(required_actions, list)
+            and required_actions
+            and not isinstance(retry_not_before, str)
+        ):
             CollectionResultWorker._release_lease(
                 session=session, job=job, lease=lease, reason="WAITING_USER"
             )
@@ -1332,6 +1494,7 @@ def apply_locked_collection_result(
             job=job,
             checkpoint_ref=checkpoint_ref,
             resume_stage=resume_stage,
+            policy_revision=result.get("policy_revision"),
         )
     CollectionResultWorker._apply_transition(
         session=session,

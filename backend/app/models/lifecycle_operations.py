@@ -200,6 +200,15 @@ class JobCheckpoint(Base):
         CheckConstraint("execution_fence >= 1", name="execution_fence_positive"),
         CheckConstraint("owner_deletion_epoch >= 0", name="owner_deletion_epoch_not_negative"),
         CheckConstraint(
+            "policy_revision IS NULL OR policy_revision >= 1",
+            name="policy_revision_positive",
+        ),
+        CheckConstraint(
+            "checkpoint_schema_version <> 'w2.collection.v1' OR resume_stage = 'policy' "
+            "OR (policy_revision IS NOT NULL AND policy_revision >= 1)",
+            name="w2_non_policy_revision_required",
+        ),
+        CheckConstraint(
             "state_ref IS NULL OR length(btrim(state_ref)) > 0", name="state_ref_present"
         ),
         CheckConstraint("jsonb_typeof(resume_payload) = 'object'", name="resume_payload_object"),
@@ -222,6 +231,7 @@ class JobCheckpoint(Base):
     execution_fence: Mapped[int] = mapped_column(BigInteger)
     owner_deletion_epoch: Mapped[int] = mapped_column(BigInteger)
     resume_stage: Mapped[str] = mapped_column(String(64))
+    policy_revision: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # The local checkpoint ``id`` is the W1 UUID reference.  ``state_ref`` keeps a
     # bounded opaque worker reference such as W2's ``fetch:checkpoint-0001``.
     state_ref: Mapped[str | None] = mapped_column(String(512), nullable=True)

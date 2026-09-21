@@ -6,12 +6,16 @@ from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine, create_engine, event, text
+from sqlalchemy import Engine, create_engine, event, select, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.models.identity import User
-from app.models.jobs import Job
-from app.runtime.w4_question_core_context import issue_w4_question_core_context
+from app.models.jobs import Job, JobCommand
+from app.models.sources import JobSourceLink
+from app.runtime.w4_question_core_context import (
+    issue_w4_question_core_context,
+    resolve_w4_question_core_context,
+)
 from app.runtime.w4_question_core_context_adapter import create_w4_question_core_context_app
 from tests.integration.db.w4_question_core_support import seed_question_job
 
@@ -24,6 +28,62 @@ def _headers() -> dict[str, str]:
         "Authorization": "Bearer w4-context-test-token",
         "X-EPICK-Service-Principal": "w4",
     }
+
+
+@pytest.mark.postgres
+def test_w4_context_source_remains_active_with_historical_w2_retry_links(
+    migrated_engine: Engine,
+    db_session: Session,
+) -> None:
+    with migrated_engine.begin() as connection:
+        connection.execute(text("TRUNCATE users CASCADE"))
+
+    with db_session.begin():
+        owner, _, source, job, question_version, _ = seed_question_job(db_session)
+        commands = [
+            JobCommand(
+                job_id=job.id,
+                owner_user_id=owner.id,
+                command_type="W2_SOURCE_COLLECTION",
+                command_schema_version="w2.collection.v1",
+                command_sequence=sequence,
+                execution_fence=sequence,
+                owner_deletion_epoch=0,
+                analysis_input_version=job.analysis_input_version,
+                payload={},
+                status="CONSUMED",
+            )
+            for sequence in (1, 2)
+        ]
+        db_session.add_all(commands)
+        db_session.flush()
+        first_link = db_session.scalar(
+            select(JobSourceLink).where(JobSourceLink.job_id == job.id)
+        )
+        assert first_link is not None
+        first_link.command_id = commands[0].id
+        db_session.add(
+            JobSourceLink(
+                job_id=job.id,
+                owner_user_id=owner.id,
+                source_id=source.id,
+                command_id=commands[1].id,
+                purpose_ref=first_link.purpose_ref,
+                analysis_input_version=job.analysis_input_version,
+            )
+        )
+        context = issue_w4_question_core_context(
+            session=db_session,
+            job=job,
+            question_version_id=question_version.id,
+            source_id=source.id,
+            valid_for=timedelta(minutes=5),
+        )
+        resolved = resolve_w4_question_core_context(
+            session=db_session, context_key=context.context_key
+        )
+        assert resolved is not None
+        assert resolved.source_active is True
 
 
 @pytest.mark.postgres

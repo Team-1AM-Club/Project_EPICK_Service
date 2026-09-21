@@ -1,185 +1,174 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import Engine, select, text
+from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.models.application_workspace import (
     ApplicationProject,
-    Company,
     ProjectQuestion,
     QuestionVersion,
 )
-from app.models.identity import User
-from app.models.jobs import Job, JobCoreDecisionBinding, JobRequiredAction
-from app.models.sources import AnalysisSourceDecision, JobSourceLink, Source
-from app.services.core_decision_inbound import CoreDecisionInboundService
+from app.models.jobs import JobCoreDecisionBinding
+from app.models.sources import AnalysisSourceDecision
 
 
-def _seed_w3_binding(session: Session) -> tuple[User, Source, Job]:
-    owner = User(display_name="W4 migration owner", locale="ko-KR", timezone="Asia/Seoul")
-    company = Company(legal_name="W4 Migration Co", display_name="W4 Migration Co")
-    session.add_all((owner, company))
-    session.flush()
-    source = Source(
-        company_id=company.id,
-        source_type="CAREERS",
-        canonical_url="https://example.test/w4-migration",
-        canonical_url_hash=f"w4-migration-{uuid4()}",
-        url_normalization_version="v1",
-        policy_version="policy-v1",
-        policy_checked_at=datetime.now(UTC),
+def _seed_w3_binding(session: Session) -> tuple[UUID, UUID, UUID]:
+    """Insert a genuine revision-027 W3 row without loading the later ORM mapping."""
+
+    owner_id, company_id, source_id, job_id, decision_id, binding_id = (
+        uuid4() for _ in range(6)
     )
-    job = Job(
-        owner_user_id=owner.id,
-        job_type="SOURCE_COLLECTION",
-        status="WAITING_USER",
-        dispatch_status="BLOCKED",
-        owner_deletion_epoch=0,
-        analysis_input_version="knowledge-input:w4-migration",
+    session.execute(
+        text("INSERT INTO users (id, display_name, locale, timezone) "
+             "VALUES (:id, 'W4 migration owner', 'ko-KR', 'Asia/Seoul')"),
+        {"id": owner_id},
     )
-    session.add_all((source, job))
-    session.flush()
-    session.add_all(
-        (
-            JobSourceLink(
-                job_id=job.id,
-                owner_user_id=owner.id,
-                source_id=source.id,
-                source_version_id=None,
-                command_id=None,
-                purpose_ref="SOURCE_COLLECTION",
-                analysis_input_version=job.analysis_input_version,
-            ),
-            JobRequiredAction(
-                job_id=job.id,
-                owner_user_id=owner.id,
-                action_code="CORE_DECISION_REQUIRED",
-                action_status="OPEN",
-                context_code="CORE_DECISION_BINDING_MISMATCH",
-                expected_input_version=job.analysis_input_version,
-            ),
-        )
+    session.execute(
+        text("INSERT INTO companies (id, legal_name, display_name) "
+             "VALUES (:id, 'W4 Migration Co', 'W4 Migration Co')"),
+        {"id": company_id},
     )
-    session.flush()
-    CoreDecisionInboundService(session).apply(
-        body={
-            "schema_version": "w3.private.core-decision/0.1-candidate",
-            "message_type": "w3.private.w1.core-decision",
-            "message_id": str(uuid4()),
-            "occurred_at": "2026-09-19T00:00:00Z",
-            "visibility_scope": "PRIVATE",
-            "producer": "w3",
-            "job_id": str(job.id),
-            "company_id": str(company.id),
-            "source_id": str(source.id),
-            "analysis_input_version": job.analysis_input_version,
-            "decision_scope": "COMPANY_KNOWLEDGE",
-            "decision_owner": "W3",
-            "question_version_id": None,
-            "decision_version": 1,
-            "is_core": True,
-            "decision_code": "CORE_REQUIRED",
-            "reason_code": "REQUIRED_COMPANY_EVIDENCE",
+    session.execute(
+        text(
+            "INSERT INTO sources (id, company_id, source_type, canonical_url, "
+            "canonical_url_hash, url_normalization_version, policy_version, "
+            "policy_checked_at) VALUES (:id, :company_id, 'CAREERS', "
+            "'https://example.test/w4-migration', :hash, 'v1', 'policy-v1', now())"
+        ),
+        {"id": source_id, "company_id": company_id, "hash": f"w4-migration-{source_id}"},
+    )
+    session.execute(
+        text(
+            "INSERT INTO jobs (id, owner_user_id, job_type, status, dispatch_status, "
+            "owner_deletion_epoch, analysis_input_version) VALUES "
+            "(:id, :owner_id, 'SOURCE_COLLECTION', 'WAITING_USER', 'BLOCKED', "
+            "0, 'knowledge-input:w4-migration')"
+        ),
+        {"id": job_id, "owner_id": owner_id},
+    )
+    session.execute(
+        text(
+            "INSERT INTO analysis_source_decisions (id, decision_scope, company_id, "
+            "source_id, analysis_input_version, decision_version, decision_code, "
+            "decision_owner, reason_code) VALUES (:id, 'COMPANY_KNOWLEDGE', "
+            ":company_id, :source_id, 'knowledge-input:w4-migration', 1, "
+            "'CORE_REQUIRED', 'W3', 'REQUIRED_COMPANY_EVIDENCE')"
+        ),
+        {"id": decision_id, "company_id": company_id, "source_id": source_id},
+    )
+    session.execute(
+        text(
+            "INSERT INTO job_core_decision_bindings (id, job_id, owner_user_id, "
+            "source_id, analysis_source_decision_id, origin_message_id, "
+            "payload_digest, analysis_input_version, decision_version, decision_code, "
+            "owner_deletion_epoch) VALUES (:id, :job_id, :owner_id, :source_id, "
+            ":decision_id, :message_id, :digest, 'knowledge-input:w4-migration', "
+            "1, 'CORE_REQUIRED', 0)"
+        ),
+        {
+            "id": binding_id,
+            "job_id": job_id,
+            "owner_id": owner_id,
+            "source_id": source_id,
+            "decision_id": decision_id,
+            "message_id": uuid4(),
+            "digest": "sha256:" + "3" * 64,
         },
-        authenticated_principal="w3",
     )
-    session.flush()
-    return owner, source, job
+    return owner_id, source_id, job_id
 
 
 @pytest.mark.postgres
 def test_028_backfills_w3_rows_and_keeps_w3_w4_revision_namespaces_distinct(
-    migrated_engine: Engine, alembic_config: Config
+    fresh_migration_config: Config,
 ) -> None:
-    with migrated_engine.begin() as connection:
-        connection.execute(text("TRUNCATE inbox_receipts"))
-        connection.execute(text("TRUNCATE users CASCADE"))
-        connection.execute(text("TRUNCATE companies CASCADE"))
+    command.upgrade(fresh_migration_config, "027_w2_staged_result_adoption")
+    engine = create_engine(fresh_migration_config.get_main_option("sqlalchemy.url"))
+    factory = sessionmaker(bind=engine, expire_on_commit=False)
+    try:
+        with factory.begin() as session:
+            owner_id, source_id, job_id = _seed_w3_binding(session)
 
-    factory = sessionmaker(bind=migrated_engine, expire_on_commit=False)
-    with factory.begin() as session:
-        owner, source, job = _seed_w3_binding(session)
+        command.upgrade(fresh_migration_config, "head")
 
-    command.downgrade(alembic_config, "027_w2_staged_result_adoption")
-    command.upgrade(alembic_config, "head")
+        with factory.begin() as session:
+            w3_binding = session.scalar(
+                select(JobCoreDecisionBinding).where(JobCoreDecisionBinding.job_id == job_id)
+            )
+            assert w3_binding is not None
+            assert w3_binding.origin_producer == "w3"
+            assert w3_binding.decision_scope == "COMPANY_KNOWLEDGE"
+            assert w3_binding.question_version_id is None
+            assert w3_binding.origin_decision_id is None
 
-    with factory.begin() as session:
-        w3_binding = session.scalar(
-            select(JobCoreDecisionBinding).where(JobCoreDecisionBinding.job_id == job.id)
-        )
-        assert w3_binding is not None
-        assert w3_binding.origin_producer == "w3"
-        assert w3_binding.decision_scope == "COMPANY_KNOWLEDGE"
-        assert w3_binding.question_version_id is None
-        assert w3_binding.origin_decision_id is None
-
-        project = ApplicationProject(owner_user_id=owner.id)
-        session.add(project)
-        session.flush()
-        question = ProjectQuestion(
-            owner_user_id=owner.id,
-            project_id=project.id,
-            display_order=0,
-        )
-        session.add(question)
-        session.flush()
-        question_version = QuestionVersion(
-            question_id=question.id,
-            project_id=project.id,
-            owner_user_id=owner.id,
-            version_no=1,
-            prompt="Synthetic migration question",
-            source="USER",
-        )
-        session.add(question_version)
-        session.flush()
-        w4_decision = AnalysisSourceDecision(
-            decision_scope="QUESTION_MATCHING",
-            company_id=None,
-            question_version_id=question_version.id,
-            source_id=source.id,
-            source_version_id=None,
-            analysis_input_version=job.analysis_input_version,
-            decision_version=1,
-            decision_code="CORE_REQUIRED",
-            decision_owner="W4",
-            reason_code="QUESTION_EVIDENCE_REQUIRED",
-        )
-        session.add(w4_decision)
-        session.flush()
-        session.add(
-            JobCoreDecisionBinding(
-                job_id=job.id,
-                owner_user_id=owner.id,
-                source_id=source.id,
-                analysis_source_decision_id=w4_decision.id,
-                origin_producer="w4",
+            project = ApplicationProject(owner_user_id=owner_id)
+            session.add(project)
+            session.flush()
+            question = ProjectQuestion(
+                owner_user_id=owner_id,
+                project_id=project.id,
+                display_order=0,
+            )
+            session.add(question)
+            session.flush()
+            question_version = QuestionVersion(
+                question_id=question.id,
+                project_id=project.id,
+                owner_user_id=owner_id,
+                version_no=1,
+                prompt="Synthetic migration question",
+                source="USER",
+            )
+            session.add(question_version)
+            session.flush()
+            w4_decision = AnalysisSourceDecision(
                 decision_scope="QUESTION_MATCHING",
+                company_id=None,
                 question_version_id=question_version.id,
-                origin_message_id=uuid4(),
-                origin_decision_id=uuid4(),
-                payload_digest="sha256:" + "4" * 64,
-                analysis_input_version=job.analysis_input_version,
+                source_id=source_id,
+                source_version_id=None,
+                analysis_input_version="knowledge-input:w4-migration",
                 decision_version=1,
                 decision_code="CORE_REQUIRED",
-                owner_deletion_epoch=0,
+                decision_owner="W4",
+                reason_code="QUESTION_EVIDENCE_REQUIRED",
             )
-        )
-        session.flush()
+            session.add(w4_decision)
+            session.flush()
+            session.add(
+                JobCoreDecisionBinding(
+                    job_id=job_id,
+                    owner_user_id=owner_id,
+                    source_id=source_id,
+                    analysis_source_decision_id=w4_decision.id,
+                    origin_producer="w4",
+                    decision_scope="QUESTION_MATCHING",
+                    question_version_id=question_version.id,
+                    origin_message_id=uuid4(),
+                    origin_decision_id=uuid4(),
+                    payload_digest="sha256:" + "4" * 64,
+                    analysis_input_version="knowledge-input:w4-migration",
+                    decision_version=1,
+                    decision_code="CORE_REQUIRED",
+                    owner_deletion_epoch=0,
+                )
+            )
+            session.flush()
 
-        assert session.scalar(
-            select(JobCoreDecisionBinding).where(
-                JobCoreDecisionBinding.origin_producer == "w3"
-            )
-        ) is not None
-        assert session.scalar(
-            select(JobCoreDecisionBinding).where(
-                JobCoreDecisionBinding.origin_producer == "w4"
-            )
-        ) is not None
+            assert session.scalar(
+                select(JobCoreDecisionBinding).where(
+                    JobCoreDecisionBinding.origin_producer == "w3"
+                )
+            ) is not None
+            assert session.scalar(
+                select(JobCoreDecisionBinding).where(
+                    JobCoreDecisionBinding.origin_producer == "w4"
+                )
+            ) is not None
+    finally:
+        engine.dispose()
