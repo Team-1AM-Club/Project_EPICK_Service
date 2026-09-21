@@ -14,8 +14,9 @@ from scripts.verify_w3_runtime_provenance import (
 
 REPO_ROOT = Path(__file__).parents[3]
 W3_ROOT = REPO_ROOT / "w3" / "Project_EPICK_Service"
-EXPECTED_IMPLEMENTATION_SHA = "3b23e0843a134fb341e6a256576ccf52fedbf4a8"
-EXPECTED_RECEIPT_HEAD_SHA = "34660343f197c74cc03459a93e0160e46adbcd2b"
+EXPECTED_IMPLEMENTATION_SHA = "0c4f01f9537a3129c976fae5e63111a7982c5da6"
+EXPECTED_RECEIPT_HEAD_SHA = "402f7a63bf8f8d601cc6ada1ce685280f47320ce"
+EXPECTED_RUNTIME_SHA = "402f7a63bf8f8d601cc6ada1ce685280f47320ce"
 EXPECTED_REMOTE = "https://github.com/Team-1AM-Club/Project_EPICK_Service.git"
 
 
@@ -28,12 +29,14 @@ def test_received_w3_clone_matches_pins_without_runtime_drift() -> None:
         w3_root=W3_ROOT,
         expected_implementation_sha=EXPECTED_IMPLEMENTATION_SHA,
         expected_receipt_head_sha=EXPECTED_RECEIPT_HEAD_SHA,
+        expected_runtime_sha=EXPECTED_RUNTIME_SHA,
         expected_remote=EXPECTED_REMOTE,
     )
 
     assert result["status"] == "ok"
     assert result["implementation_sha"] == EXPECTED_IMPLEMENTATION_SHA
     assert result["receipt_head_sha"] == EXPECTED_RECEIPT_HEAD_SHA
+    assert result["runtime_sha"] == EXPECTED_RUNTIME_SHA
     assert result["contract"] == "w3.private.core-decision/0.1-candidate"
     assert result["policy_revision"] == "w3.retention/1.1"
     assert result["runtime_drift"] is False

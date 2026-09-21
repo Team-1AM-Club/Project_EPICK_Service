@@ -1,5 +1,11 @@
 # Quickstart: W1–W3 M1–M5 Validation
 
+> Historical 2026-09-20 pin instructions. The independent W3 clone now has implementation
+> `0c4f01f9537a3129c976fae5e63111a7982c5da6` and receipt/runtime HEAD
+> `402f7a63bf8f8d601cc6ada1ce685280f47320ce`. Do not run the older image build
+> commands below as a current release procedure. See `specs/008-end-to-end-service/baseline-evidence.md`
+> for the verified current source; a new image digest has not been recorded.
+
 This is a validation guide, not an instruction to bypass milestone gates. At the current state only
 M1 may run. Commands and script names below are the target interface produced during implementation;
 actual secret values must remain in root-owned runtime files or the approved secret channel.
@@ -11,25 +17,25 @@ From the repository root:
 ```powershell
 git rev-parse HEAD
 git -C w3/Project_EPICK_Service rev-parse HEAD
-git -C w3/Project_EPICK_Service cat-file -t 3b23e0843a134fb341e6a256576ccf52fedbf4a8
+git -C w3/Project_EPICK_Service cat-file -t 66a0e3e1b087bf7f9d1b6d7730934ea27f55e94b
 python backend/scripts/verify_w3_runtime_provenance.py --w3-root w3/Project_EPICK_Service
 ```
 
 Expected:
 
-- W3 implementation is `3b23e0843a134fb341e6a256576ccf52fedbf4a8` and receipt HEAD is
-  `34660343f197c74cc03459a93e0160e46adbcd2b`.
+- W3 implementation is `66a0e3e1b087bf7f9d1b6d7730934ea27f55e94b` and receipt HEAD is
+  `bad8671b2ea8d02bdce2157120b94d2b7edf09d8`.
 - The implementation commit is an ancestor of receipt HEAD and runtime paths have no drift.
 - No runtime env, Queue URL, Role ID, token, owner ID or database URL is printed.
 
 ## 2. M1 — image and single-host state
 
 ```powershell
-python backend/scripts/export_w3_runtime_context.py --source w3/Project_EPICK_Service --commit 3b23e0843a134fb341e6a256576ccf52fedbf4a8
-docker build --pull --tag epick-w3-core-runtime:3b23e084 --file backend/infra/w3-runtime.Dockerfile .runtime/w3-build-context
+python backend/scripts/export_w3_runtime_context.py --source w3/Project_EPICK_Service --commit 66a0e3e1b087bf7f9d1b6d7730934ea27f55e94b
+docker build --pull --tag epick-w3-core-runtime:66a0e3e1 --file backend/infra/w3-runtime.Dockerfile .runtime/w3-build-context
 docker compose --file backend/infra/w3-runtime.compose.yml config
 docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,nodev,size=16m `
-  epick-w3-core-runtime:3b23e084 `
+  epick-w3-core-runtime:66a0e3e1 `
   smoke --directory /tmp/smoke
 python -m pytest backend/tests/contract/test_w3_runtime_deployment.py -q
 ```
@@ -49,7 +55,7 @@ run `inspect` from the replacement container. Expected M1 evidence:
 Validate `runtime-readiness.schema.json`. Do not proceed when these are absent:
 
 - M2 W1 work: may run now; actual cutover requires W3-A and W3-B verified;
-- M3 W1 work: may run with verified `w3.retention/1.1`; dispatcher cutover requires W3-C transport/ACK adoption;
+- M3 W1 work: W3-C transport/ACK semantics and implementation SHA are verified; actual cutover still requires secret-channel Queue/Role values and live E2E evidence;
 - M4: M1/M2 complete and actual workload identity assigned;
 - M5: M1–M4 complete and W3-F executor/window confirmed.
 
@@ -69,10 +75,11 @@ SQS message or new W1 decision.
 
 ## 5. M3 — deletion, Source retirement, and operations
 
-Run W1 persistence and lifecycle work against `w3.retention/1.1`; run dispatcher cutover after W3-C:
+Run W1 persistence and lifecycle work against adopted W3-C and `w3.retention/1.1`:
 
 ```powershell
 python -m pytest backend/tests/integration/db/test_w3_deletion_dispatch.py -q
+python -m pytest backend/tests/runtime/test_w3_deletion_worker.py -q
 python -m pytest backend/tests/runtime/test_w3_runtime_operations.py -q
 ```
 

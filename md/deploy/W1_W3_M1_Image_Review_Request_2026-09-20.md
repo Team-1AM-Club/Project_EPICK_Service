@@ -1,5 +1,10 @@
 # W1 → W3 actual runtime 선행물·M1 review 통합 요청
 
+> **폐기된 기준선:** 이 문서는 이전 `3b23e084...` image review 요청의 실행 기록이다.
+> 현재 implementation pin은 `66a0e3e1b087bf7f9d1b6d7730934ea27f55e94b`, receipt/docs HEAD는
+> `bad8671b2ea8d02bdce2157120b94d2b7edf09d8`이다. 아래 image는 publish/deploy하지 않으며,
+> T020에서 현재 pin으로 rebuild한 뒤 W3-D review를 다시 받아야 한다.
+
 - 작성일: 2026-09-20
 - 요청자: W1
 - 수신자: W3 runtime 담당자, 통합 조정자

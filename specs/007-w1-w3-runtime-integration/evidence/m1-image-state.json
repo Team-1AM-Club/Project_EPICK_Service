@@ -1,6 +1,8 @@
 {
   "schema_version": "w1-w3.m1-image-state.v1",
-  "status": "LOCALLY_VERIFIED_AWAITING_W3_D",
+  "status": "SUPERSEDED_REBUILD_REQUIRED",
+  "superseded_by_w3_implementation_sha": "66a0e3e1b087bf7f9d1b6d7730934ea27f55e94b",
+  "superseded_by_w3_receipt_head_sha": "bad8671b2ea8d02bdce2157120b94d2b7edf09d8",
   "w3_source_sha": "3b23e0843a134fb341e6a256576ccf52fedbf4a8",
   "w3_implementation_sha": "3b23e0843a134fb341e6a256576ccf52fedbf4a8",
   "w3_receipt_head_sha": "34660343f197c74cc03459a93e0160e46adbcd2b",

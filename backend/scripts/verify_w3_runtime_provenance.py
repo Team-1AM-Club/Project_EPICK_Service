@@ -9,8 +9,9 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-EXPECTED_IMPLEMENTATION_SHA = "3b23e0843a134fb341e6a256576ccf52fedbf4a8"
-EXPECTED_RECEIPT_HEAD_SHA = "34660343f197c74cc03459a93e0160e46adbcd2b"
+EXPECTED_IMPLEMENTATION_SHA = "0c4f01f9537a3129c976fae5e63111a7982c5da6"
+EXPECTED_RECEIPT_HEAD_SHA = "402f7a63bf8f8d601cc6ada1ce685280f47320ce"
+EXPECTED_RUNTIME_SHA = "402f7a63bf8f8d601cc6ada1ce685280f47320ce"
 EXPECTED_REMOTE = "https://github.com/Team-1AM-Club/Project_EPICK_Service.git"
 EXPECTED_CONTRACT = "w3.private.core-decision/0.1-candidate"
 EXPECTED_POLICY_REVISION = "w3.retention/1.1"
@@ -34,11 +35,14 @@ def verify_w3_runtime_provenance(
     w3_root: Path,
     expected_implementation_sha: str = EXPECTED_IMPLEMENTATION_SHA,
     expected_receipt_head_sha: str = EXPECTED_RECEIPT_HEAD_SHA,
+    expected_runtime_sha: str | None = None,
     expected_remote: str = EXPECTED_REMOTE,
 ) -> dict[str, Any]:
     root = w3_root.resolve()
     _validate_expected_sha(expected_implementation_sha, "implementation")
     _validate_expected_sha(expected_receipt_head_sha, "receipt HEAD")
+    runtime_sha = expected_runtime_sha or expected_receipt_head_sha
+    _validate_expected_sha(runtime_sha, "runtime")
     if not root.is_dir():
         raise W3ProvenanceError("W3 clone directory is unavailable")
     if _git(root, "rev-parse", "--is-inside-work-tree") != "true":
@@ -51,8 +55,8 @@ def verify_w3_runtime_provenance(
         raise W3ProvenanceError("W3 implementation object is not a commit")
     if _git(root, "cat-file", "-t", expected_receipt_head_sha) != "commit":
         raise W3ProvenanceError("W3 receipt HEAD object is not a commit")
-    if _git(root, "rev-parse", "HEAD") != expected_receipt_head_sha:
-        raise W3ProvenanceError("W3 checkout HEAD does not match the receipt pin")
+    if _git(root, "rev-parse", "HEAD") != runtime_sha:
+        raise W3ProvenanceError("W3 checkout HEAD does not match the runtime pin")
     if not _git_succeeds(
         root,
         "merge-base",
@@ -61,6 +65,14 @@ def verify_w3_runtime_provenance(
         expected_receipt_head_sha,
     ):
         raise W3ProvenanceError("W3 implementation is not an ancestor of receipt HEAD")
+    if not _git_succeeds(
+        root,
+        "merge-base",
+        "--is-ancestor",
+        expected_receipt_head_sha,
+        runtime_sha,
+    ):
+        raise W3ProvenanceError("W3 receipt HEAD is not an ancestor of the runtime pin")
 
     readiness = _load_readiness(root / READINESS_PATH)
     if readiness.get("w3_full_sha") != expected_implementation_sha:
@@ -68,7 +80,10 @@ def verify_w3_runtime_provenance(
     if readiness.get("contract") != EXPECTED_CONTRACT:
         raise W3ProvenanceError("W3 readiness contract does not match")
     retention = readiness.get("retention")
-    if not isinstance(retention, dict) or retention.get("policy_revision") != EXPECTED_POLICY_REVISION:
+    if (
+        not isinstance(retention, dict)
+        or retention.get("policy_revision") != EXPECTED_POLICY_REVISION
+    ):
         raise W3ProvenanceError("W3 readiness policy revision does not match")
 
     if _git(root, "status", "--porcelain=v1", "--untracked-files=all"):
@@ -85,13 +100,14 @@ def verify_w3_runtime_provenance(
     if runtime_drift:
         raise W3ProvenanceError("W3 runtime source drift exists after the implementation pin")
 
-    archive_paths = _archive_manifest(root, expected_implementation_sha)
+    archive_paths = _archive_manifest(root, runtime_sha)
     return {
         "status": "ok",
         "contract": EXPECTED_CONTRACT,
         "policy_revision": EXPECTED_POLICY_REVISION,
         "implementation_sha": expected_implementation_sha,
         "receipt_head_sha": expected_receipt_head_sha,
+        "runtime_sha": runtime_sha,
         "runtime_drift": False,
         "worktree_clean": True,
         "archive_paths": archive_paths,
@@ -174,12 +190,14 @@ def main() -> None:
         "--expected-implementation-sha", default=EXPECTED_IMPLEMENTATION_SHA
     )
     parser.add_argument("--expected-receipt-head-sha", default=EXPECTED_RECEIPT_HEAD_SHA)
+    parser.add_argument("--expected-runtime-sha", default=EXPECTED_RUNTIME_SHA)
     parser.add_argument("--expected-remote", default=EXPECTED_REMOTE)
     args = parser.parse_args()
     result = verify_w3_runtime_provenance(
         w3_root=args.w3_root,
         expected_implementation_sha=args.expected_implementation_sha,
         expected_receipt_head_sha=args.expected_receipt_head_sha,
+        expected_runtime_sha=args.expected_runtime_sha,
         expected_remote=args.expected_remote,
     )
     print(json.dumps(result, separators=(",", ":"), sort_keys=True))

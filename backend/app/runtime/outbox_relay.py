@@ -12,6 +12,7 @@ from jsonschema import Draft202012Validator, FormatChecker
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
+from app.models.deletion import DeletionTarget
 from app.models.identity import User
 from app.models.jobs import (
     Job,
@@ -42,10 +43,16 @@ _W2_DIRECT_SOURCE_REGISTRATION_MESSAGE_TYPE = "w1.private.w2.direct-source-regis
 _W2_COMMIT_GATE_MESSAGE_TYPE = "w1.private.w2.commit-gate.v1"
 _W4_RECOMMENDATION_EXECUTION_MESSAGE_TYPE = "w1.private.w4.recommendation-execution.v1"
 _W4_RECOMMENDATION_EXECUTION_SCHEMA_VERSION = "w1.w4.recommendation-exec/1"
+W3_OWNER_DELETION_MESSAGE_TYPE = "w1.private.w3.owner-deletion.v1"
+W3_SOURCE_RETIREMENT_MESSAGE_TYPE = "w1.private.w3.source-retirement.v1"
+_W3_RETENTION_MESSAGE_TYPES = frozenset(
+    {W3_OWNER_DELETION_MESSAGE_TYPE, W3_SOURCE_RETIREMENT_MESSAGE_TYPE}
+)
 _W1_EXECUTION_QUEUE = "w1_execution"
 _W2_COLLECTION_COMMAND_QUEUE = "w2_collection_command"
 _W2_COMMIT_GATE_COMMAND_QUEUE = "w2_commit_gate_command"
 _W4_RECOMMENDATION_EXECUTION_QUEUE = "w4_recommendation_execution"
+_W3_RETENTION_COMMAND_QUEUE = "w3_retention_command"
 _MAX_SQS_BODY_BYTES = 16 * 1024
 
 
@@ -97,6 +104,14 @@ class QueueUrlRegistry:
             logical_key=_W4_RECOMMENDATION_EXECUTION_QUEUE,
             message_type=_W4_RECOMMENDATION_EXECUTION_MESSAGE_TYPE,
         ),
+        W3_OWNER_DELETION_MESSAGE_TYPE: QueueRoute(
+            logical_key=_W3_RETENTION_COMMAND_QUEUE,
+            message_type=W3_OWNER_DELETION_MESSAGE_TYPE,
+        ),
+        W3_SOURCE_RETIREMENT_MESSAGE_TYPE: QueueRoute(
+            logical_key=_W3_RETENTION_COMMAND_QUEUE,
+            message_type=W3_SOURCE_RETIREMENT_MESSAGE_TYPE,
+        ),
     }
 
     def __init__(
@@ -106,10 +121,16 @@ class QueueUrlRegistry:
         w2_collection_command_queue_url: str | None = None,
         w2_commit_gate_command_queue_url: str | None = None,
         w4_recommendation_execution_queue_url: str | None = None,
+        w3_retention_command_queue_url: str | None = None,
         commit_gate_only: bool = False,
+        retention_only: bool = False,
     ) -> None:
+        if sum((commit_gate_only, retention_only)) > 1:
+            raise ValueError("relay scope must select at most one dedicated route")
         if commit_gate_only and not w2_commit_gate_command_queue_url:
             raise ValueError("commit-gate-only relay requires a dedicated commit-gate queue")
+        if retention_only and not w3_retention_command_queue_url:
+            raise ValueError("retention-only relay requires a dedicated W3 command queue")
         self._urls = {
             _W1_EXECUTION_QUEUE: w1_execution_queue_url,
             _W2_COLLECTION_COMMAND_QUEUE: w2_collection_command_queue_url,
@@ -120,13 +141,17 @@ class QueueUrlRegistry:
                 w2_commit_gate_command_queue_url or w2_collection_command_queue_url
             ),
             _W4_RECOMMENDATION_EXECUTION_QUEUE: w4_recommendation_execution_queue_url,
+            _W3_RETENTION_COMMAND_QUEUE: w3_retention_command_queue_url,
         }
         self._commit_gate_only = commit_gate_only
+        self._retention_only = retention_only
 
     @property
     def supported_message_types(self) -> tuple[str, ...]:
         if self._commit_gate_only:
             return (_W2_COMMIT_GATE_MESSAGE_TYPE,)
+        if self._retention_only:
+            return (W3_OWNER_DELETION_MESSAGE_TYPE, W3_SOURCE_RETIREMENT_MESSAGE_TYPE)
         return tuple(self._ROUTES)
 
     def resolve(self, *, message_type: str) -> tuple[QueueRoute, str]:
@@ -239,6 +264,36 @@ def _w2_collection_command_validator() -> Draft202012Validator:
     return Draft202012Validator(schema, format_checker=FormatChecker())
 
 
+@lru_cache(maxsize=1)
+def _w3_owner_deletion_validator() -> Draft202012Validator:
+    schema_path = (
+        Path(__file__).resolve().parents[2]
+        / "contracts"
+        / "w1"
+        / "v1"
+        / "deletion-command.schema.json"
+    )
+    with schema_path.open(encoding="utf-8") as stream:
+        schema = json.load(stream)
+    Draft202012Validator.check_schema(schema)
+    return Draft202012Validator(schema, format_checker=FormatChecker())
+
+
+@lru_cache(maxsize=1)
+def _w3_source_retirement_validator() -> Draft202012Validator:
+    schema_path = (
+        Path(__file__).resolve().parents[2]
+        / "contracts"
+        / "w1"
+        / "v1"
+        / "w3-source-retirement.request.schema.json"
+    )
+    with schema_path.open(encoding="utf-8") as stream:
+        schema = json.load(stream)
+    Draft202012Validator.check_schema(schema)
+    return Draft202012Validator(schema, format_checker=FormatChecker())
+
+
 class OutboxRelay:
     """Publish committed private Job outbox references after their DB transaction ends.
 
@@ -339,7 +394,11 @@ class OutboxRelay:
                 message.relay_lease_expires_at = now + timedelta(seconds=self._lease_seconds)
 
                 try:
-                    if message.message_type == _W4_RECOMMENDATION_EXECUTION_MESSAGE_TYPE:
+                    if message.message_type in _W3_RETENTION_MESSAGE_TYPES:
+                        binding = None
+                        recommendation_run = None
+                        self._validate_w3_retention_message(message=message)
+                    elif message.message_type == _W4_RECOMMENDATION_EXECUTION_MESSAGE_TYPE:
                         binding, recommendation_run = self._require_private_recommendation(
                             session=session,
                             message=message,
@@ -351,7 +410,9 @@ class OutboxRelay:
                             session=session, message=message
                         )
                     _, queue_url = self._queues.resolve(message_type=message.message_type)
-                    if binding is not None and recommendation_run is not None:
+                    if message.message_type in _W3_RETENTION_MESSAGE_TYPES:
+                        body = self._serialize_w3_retention_command(message=message)
+                    elif binding is not None and recommendation_run is not None:
                         body = self._serialize_w4_recommendation_dispatch(
                             message=message,
                             binding=binding,
@@ -395,6 +456,7 @@ class OutboxRelay:
                                 in {
                                     _W2_COMMIT_GATE_MESSAGE_TYPE,
                                     _W4_RECOMMENDATION_EXECUTION_MESSAGE_TYPE,
+                                    *_W3_RETENTION_MESSAGE_TYPES,
                                 }
                                 else command.id
                             ),
@@ -404,10 +466,14 @@ class OutboxRelay:
                                     "epick_binding_id": str(binding.id),
                                 }
                                 if binding is not None and recommendation_run is not None
-                                else {
-                                    "epick_command_id": str(command.id),
-                                    "epick_job_id": str(job.id),
-                                }
+                                else (
+                                    {"epick_command_id": str(message.id)}
+                                    if message.message_type in _W3_RETENTION_MESSAGE_TYPES
+                                    else {
+                                        "epick_command_id": str(command.id),
+                                        "epick_job_id": str(job.id),
+                                    }
+                                )
                             ),
                         },
                         attempts=message.attempts,
@@ -421,7 +487,10 @@ class OutboxRelay:
             session.scalars(
                 select(OutboxMessage)
                 .where(
-                    OutboxMessage.visibility_scope == "PRIVATE",
+                    or_(
+                        OutboxMessage.visibility_scope == "PRIVATE",
+                        OutboxMessage.message_type == W3_SOURCE_RETIREMENT_MESSAGE_TYPE,
+                    ),
                     OutboxMessage.message_type.in_(self._queues.supported_message_types),
                     or_(
                         OutboxMessage.status.in_(("PENDING", "FAILED_RETRYABLE")),
@@ -768,6 +837,57 @@ class OutboxRelay:
         raise OutboxPayloadError("OUTBOX_ROUTE_UNKNOWN")
 
     @staticmethod
+    def _validate_w3_retention_message(*, message: OutboxMessage) -> None:
+        payload = message.payload
+        if not isinstance(payload, dict) or payload.get("command_id") != str(message.id):
+            raise OutboxPayloadError("OUTBOX_W3_RETENTION_PAYLOAD_INVALID")
+        if message.message_type == W3_OWNER_DELETION_MESSAGE_TYPE:
+            if (
+                message.visibility_scope != "PRIVATE"
+                or message.schema_version != "1.0"
+                or message.deletion_request_id is None
+                or message.deletion_target_id is None
+                or message.owner_user_id is None
+                or message.owner_deletion_epoch is None
+                or message.aggregate_id != message.deletion_target_id
+                or payload.get("target_type") != "W3_CORE_RUNTIME"
+                or payload.get("target_ref") != str(message.deletion_target_id)
+                or payload.get("owner_id") != str(message.owner_user_id)
+                or payload.get("owner_deletion_epoch") != message.owner_deletion_epoch
+                or list(_w3_owner_deletion_validator().iter_errors(payload))
+            ):
+                raise OutboxPayloadError("OUTBOX_W3_DELETION_PAYLOAD_INVALID")
+            return
+        if message.message_type == W3_SOURCE_RETIREMENT_MESSAGE_TYPE:
+            if (
+                message.visibility_scope != "PRIVATE"
+                or message.deletion_request_id is not None
+                or message.deletion_target_id is not None
+                or message.owner_user_id is not None
+                or message.owner_deletion_epoch is not None
+                or payload.get("source_id") != str(message.aggregate_id)
+                or payload.get("target_type") != "W3_CORE_RUNTIME"
+                or payload.get("target_ref") != str(message.aggregate_id)
+                or list(_w3_source_retirement_validator().iter_errors(payload))
+            ):
+                raise OutboxPayloadError("OUTBOX_W3_SOURCE_RETIREMENT_PAYLOAD_INVALID")
+            return
+        raise OutboxPayloadError("OUTBOX_W3_RETENTION_TYPE_INVALID")
+
+    @staticmethod
+    def _serialize_w3_retention_command(*, message: OutboxMessage) -> str:
+        OutboxRelay._validate_w3_retention_message(message=message)
+        body = json.dumps(
+            message.payload,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        if len(body.encode("utf-8")) > _MAX_SQS_BODY_BYTES:
+            raise OutboxPayloadError("OUTBOX_W3_RETENTION_TOO_LARGE")
+        return body
+
+    @staticmethod
     def _serialize_private_dispatch(
         *,
         message: OutboxMessage,
@@ -949,6 +1069,23 @@ class OutboxRelay:
             self._clear_claim(message)
             message.last_error_code = None
             message.last_error_at = None
+
+            if (
+                message.message_type == W3_OWNER_DELETION_MESSAGE_TYPE
+                and message.deletion_target_id is not None
+            ):
+                target = session.scalar(
+                    select(DeletionTarget)
+                    .where(
+                        DeletionTarget.id == message.deletion_target_id,
+                        DeletionTarget.deletion_request_id == message.deletion_request_id,
+                    )
+                    .with_for_update()
+                )
+                if target is not None and target.status == "QUEUED":
+                    target.status = "DISPATCHED"
+                    target.error_code = None
+                    target.updated_at = now
 
             command, job = self._read_current_job_command(session=session, message=message)
             if command is not None and job is not None and command.status == "PENDING":

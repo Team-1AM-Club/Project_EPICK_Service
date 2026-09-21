@@ -33,6 +33,12 @@ def test_w3_runtime_is_hardened_and_has_bounded_operator_services() -> None:
     assert "w3-core-expire:" in compose
     assert "w3-core-backup:" in compose
     assert "w3-core-command:" in compose
+    assert "w3-core-lifecycle:" in compose
+    assert "lifecycle-once" in compose
+    assert "W3_LIFECYCLE_EXPECTED_W1_ROLE_ID" in compose
+    assert "W3_LIFECYCLE_COMMAND_QUEUE_URL" in compose
+    assert "W3_LIFECYCLE_RECEIPT_QUEUE_URL" in compose
+    assert "--consume" in compose
 
 
 def test_w3_runtime_uses_the_approved_retention_compatibility_input() -> None:
@@ -41,7 +47,7 @@ def test_w3_runtime_uses_the_approved_retention_compatibility_input() -> None:
     assert "1209600" in compose
     assert "W3_RETENTION_SECONDS" not in compose
     assert "3600" not in compose
-    for service in ("init", "inspect", "relay", "expire", "backup"):
+    for service in ("init", "inspect", "relay", "lifecycle", "expire", "backup"):
         marker = f"  w3-core-{service}:"
         assert marker in compose
         block = compose.split(marker, 1)[1].split("\n  w3-core-", 1)[0]

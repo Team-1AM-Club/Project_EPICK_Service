@@ -6,7 +6,7 @@ Deployment metadata, not authoritative user state.
 
 | Field | Type | Rules |
 | --- | --- | --- |
-| `w3_implementation_sha` | 40-char git SHA | Must equal `3b23e0843a134fb341e6a256576ccf52fedbf4a8`; image source pin |
+| `w3_implementation_sha` | 40-char git SHA | Must equal `66a0e3e1b087bf7f9d1b6d7730934ea27f55e94b`; image source pin |
 | `w3_receipt_head_sha` | 40-char git SHA | Documentation/readiness successor recorded separately; not substituted for image source |
 | `image_repository` | string | Logical ECR repository; no credentials |
 | `image_digest` | `sha256:<64 hex>` | Required before M1 closure; deploy by digest |
@@ -74,9 +74,14 @@ QUEUED → DISPATCHED → ACKNOWLEDGED
    └──────────────→ FAILED_RETRYABLE → QUEUED
 ```
 
-W3 `delete_owner` returning an idempotent already-deleted/current result maps to ACKNOWLEDGED. A
-lower/stale epoch, adapter failure or unavailable runtime never advances the W1 target to complete.
-The precise response mapping remains gated on W3-C review.
+Authenticated W3 `APPLIED` and `DUPLICATE` receipts whose operation, target reference and current
+owner epoch match map to `ACKNOWLEDGED`; W1 stores an exact receipt-body digest for redelivery
+idempotency. `STALE` maps to `FAILED_RETRYABLE` without completing the target. A mismatched receipt
+or a same-command/different-body receipt is terminally rejected before domain mutation. W3 emits no
+receipt for a same-command/different-command-digest `CONFLICT`; that condition remains in the W3
+DLQ/HELD and operator-reconciliation path. The W3-C decision fixed a dedicated Standard-SQS command
+queue and a separate receipt queue; both sides authenticate SQS `SenderId` against
+deployment-provided stable Role IDs rather than trusting body fields.
 
 ## 5. W3 Delivery State
 

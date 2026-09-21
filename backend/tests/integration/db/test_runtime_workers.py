@@ -906,8 +906,6 @@ def test_missing_core_pin_blocks_without_creating_w2_dispatch(
             OutboxMessage.message_type == "w1.private.w2.collection-command.v1"
         )
     ) is None
-
-
 @pytest.mark.postgres
 def test_explicit_retry_after_w3_core_decision_creates_new_fenced_pinned_command(
     db_session: Session,

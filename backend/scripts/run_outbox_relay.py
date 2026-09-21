@@ -20,7 +20,7 @@ from app.runtime.session import create_worker_session_factory  # noqa: E402
 from app.runtime.sqs import Boto3SqsPort  # noqa: E402
 
 
-def _build_relay() -> OutboxRelay:
+def _build_relay(*, scope: str = "all") -> OutboxRelay:
     # This narrow worker entrypoint does not import the API router graph. Load
     # every mapped table before SQLAlchemy resolves OutboxMessage's string
     # foreign keys (notably deletion_requests.id) during the first flush.
@@ -31,6 +31,7 @@ def _build_relay() -> OutboxRelay:
             settings.w2_collection_command_queue_url,
             settings.w2_commit_gate_outbound_queue_url,
             settings.w4_recommendation_execution_queue_url,
+            settings.w3_retention_command_queue_url,
         )
     ):
         raise SystemExit("at least one private outbox destination must be configured")
@@ -43,7 +44,9 @@ def _build_relay() -> OutboxRelay:
             w2_collection_command_queue_url=settings.w2_collection_command_queue_url,
             w2_commit_gate_command_queue_url=settings.w2_commit_gate_outbound_queue_url,
             w4_recommendation_execution_queue_url=(settings.w4_recommendation_execution_queue_url),
+            w3_retention_command_queue_url=settings.w3_retention_command_queue_url,
             commit_gate_only=settings.w2_ct15_gate_only_queue_approved,
+            retention_only=scope == "w3-retention",
         ),
         relay_id=relay_id[:128],
         lease_seconds=settings.w1_outbox_relay_lease_seconds,
@@ -72,8 +75,14 @@ def _run_once(relay: OutboxRelay) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--once", action="store_true", help="Drain one bounded batch and exit")
+    parser.add_argument(
+        "--scope",
+        choices=("all", "w3-retention"),
+        default="all",
+        help="Limit claims to one dedicated route set",
+    )
     args = parser.parse_args()
-    relay = _build_relay()
+    relay = _build_relay(scope=args.scope)
     if args.once:
         _run_once(relay)
         return

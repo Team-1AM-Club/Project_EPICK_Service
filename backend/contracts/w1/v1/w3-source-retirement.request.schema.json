@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w3/core-runtime/source-retirement-command.schema.json",
+  "title": "W1 private Source retirement command for W3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "command_id", "operation", "company_id", "source_id", "retired_at", "target_type", "target_ref"],
+  "properties": {
+    "schema_version": {"const": "w1.private.w3-source-retirement/1.0"},
+    "command_id": {"type": "string", "format": "uuid"},
+    "operation": {"const": "RETIRE_SOURCE"},
+    "company_id": {"type": "string", "format": "uuid"},
+    "source_id": {"type": "string", "format": "uuid"},
+    "retired_at": {"type": "string", "format": "date-time"},
+    "target_type": {"const": "W3_CORE_RUNTIME"},
+    "target_ref": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Must equal source_id; the authoritative W1 Source.id. Enforced by the W3 command model."
+    }
+  }
+}

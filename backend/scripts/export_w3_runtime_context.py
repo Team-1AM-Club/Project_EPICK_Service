@@ -17,7 +17,7 @@ try:
 except ModuleNotFoundError:  # Direct script execution from backend/scripts.
     from verify_w3_runtime_provenance import W3ProvenanceError
 
-EXPECTED_IMPLEMENTATION_SHA = "3b23e0843a134fb341e6a256576ccf52fedbf4a8"
+EXPECTED_RUNTIME_SHA = "402f7a63bf8f8d601cc6ada1ce685280f47320ce"
 ARCHIVE_PATHS = (
     "pyproject.toml",
     "uv.lock",
@@ -130,7 +130,7 @@ def main() -> None:
     parser.add_argument(
         "--source", type=Path, default=repo_root / "w3" / "Project_EPICK_Service"
     )
-    parser.add_argument("--commit", default=EXPECTED_IMPLEMENTATION_SHA)
+    parser.add_argument("--commit", default=EXPECTED_RUNTIME_SHA)
     parser.add_argument(
         "--destination", type=Path, default=repo_root / ".runtime" / "w3-build-context"
     )

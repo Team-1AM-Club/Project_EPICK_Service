@@ -34,7 +34,8 @@
         "CHECKPOINT",
         "CACHE",
         "NEO4J",
-        "VECTOR"
+        "VECTOR",
+        "W3_CORE_RUNTIME"
       ]
     },
     "target_ref": {

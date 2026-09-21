@@ -191,14 +191,15 @@ def test_deletion_requires_all_current_store_acks_and_fences_active_jobs(
         "VECTOR",
         "CACHE",
         "CHECKPOINT",
+        "W3_CORE_RUNTIME",
     }
-    assert len(targets) == 5
+    assert len(targets) == 6
     messages = list(
         db_session.scalars(
             select(OutboxMessage).where(OutboxMessage.deletion_request_id == request.id)
         )
     )
-    assert len(messages) == 5
+    assert len(messages) == 6
     assert all(message.visibility_scope == "PRIVATE" for message in messages)
     assert {message.payload["target_type"] for message in messages} == {
         target.store_type for target in targets

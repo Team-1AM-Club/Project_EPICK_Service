@@ -15,8 +15,8 @@ feature into a perpetually gated deployment project and invalidate its existing 
 ## Decision 2 — Reproducible W3 image
 
 **Decision**: Treat `w3/Project_EPICK_Service` as a read-only independent clone, verify runtime
-implementation SHA `3b23e0843a134fb341e6a256576ccf52fedbf4a8` is an ancestor of documentation
-receipt HEAD `34660343f197c74cc03459a93e0160e46adbcd2b`, and prove no runtime-path drift. Export an
+implementation SHA `66a0e3e1b087bf7f9d1b6d7730934ea27f55e94b` is an ancestor of documentation
+receipt HEAD `bad8671b2ea8d02bdce2157120b94d2b7edf09d8`, and prove no runtime-path drift. Export an
 allowlisted build context from the implementation commit and build it with `uv.lock`, Python 3.12,
 a non-root runtime user, read-only rootfs, bounded `/tmp` tmpfs and one `/state` volume. Push an
 implementation-SHA tag but deploy only `repository@sha256:manifest`.
@@ -74,8 +74,13 @@ rejected because authentication/infrastructure retry behavior must remain distin
 ## Decision 6 — Deletion integration
 
 **Decision**: Extend W1's existing PostgreSQL deletion target/outbox workflow with an explicit W3
-Core runtime target after W3-C approves its command/ack mapping. A background adapter performs
-`delete_owner(owner_id, epoch)` outside the API transaction and records idempotent success/failure.
+Core runtime target. W3-C adopted separate private Standard-SQS command and receipt queues. W1 sends
+with its workload role, W3 authenticates the SQS `SenderId`, and W1 accepts receipts only from the
+configured W3 stable Role ID. W3 stores the canonical command digest internally and retransmits the
+same receipt bytes; W1 binds the receipt by `command_id`, operation, target reference and current
+epoch/effective time, and stores the receipt-body digest for idempotency. `APPLIED`/`DUPLICATE`
+acknowledge the target while `STALE` records a retryable target failure. Same-ID/different-body
+`CONFLICT` is a W3 terminal reject with no receipt. Body `producer` is never authentication evidence.
 
 **Rationale**: W1 already fences jobs, increments deletion epoch and stages durable private-store
 commands atomically. Adding W3 there gives crash-safe retry without coupling a PostgreSQL transaction
@@ -144,5 +149,6 @@ not service behavior. Reuse T043 as actual producer proof; rejected because T043
 
 No implementation choice is left as an unqualified `NEEDS CLARIFICATION`. W3-E is resolved by the
 approved implementation. Missing inter-team values remain deliberate cutover gates: W3-A/B block
-M2 actual binding, W3-C transport/ACK adoption blocks M3 closure, M1/M2 block M4, and M1–M4 plus
-W3-F block M5. W1-owned work before those cutovers may proceed without placeholder READY values.
+M2 actual binding, actual private Queue/Role injection and live evidence block M3 closure, M1/M2
+block M4, and M1–M4 plus W3-F block M5. W3-C transport/ACK semantics and implementation SHA
+`66a0e3e1...` are verified; W1-owned work may proceed without placeholder READY values.

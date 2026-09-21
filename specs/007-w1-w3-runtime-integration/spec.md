@@ -138,8 +138,8 @@ W1 currentness 차단, 다른 owner 무영향 및 durable retry를 검증한다.
 ### Functional Requirements
 
 - **FR-001**: W1은 독립 clone의 W3 runtime 구현 SHA
-  `3b23e0843a134fb341e6a256576ccf52fedbf4a8`와 locked dependencies로 재현 가능한 container
-  image recipe를 제공하고 receipt HEAD `34660343f197c74cc03459a93e0160e46adbcd2b`를 별도 기록해야 한다.
+  `66a0e3e1b087bf7f9d1b6d7730934ea27f55e94b`와 locked dependencies로 재현 가능한 container
+  image recipe를 제공하고 receipt HEAD `bad8671b2ea8d02bdce2157120b94d2b7edf09d8`를 별도 기록해야 한다.
 - **FR-002**: W3 image는 non-root로 실행되고 root filesystem은 read-only이며 writable state는
   `/state` named volume과 제한된 tmpfs에만 존재해야 한다.
 - **FR-003**: 모든 W3 runtime process는 같은 host의 `/state/core.db`를 사용해야 하며 다중 host,
@@ -207,7 +207,7 @@ W1 currentness 차단, 다른 owner 무영향 및 durable retry를 검증한다.
 
 ## Assumptions and External Gates
 
-- W3 implementation pin `3b23e084...`, receipt HEAD `34660343...`와 기존 wire contract
+- W3 implementation pin `66a0e3e1...`, receipt HEAD `bad8671...`와 기존 wire contract
   `w3.private.core-decision/0.1-candidate`는 변경하지 않는다.
 - W1 W3 inbound consumer와 T043 격리 검증은 완료됐으며 이 기능은 actual W3 runtime 연결에 집중한다.
 - M1은 즉시 착수 가능하지만 최종 digest 확정 전 W3-D review가 필요하다.

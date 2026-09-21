@@ -59,6 +59,23 @@ services:
       - --send
     profiles: ["w3-relay"]
 
+  w3-core-lifecycle:
+    <<: *w3-runtime
+    environment:
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-}
+      W3_CORE_DECISION_EXPECTED_ROLE_ID: ${W3_CORE_DECISION_EXPECTED_ROLE_ID:-}
+      W3_LIFECYCLE_EXPECTED_W1_ROLE_ID: ${W3_LIFECYCLE_EXPECTED_W1_ROLE_ID:-}
+      W3_LIFECYCLE_COMMAND_QUEUE_URL: ${W3_LIFECYCLE_COMMAND_QUEUE_URL:-}
+      W3_LIFECYCLE_RECEIPT_QUEUE_URL: ${W3_LIFECYCLE_RECEIPT_QUEUE_URL:-}
+    command:
+      - lifecycle-once
+      - --db
+      - /state/core.db
+      - --retention-seconds
+      - "1209600"
+      - --consume
+    profiles: ["w3-lifecycle"]
+
   w3-core-expire:
     <<: *w3-runtime
     command:

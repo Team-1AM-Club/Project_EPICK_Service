@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
@@ -24,7 +25,23 @@ DELETION_REQUEST_STATUS_VALUES = (
     "'PARTIALLY_COMPLETED', 'FAILED_RETRYABLE', 'EXPIRED'"
 )
 DELETION_TARGET_STATUS_VALUES = "'QUEUED', 'DISPATCHED', 'ACKNOWLEDGED', 'FAILED_RETRYABLE'"
-DELETION_STORE_TYPE_VALUES = "'POSTGRESQL', 'NEO4J', 'VECTOR', 'CACHE', 'CHECKPOINT'"
+DeletionStoreType = Literal[
+    "POSTGRESQL",
+    "NEO4J",
+    "VECTOR",
+    "CACHE",
+    "CHECKPOINT",
+    "W3_CORE_RUNTIME",
+]
+DELETION_STORE_TYPES: tuple[DeletionStoreType, ...] = (
+    "POSTGRESQL",
+    "NEO4J",
+    "VECTOR",
+    "CACHE",
+    "CHECKPOINT",
+    "W3_CORE_RUNTIME",
+)
+DELETION_STORE_TYPE_VALUES = ", ".join(f"'{value}'" for value in DELETION_STORE_TYPES)
 
 
 class DeletionRequest(Base):
@@ -118,7 +135,7 @@ class DeletionTarget(Base):
 
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
     deletion_request_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
-    store_type: Mapped[str] = mapped_column(String(32))
+    store_type: Mapped[DeletionStoreType] = mapped_column(String(32))
     resource_type: Mapped[str] = mapped_column(String(64))
     resource_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
     ack_epoch: Mapped[int | None] = mapped_column(BigInteger, nullable=True)

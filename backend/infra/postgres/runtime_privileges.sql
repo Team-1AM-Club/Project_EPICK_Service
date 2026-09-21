@@ -444,8 +444,15 @@ ON TABLE job_core_decision_bindings
 TO epick_w4_context;
 
 -- The deleter advances deletion state and may remove owner-scoped data. It is
--- deliberately denied mutation of canonical Source/knowledge tables.
+-- deliberately denied mutation of canonical Source/knowledge tables.  The W3
+-- owner-deletion dispatcher runs with this role: its existing deletion_targets
+-- and outbox_messages grants are sufficient for the additive W3 target and do
+-- not grant direct access to W3-owned SQLite state.
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO epick_deleter;
+-- Receipt reconciliation takes row locks on the current owner and canonical
+-- Source without changing either record. PostgreSQL requires an UPDATE-capable
+-- column for SELECT ... FOR UPDATE, so restrict it to audit timestamps.
+GRANT UPDATE (updated_at) ON TABLE users, sources TO epick_deleter;
 GRANT SELECT, INSERT, UPDATE ON TABLE
     deletion_requests,
     deletion_targets,
@@ -460,6 +467,15 @@ GRANT SELECT, INSERT, UPDATE ON TABLE
     job_checkpoints,
     notifications
 TO epick_deleter;
+
+-- W3 receipt reconciliation records one immutable receipt only after SenderId,
+-- receipt-body digest, operation/target binding and current epoch/time checks.
+GRANT INSERT ON TABLE inbox_receipts TO epick_deleter;
+
+-- Permanent Source retirement is staged as the single allowlisted PRIVATE
+-- outbox shape by the W1 transaction that owns the registry transition.  The
+-- interactive runtime already has INSERT on outbox_messages and SELECT-only
+-- access to sources; no Source mutation or broad worker grant is added here.
 
 GRANT DELETE ON TABLE
     users,

@@ -16,8 +16,9 @@ RUN uv sync --frozen --no-dev --no-editable
 FROM python:3.12.14-slim-bookworm@sha256:392307d22300de8b5986851a12d9176dfc0fc073e65bf6523ebd7dcbeb23564e
 
 LABEL org.opencontainers.image.source="https://github.com/Team-1AM-Club/Project_EPICK_Service" \
-      org.opencontainers.image.revision="3b23e0843a134fb341e6a256576ccf52fedbf4a8" \
-      io.epick.w3.receipt-head="34660343f197c74cc03459a93e0160e46adbcd2b" \
+      org.opencontainers.image.revision="402f7a63bf8f8d601cc6ada1ce685280f47320ce" \
+      io.epick.w3.upstream-implementation="0c4f01f9537a3129c976fae5e63111a7982c5da6" \
+      io.epick.w3.receipt-head="402f7a63bf8f8d601cc6ada1ce685280f47320ce" \
       io.epick.w3.contract="w3.private.core-decision/0.1-candidate" \
       io.epick.w3.policy-revision="w3.retention/1.1"
 

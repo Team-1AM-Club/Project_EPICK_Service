@@ -18,6 +18,10 @@
 # W3 Authority is a distinct read-only private listener. Its host mapping is
 # loopback-only and its env file contains only the dedicated DB login and workload auth:
 #   docker compose -f w1-runtime.compose.yml --profile w3-authority up -d
+# W3 retention uses two least-privilege W1 processes. The command relay env contains
+# only the command queue/runtime DB values; the receipt env contains the receipt/DLQ,
+# expected W3 stable Role ID, and deletion-only DB login:
+#   docker compose -f w1-runtime.compose.yml --profile w3-retention up -d
 #
 # W4 Question Core inbound is opt-in and uses a separate worker-only env file.
 # Do not start this profile until W4 has supplied its pinned producer, stable
@@ -106,6 +110,52 @@ services:
     security_opt:
       - no-new-privileges:true
     profiles: ["w1-execution"]
+
+  w1-w3-retention-command-relay:
+    image: ${BACKEND_IMAGE:?set BACKEND_IMAGE to the immutable backend image reference}
+    env_file:
+      - ${W1_W3_RETENTION_COMMAND_ENV_FILE:?set W1_W3_RETENTION_COMMAND_ENV_FILE to the W3 retention command relay env file}
+    command: ["python", "scripts/run_outbox_relay.py", "--scope", "w3-retention"]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - type: bind
+        source: ${RDS_CA_BUNDLE_PATH:?set RDS_CA_BUNDLE_PATH to the host RDS CA bundle}
+        target: /run/epick/rds-ca.pem
+        read_only: true
+        bind:
+          create_host_path: false
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    profiles: ["w3-retention"]
+
+  w1-w3-retention-receipt-worker:
+    image: ${BACKEND_IMAGE:?set BACKEND_IMAGE to the immutable backend image reference}
+    env_file:
+      - ${W1_W3_RETENTION_RECEIPT_ENV_FILE:?set W1_W3_RETENTION_RECEIPT_ENV_FILE to the W3 retention receipt worker env file}
+    command: ["python", "scripts/run_w3_retention_receipt_worker.py"]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - type: bind
+        source: ${RDS_CA_BUNDLE_PATH:?set RDS_CA_BUNDLE_PATH to the host RDS CA bundle}
+        target: /run/epick/rds-ca.pem
+        read_only: true
+        bind:
+          create_host_path: false
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    profiles: ["w3-retention"]
 
   w1-job-worker:
     image: ${BACKEND_IMAGE:?set BACKEND_IMAGE to the immutable backend image reference}

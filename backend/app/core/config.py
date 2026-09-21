@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     # Runtime processes never inherit the API database login.  These values are provided from
     # runtime-only Secrets Manager entries once R-3 provisions the private host.
     worker_database_url: str | None = None
+    deletion_worker_database_url: str | None = None
     lookup_database_url: str | None = None
     # W4's pre-send currentness adapter has a distinct, read-only database
     # login and bearer.  It is not the W2 lookup bearer or worker database URL.
@@ -86,6 +87,16 @@ class Settings(BaseSettings):
     w3_core_decision_batch_size: int = 10
     w3_core_decision_wait_seconds: int = 20
     w3_core_decision_visibility_seconds: int = 120
+    # W1 -> W3 retention commands and W3 -> W1 receipts use distinct private
+    # Standard queues. Stable Role IDs are deployment secrets, never body fields.
+    w3_retention_command_queue_url: str | None = None
+    w3_retention_receipt_queue_url: str | None = None
+    w3_retention_receipt_dlq_url: str | None = None
+    w3_retention_w1_stable_role_id: str | None = None
+    w3_retention_expected_w3_sender_id: str | None = None
+    w3_retention_receipt_batch_size: int = 10
+    w3_retention_receipt_wait_seconds: int = 20
+    w3_retention_receipt_visibility_seconds: int = 120
     # W1's private currentness boundary for W3. These values are injected only
     # into the isolated Authority process/W3 workload after W3-B is verified.
     w3_authority_private_url: str | None = None
@@ -157,6 +168,40 @@ class Settings(BaseSettings):
             )
         if not self.w3_authority_expected_principal.strip():
             raise ValueError("W3 Authority expected principal must be non-empty")
+        receipt_values = (
+            self.w3_retention_receipt_queue_url,
+            self.w3_retention_receipt_dlq_url,
+            self.w3_retention_expected_w3_sender_id,
+            self.deletion_worker_database_url,
+        )
+        if any(value is not None for value in receipt_values) and not all(receipt_values):
+            raise ValueError(
+                "W3 retention receipt queue, DLQ, expected W3 Role ID, and deletion worker "
+                "database must be configured together"
+            )
+        retention_queues = [
+            queue
+            for queue in (
+                self.w3_retention_command_queue_url,
+                self.w3_retention_receipt_queue_url,
+                self.w3_retention_receipt_dlq_url,
+            )
+            if queue is not None
+        ]
+        if len(retention_queues) != len(set(retention_queues)):
+            raise ValueError("configured W3 retention command, receipt, and DLQ queues must differ")
+        for role_id in (
+            self.w3_retention_w1_stable_role_id,
+            self.w3_retention_expected_w3_sender_id,
+        ):
+            if role_id is not None and (not role_id.strip() or ":" in role_id):
+                raise ValueError("W3 retention Role IDs must be stable IDs without session suffix")
+        if not 1 <= self.w3_retention_receipt_batch_size <= 10:
+            raise ValueError("W3 retention receipt batch size must be between 1 and 10")
+        if not 0 <= self.w3_retention_receipt_wait_seconds <= 20:
+            raise ValueError("W3 retention receipt wait seconds must be between 0 and 20")
+        if not 1 <= self.w3_retention_receipt_visibility_seconds <= 43_200:
+            raise ValueError("W3 retention receipt visibility seconds must be between 1 and 43200")
         if not (
             0 < self.w3_authority_connect_timeout_seconds
             <= self.w3_authority_read_timeout_seconds

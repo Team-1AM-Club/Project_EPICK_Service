@@ -1,0 +1,12 @@
+[Unit]
+Description=Run EPICK W3 bounded runtime maintenance every five minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=5min
+AccuracySec=10s
+Persistent=true
+Unit=epick-w3-core-runtime.service
+
+[Install]
+WantedBy=timers.target

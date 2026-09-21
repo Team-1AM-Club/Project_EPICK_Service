@@ -46,7 +46,6 @@ from app.services.w2_commit_gate import (
     W2CommitGateError,
     W2CommitGateService,
 )
-
 _EXECUTION_MESSAGE_TYPE = "job.command.dispatch"
 _W2_COMMAND_MESSAGE_TYPE = "w1.private.w2.collection-command.v1"
 _W2_DIRECT_SOURCE_REGISTRATION_MESSAGE_TYPE = "w1.private.w2.direct-source-registration.v1"

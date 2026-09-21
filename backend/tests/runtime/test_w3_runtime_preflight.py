@@ -18,8 +18,8 @@ from scripts.preflight_w3_actual_runtime import (
     _policy_revision,
 )
 
-IMPLEMENTATION_SHA = "3b23e0843a134fb341e6a256576ccf52fedbf4a8"
-RECEIPT_HEAD_SHA = "34660343f197c74cc03459a93e0160e46adbcd2b"
+IMPLEMENTATION_SHA = "66a0e3e1b087bf7f9d1b6d7730934ea27f55e94b"
+RECEIPT_HEAD_SHA = "bad8671b2ea8d02bdce2157120b94d2b7edf09d8"
 POLICY_REVISION = "w3.retention/1.1"
 DIGEST = "sha256:" + "a" * 64
 

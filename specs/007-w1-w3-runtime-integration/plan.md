@@ -7,10 +7,10 @@
 ## Summary
 
 Re-baseline the locally verified W3 Core runtime at implementation SHA
-`3b23e0843a134fb341e6a256576ccf52fedbf4a8` from the independent clone at
+`66a0e3e1b087bf7f9d1b6d7730934ea27f55e94b` from the independent clone at
 `w3/Project_EPICK_Service` and connect it to W1's authoritative Job/deletion/Source state without
 changing the adopted W3 event wire. The clone is currently at documentation receipt SHA
-`34660343f197c74cc03459a93e0160e46adbcd2b`; the implementation SHA is its direct ancestor and no
+`bad8671b2ea8d02bdce2157120b94d2b7edf09d8`; the implementation SHA is its ancestor and no
 runtime source changed between the two commits. M1 rebuilds and verifies the non-root/read-only W3
 image plus durable `/state/core.db`. M2 implements the W1 Authority boundary now, then binds the
 actual AnalysisPlan caller and W3 Authority client after W3-A/B. M3 connects durable owner deletion
@@ -85,7 +85,7 @@ is assigned a placeholder that could be mistaken for READY.
 
 1. Keep this work in a new feature rather than overwrite implemented inbound feature 003.
 2. Treat `w3/Project_EPICK_Service` as a read-only upstream clone. Verify implementation commit
-   `3b23e084...`, its ancestry to receipt HEAD `34660343...`, and zero runtime-source drift; build an
+   `66a0e3e1...`, its ancestry to receipt HEAD `bad8671...`, and zero runtime-source drift; build an
    allowlisted archive of the implementation commit with its lockfile, publish by implementation
    tag and deploy by ECR manifest digest. Do not build from the mutable working-tree contents.
 3. Run W3 as non-root with read-only rootfs, bounded `/tmp` tmpfs, and exactly one RW named volume
@@ -116,9 +116,9 @@ Detailed rationale and rejected alternatives are in [research.md](research.md).
 
 | Milestone | Inputs / gate | W1 work | Joint or external work | Exit evidence |
 | --- | --- | --- | --- | --- |
-| **M1 — immutable image·single-host state** | W3 implementation pin `3b23e084...` and clone are available; old `c7e678...` image evidence is stale | Re-baseline provenance, create W1-owned immutable build recipe for the read-only clone, correct retention input, rebuild/retest, publish, and verify `/state` persistence | W3-D reviews entrypoint, shared SQLite, non-root/read-only layout before final digest | implementation and receipt SHAs + manifest digest; zero runtime drift; locked build; 32 W3 tests; smoke; state persistence; W3-D disposition |
+| **M1 — immutable image·single-host state** | W3 implementation pin `66a0e3e1...` and clone are available; older image evidence is stale | Re-baseline provenance, create W1-owned immutable build recipe for the read-only clone, correct retention input, rebuild/retest, publish, and verify `/state` persistence | W3-D reviews entrypoint, shared SQLite, non-root/read-only layout before final digest | implementation and receipt SHAs + manifest digest; zero runtime drift; locked build; focused W3 tests; smoke; state persistence; W3-D disposition |
 | **M2 — actual supplier·Authority** | W1 boundary work starts now; **actual cutover GATE: W3-A/B** | Add private Authority schema/service/read-only DB grants/HTTP adapter/preflight and consumer compatibility tests | actual analysis owner pins caller SHA/function/required-vs-optional semantics/idempotency; W3 client adapter pins auth/timeout/error mapping and supply/relay/replay recheck | valid/current succeeds; source/cancel/delete/epoch mismatch and 401/403/404/409/503/timeout fail closed; actual caller revision recorded |
-| **M3 — deletion·Source retirement·operations** | `w3.retention/1.1` and local methods are verified; **final dispatch GATE: W3-C transport/ack adoption** | Add owner-deletion and Source-retirement durable targets, dispatch routing, ack/failure reconciliation, scheduler, inspect/HELD/backup alarm and runbook | W3 confirms private transport and result mapping; W1 records the already-approved policy revision rather than requesting new retention values | deletion/send races; duplicate/restart retry; transient unavailable is not retired; other owner unaffected; expire/backup/HELD evidence |
+| **M3 — deletion·Source retirement·operations** | `w3.retention/1.1` and W3-C implementation `66a0e3e1...` are verified; actual private Queue/Role binding verified on 2026-09-21 | Add owner-deletion and Source-retirement durable targets, dispatch routing, ack/failure reconciliation, bounded lifecycle consumer, scheduler, inspect/HELD/backup alarm and runbook | W3/W1 injected Queue/Role values outside Git and completed live duplicate/restart E2E | `evidence/m3-deletion-operations.json`: first apply 2, exact duplicate convergence 2, final pending delivery 0 |
 | **M4 — actual IAM/SQS** | M1 and M2 complete; actual compute identity known | Create exact send-only role/policy, queue resource policy, W1 receive-only policy, root-only env and two-sided preflight | W3 workload proves default credential chain and stable role ID self-check | Role ARN/Role ID captured securely; W3 role ID = W1 expected SenderId; negative permissions denied |
 | **M5 — joint CT-12** | M1–M4 + **GATE: W3-F** | Provision isolated DB/SQS window, run W1 consumer, capture DB/SQS counts and teardown | actual W3 caller/supplier/outbox/relay runs all scenarios and supplies inspect/digest evidence | CT12-01~12 pass; counts reconcile; no auto command; new fence exactly once; stale effects zero; cleanup manifest |
 
@@ -186,7 +186,7 @@ w3/Project_EPICK_Service/             # independent read-only W3 Git clone
 
 **Structure Decision**: Keep W1 authoritative adapters, deployment recipe and PostgreSQL changes
 inside `backend/`. Keep the independent W3 clone clean and build from an allowlisted archive of
-`3b23e084...`; do not modify W3 domain code or send `.git`, `.venv` or working-tree-only files into
+`66a0e3e1...`; do not modify W3 domain code or send `.git`, `.venv` or working-tree-only files into
 the Docker context. If M2/M3 require W3 code changes, they arrive as a new W3-owned full SHA before
 adoption. AWS templates contain placeholders, never actual account secrets or identifiers.
 
@@ -195,8 +195,8 @@ adoption. AWS templates contain placeholders, never actual account secrets or id
 | Item | Current value | Planning consequence |
 | --- | --- | --- |
 | W3 clone | `w3/Project_EPICK_Service`, branch `feat/w3-knowledge-validation` | Replaces the former unversioned `w3/` handoff copy |
-| Runtime implementation | `3b23e0843a134fb341e6a256576ccf52fedbf4a8` | Immutable image and compatibility baseline |
-| Clone receipt HEAD | `34660343f197c74cc03459a93e0160e46adbcd2b` | Documentation/readiness-only successor; record separately from image source |
+| Runtime implementation | `66a0e3e1b087bf7f9d1b6d7730934ea27f55e94b` | Immutable image and compatibility baseline |
+| Clone receipt HEAD | `bad8671b2ea8d02bdce2157120b94d2b7edf09d8` | Documentation/readiness-only successor; record separately from image source |
 | Runtime drift | none between implementation and receipt HEAD | W3 source can be built without waiting for another handoff |
 | Focused W3 verification | `32 passed` | Baseline test evidence; rerun inside the image build workflow |
 | Retention | `w3.retention/1.1` approved and implemented | W3-E policy-value gate is closed; scheduler/storage integration remains W1 work |
@@ -208,9 +208,9 @@ adoption. AWS templates contain placeholders, never actual account secrets or id
 | --- | --- | --- | --- | --- |
 | W3-A | OPEN | actual AnalysisPlan caller repository/SHA/function, trusted request time, required/optional Source semantics and idempotency | M2 cutover, M4, M5 | analysis pipeline owner / integration coordinator |
 | W3-B | OPEN | actual Authority client adapter source pin, private auth, timeout and error/currentness mapping | M2 cutover, M4, M5 | W3 runtime owner + W1 integration owner |
-| W3-C | RECEIVED | `delete_owner`/`retire_source` methods are pinned; private dispatcher transport, authentication and ACK/retry mapping remain before VERIFIED | M3 closure, M5 | W3 runtime owner + W1 integration owner |
-| W3-D | OPEN | updated `3b23...` image/entrypoint/state-layout review and manifest digest | final M1 closure, then M4/M5 | W3 runtime owner |
-| W3-E | VERIFIED | `w3.retention/1.1` code, lifecycle semantics and policy values are pinned; only deployment evidence remains | no implementation start; M3 evidence closure only | W3 runtime owner + product/privacy approver |
+| W3-C | VERIFIED | Dedicated Standard SQS command/receipt queues, stable Role ID authentication, APPLIED/DUPLICATE/STALE receipts, terminal no-receipt conflict, commit-before-receipt and pending-receipt-first restart are implemented at `66a0e3e1...`; T050 AWS E2E is complete | M5 | W3 runtime owner + W1 integration owner |
+| W3-D | OPEN | updated `66a0e3e1...` image/entrypoint/state-layout review and manifest digest | final M1 closure, then M4/M5 | W3 runtime owner |
+| W3-E | VERIFIED | `w3.retention/1.1` code, lifecycle semantics and policy values are pinned; deployment evidence is recorded by T050 | no implementation start | W3 runtime owner + product/privacy approver |
 | W3-F | OPEN | actual supplier/relay joint executor, window and evidence location | M5 | W3/analysis runtime owner |
 
 ## Complexity Tracking

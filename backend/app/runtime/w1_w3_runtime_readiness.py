@@ -84,6 +84,15 @@ def validate_runtime_readiness(
         if milestones[milestone]["status"] == "COMPLETE":
             _assert_gate_map_verified(gate_by_id, *required_gates)
 
+    if (
+        milestones["M3"]["status"] == "COMPLETE"
+        and "evidence/m3-deletion-operations.json"
+        not in milestones["M3"]["evidence_refs"]
+    ):
+        raise W1W3ReadinessError(
+            "M3 completion requires actual private-queue E2E evidence"
+        )
+
     if milestones["M4"]["status"] == "COMPLETE":
         _assert_milestones_complete(milestones, "M1", "M2")
     if milestones["M5"]["status"] == "COMPLETE":

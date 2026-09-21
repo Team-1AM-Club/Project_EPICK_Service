@@ -42,10 +42,10 @@ def test_rebased_readiness_is_schema_valid_without_false_cutover_claims() -> Non
     assert loaded["status"] == "M1_IN_PROGRESS"
     assert loaded["milestones"]["M1"]["status"] == "IN_PROGRESS"
     assert loaded["milestones"]["M2"]["status"] == "NOT_STARTED"
-    assert loaded["milestones"]["M3"]["status"] == "NOT_STARTED"
+    assert loaded["milestones"]["M3"]["status"] == "COMPLETE"
     assert loaded["milestones"]["M4"]["status"] == "BLOCKED"
     assert loaded["milestones"]["M5"]["status"] == "BLOCKED"
-    assert _gate(loaded, "W3-C")["status"] == "RECEIVED"
+    assert _gate(loaded, "W3-C")["status"] == "VERIFIED"
     assert _gate(loaded, "W3-E")["status"] == "VERIFIED"
 
 
@@ -59,11 +59,13 @@ def test_w1_owned_work_may_start_but_actual_cutover_stays_gated() -> None:
         validate_runtime_readiness(data, schema_path=SCHEMA_PATH)
 
 
-def test_received_w3_c_is_not_enough_to_complete_m3() -> None:
+def test_completed_m3_requires_actual_private_queue_evidence() -> None:
     data = _readiness()
-    data["milestones"]["M3"]["status"] = "COMPLETE"
+    data["milestones"]["M3"]["evidence_refs"].remove(
+        "evidence/m3-deletion-operations.json"
+    )
 
-    with pytest.raises(W1W3ReadinessError, match="W3-C"):
+    with pytest.raises(W1W3ReadinessError, match="evidence"):
         validate_runtime_readiness(data, schema_path=SCHEMA_PATH)
 
 
@@ -119,8 +121,9 @@ def test_completed_milestone_cannot_move_backwards() -> None:
         validate_runtime_readiness_transition(before, after, schema_path=SCHEMA_PATH)
 
 
-def test_received_gate_cannot_move_back_to_open() -> None:
+def test_verified_gate_cannot_move_back_to_open() -> None:
     before = _readiness()
+    before["milestones"]["M3"]["status"] = "IN_PROGRESS"
     after = deepcopy(before)
     _gate(after, "W3-C")["status"] = "OPEN"
 

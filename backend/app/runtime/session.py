@@ -13,3 +13,14 @@ def create_worker_session_factory() -> sessionmaker:
         raise RuntimeError("WORKER_DATABASE_URL must be set before starting a W1 worker")
     worker_engine = create_engine(settings.worker_database_url, pool_pre_ping=True)
     return sessionmaker(bind=worker_engine, autoflush=False, expire_on_commit=False)
+
+
+def create_deletion_worker_session_factory() -> sessionmaker:
+    """Create the least-privilege factory for W3 retention receipt reconciliation."""
+
+    if not settings.deletion_worker_database_url:
+        raise RuntimeError(
+            "DELETION_WORKER_DATABASE_URL must be set before starting the retention worker"
+        )
+    worker_engine = create_engine(settings.deletion_worker_database_url, pool_pre_ping=True)
+    return sessionmaker(bind=worker_engine, autoflush=False, expire_on_commit=False)

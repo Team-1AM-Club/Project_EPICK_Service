@@ -973,7 +973,7 @@ def test_owner_deletion_purges_w1_committed_gate_without_targeting_public_source
         targets = session.scalars(
             select(DeletionTarget).where(DeletionTarget.deletion_request_id == request.id)
         ).all()
-        assert len(targets) == 5
+        assert len(targets) == 6
         assert {(target.resource_type, target.resource_id) for target in targets} == {
             ("OWNER_PRIVATE_SCOPE", owner_id)
         }

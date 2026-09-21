@@ -15,7 +15,14 @@ DeletionRequestStatus = Literal[
     "EXPIRED",
 ]
 DeletionTargetStatus = Literal["QUEUED", "DISPATCHED", "ACKNOWLEDGED", "FAILED_RETRYABLE"]
-DeletionStore = Literal["POSTGRESQL", "NEO4J", "VECTOR", "CACHE", "CHECKPOINT"]
+DeletionStore = Literal[
+    "POSTGRESQL",
+    "NEO4J",
+    "VECTOR",
+    "CACHE",
+    "CHECKPOINT",
+    "W3_CORE_RUNTIME",
+]
 
 
 class AccountDeletionPreviewResponse(BaseModel):

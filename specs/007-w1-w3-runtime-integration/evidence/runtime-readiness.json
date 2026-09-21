@@ -1,10 +1,10 @@
 {
   "schema_version": "w1-w3.runtime-readiness.v1",
   "status": "M1_IN_PROGRESS",
-  "w1_source_sha": "6352347748f3cfb664672e3a5b35c92e14570aca",
-  "w3_source_sha": "3b23e0843a134fb341e6a256576ccf52fedbf4a8",
-  "w1_image_digest": null,
-  "w3_image_digest": null,
+  "w1_source_sha": "e5af86c72324e2838d9666d4a170f63fd0ec29f9",
+  "w3_source_sha": "66a0e3e1b087bf7f9d1b6d7730934ea27f55e94b",
+  "w1_image_digest": "sha256:bb41373b0a3599d67bb6ba5b338e870ec260462b3529c06b9c1bd335457a330c",
+  "w3_image_digest": "sha256:531915497ccc82187b0c2b39ae8fd095b59e59878835b3c5e7db9cb3d68ab98a",
   "milestones": {
     "M1": {
       "status": "IN_PROGRESS",
@@ -17,8 +17,12 @@
       "evidence_refs": []
     },
     "M3": {
-      "status": "NOT_STARTED",
-      "evidence_refs": []
+      "status": "COMPLETE",
+      "evidence_refs": [
+        "evidence/m3-gate.json",
+        "evidence/m3-w1-side-result.json",
+        "evidence/m3-deletion-operations.json"
+      ]
     },
     "M4": {
       "status": "BLOCKED",
@@ -32,7 +36,7 @@
   "gates": [
     {"id": "W3-A", "status": "OPEN", "owner": "analysis pipeline owner / integration coordinator", "evidence_ref": null},
     {"id": "W3-B", "status": "OPEN", "owner": "W3 runtime owner", "evidence_ref": null},
-    {"id": "W3-C", "status": "RECEIVED", "owner": "W3 runtime owner + W1 integration owner", "evidence_ref": "w3/Project_EPICK_Service/contracts/core-runtime/readiness.json"},
+    {"id": "W3-C", "status": "VERIFIED", "owner": "W3 runtime owner + W1 integration owner", "evidence_ref": "evidence/m3-gate.json"},
     {"id": "W3-D", "status": "OPEN", "owner": "W3 runtime owner", "evidence_ref": null},
     {"id": "W3-E", "status": "VERIFIED", "owner": "W3 runtime owner + product/privacy approver", "evidence_ref": "w3/Project_EPICK_Service/docs/w3-retention-1.1-implementation-handoff-2026-09-20.md"},
     {"id": "W3-F", "status": "OPEN", "owner": "W3/analysis runtime owner", "evidence_ref": null}

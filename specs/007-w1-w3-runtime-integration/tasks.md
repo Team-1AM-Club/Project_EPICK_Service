@@ -22,9 +22,9 @@ is not verified; missing inter-team values must not be replaced with placeholder
 
 **Purpose**: Pin the inputs and create a non-secret evidence boundary shared by M1–M5.
 
-- [X] T001 Re-baseline the W1 SHA, W3 implementation SHA `3b23e0843a134fb341e6a256576ccf52fedbf4a8`, receipt HEAD `34660343f197c74cc03459a93e0160e46adbcd2b`, clone path, adopted event/policy versions, 32-test result, superseded M1 digest, and current gate owners in `specs/007-w1-w3-runtime-integration/evidence/source-baseline.json`
+- [X] T001 Re-baseline the W1 SHA, W3 implementation SHA `66a0e3e1b087bf7f9d1b6d7730934ea27f55e94b`, receipt HEAD `bad8671b2ea8d02bdce2157120b94d2b7edf09d8`, clone path, adopted event/policy versions, focused-test result, superseded M1 digest, and current gate owners in `specs/007-w1-w3-runtime-integration/evidence/source-baseline.json`
 - [X] T002 [P] Document evidence redaction rules, allowed count-only fields, and forbidden secret/private fields in `specs/007-w1-w3-runtime-integration/evidence/README.md`
-- [X] T003 [P] Update the readiness record within the existing schema to `M1_IN_PROGRESS`, W3-E `VERIFIED`, W3-C `RECEIVED`, and W3-A/B/D/F `OPEN`, marking stale M1 evidence without claiming runtime deployment, in `specs/007-w1-w3-runtime-integration/evidence/runtime-readiness.json`
+- [X] T003 [P] Update the readiness record within the existing schema to `M1_IN_PROGRESS`, W3-C/E `VERIFIED`, and W3-A/B/D/F `OPEN`, marking stale M1 evidence without claiming runtime deployment, in `specs/007-w1-w3-runtime-integration/evidence/runtime-readiness.json`
 
 ---
 
@@ -57,7 +57,7 @@ volume, recreate the container, and prove the same SQLite counters/delivery meta
 
 ### Tests for User Story 1
 
-- [X] T010 [P] [US1] Update Dockerfile policy tests for a W1-owned recipe, exact `3b23e084...` archive input, Python 3.12, locked dependencies, non-root UID, no embedded secrets or `.git/.venv`, and a read-only-compatible entrypoint in `backend/tests/contract/test_w3_runtime_image.py`
+- [X] T010 [P] [US1] Update Dockerfile policy tests for a W1-owned recipe, exact `66a0e3e1...` archive input, Python 3.12, locked dependencies, non-root UID, no embedded secrets or `.git/.venv`, and a read-only-compatible entrypoint in `backend/tests/contract/test_w3_runtime_image.py`
 - [X] T011 [P] [US1] Update Compose contract tests for one local named volume at `/state`, `/state/core.db`, `w3.retention/1.1` handoff value `1209600`, bounded tmpfs, read-only rootfs, dropped capabilities, and no host/NFS state path in `backend/tests/contract/test_w3_runtime_deployment.py`
 - [X] T012 [P] [US1] Update preflight tests for implementation/receipt provenance, image label/digest, runtime UID, mount topology, policy revision, database migration blockers, and restart persistence in `backend/tests/runtime/test_w3_runtime_preflight.py`
 - [X] T013 [P] [US1] Update the opt-in Docker integration test to recreate the `3b23...` W3 container and compare its safe `inspect` policy/migration-blocker/delivery state; counter/tombstone persistence remains covered by the pinned W3 integration tests because `inspect_report` does not expose those counts, in `backend/tests/runtime/test_w3_runtime_persistence.py`
@@ -65,12 +65,12 @@ volume, recreate the container, and prove the same SQLite counters/delivery meta
 ### Implementation for User Story 1
 
 - [X] T014 [P] [US1] Add the reproducible W1-owned multi-stage Python 3.12 recipe using the pinned archive, `uv.lock`, a fixed non-root runtime user, OCI implementation/receipt labels, and no credentials in `backend/infra/w3-runtime.Dockerfile`
-- [X] T015 [P] [US1] Implement an allowlisted, clean temporary build-context export from W3 commit `3b23e084...` without `.git`, `.venv`, working-tree files, or secrets in `backend/scripts/export_w3_runtime_context.py`
+- [X] T015 [P] [US1] Implement an allowlisted, clean temporary build-context export from W3 commit `66a0e3e1...` without `.git`, `.venv`, working-tree files, or secrets in `backend/scripts/export_w3_runtime_context.py`
 - [X] T016 [US1] Update init/smoke/inspect/relay/expire/backup one-shot services to use `1209600` seconds and share only `epick-w3-core-runtime-state:/state` in `backend/infra/w3-runtime.compose.yml`
 - [X] T017 [US1] Update source/digest/UID/rootfs/mount/SQLite/policy/migration-blocker/restart checks without live SQS sends in `backend/app/runtime/w3_runtime_preflight.py`
 - [X] T018 [US1] Update the M1 operator command to remove the obsolete `3600` retention input and emit secret-safe dual-pin/policy evidence in `backend/scripts/preflight_w3_actual_runtime.py`
 - [X] T019 [P] [US1] Add least-privilege ECR build/push and Worker pull policy placeholders without account-specific values in `backend/infra/w3-runtime-ecr-policy.template.json`
-- [ ] T020 [US1] Build from the `3b23...` archive, rerun the 32 focused W3 tests, smoke/recreate the volume, publish by implementation tag, resolve the ECR manifest digest, and replace stale `c7e678...` evidence in `specs/007-w1-w3-runtime-integration/evidence/m1-image-state.json`
+- [ ] T020 [US1] Build from the `66a0e3e1...` archive, rerun the focused W3 tests, smoke/recreate the volume, publish by implementation tag, resolve the ECR manifest digest, and replace stale prior-image evidence in `specs/007-w1-w3-runtime-integration/evidence/m1-image-state.json`
 - [X] T021 [US1] Refresh the W3-D review request with dual SHAs, W1-owned Dockerfile/export paths, policy revision, new image digest, non-root/read-only proof, migration-blocker result, and restart evidence in `md/deploy/W1_W3_M1_Image_Review_Request_2026-09-20.md`; keep M1 open until W3-D is recorded
 
 **Checkpoint**: M1 is locally/deployment verified; final M1 closure requires W3-D review. Do not start
@@ -123,31 +123,33 @@ send-first is rejected by W1 currentness; only permanent Source retirement invok
 another owner and unrelated counters remain unchanged; exhausted delivery enters HELD and alerts
 without replay.
 
-**Gate**: `w3.retention/1.1` and local delete/retire semantics are verified. T036–T043 and T046–T049
-may proceed; W3-C private transport/authentication/ACK mapping must be adopted before T044/T045 and
-M3 completion.
+**Gate**: `w3.retention/1.1` and W3-C private transport/authentication/receipt semantics are adopted,
+and W3 implementation `66a0e3e1...` supplies the command consumer plus transactional receipt outbox.
+T046A and T050 are complete; actual private queue binding and M3 duplicate/restart E2E were verified
+on AWS staging on 2026-09-21.
 
 ### Gate and Tests for User Story 3
 
-- [ ] T035 [US3] Record pinned `delete_owner`/`retire_source`/expire/backup semantics and `w3.retention/1.1` as verified, define the still-open private dispatcher transport/authentication/ACK/retry decision, and enforce the T044 cutover stop in `specs/007-w1-w3-runtime-integration/evidence/m3-gate.json`
-- [ ] T036 [P] [US3] Add failing migration tests for the additive `W3_CORE_RUNTIME` deletion target constraint/downgrade prohibition and contract tests for permanent Source-retirement commands in `backend/tests/integration/db/test_w3_deletion_target_migration.py` and `backend/tests/contract/test_w3_source_retirement_contract.py`
-- [ ] T037 [P] [US3] Add failing transaction tests proving W1 deletion stages exactly one W3 target/outbox command with the current owner epoch in `backend/tests/integration/db/test_w3_deletion_dispatch.py`
-- [ ] T038 [P] [US3] Add failing worker tests for duplicate owner deletion and Source retirement, stale epoch, transient unavailable/unknown Source, W3 unavailable, restart, idempotent ACK, and retryable failure mapping in `backend/tests/runtime/test_w3_deletion_worker.py` and `backend/tests/runtime/test_w3_source_retirement_worker.py`
-- [ ] T039 [P] [US3] Add failing lifecycle tests for relay/expire/inspect/redacted quarantine backup, HELD alert/no-auto-replay, exact `w3.retention/1.1` deadlines, migration blockers, and raw-restore rejection in `backend/tests/runtime/test_w3_runtime_operations.py`
-- [ ] T040 [P] [US3] Add failing PostgreSQL/W3 race tests for deletion-first, send-first, late SQS delivery, permanent retirement versus transient unavailable/unknown, and another-owner/unrelated-Source preservation in `backend/tests/integration/db/test_w3_deletion_races.py`
+- [X] T035 [US3] Record pinned `delete_owner`/`retire_source`/expire/backup semantics, `w3.retention/1.1`, the adopted private dispatcher transport/authentication/ACK/retry decision, and the verified W3 implementation revision in `specs/007-w1-w3-runtime-integration/evidence/m3-gate.json`
+- [X] T036 [P] [US3] Add failing migration tests for the additive `W3_CORE_RUNTIME` deletion target constraint/downgrade prohibition and contract tests for permanent Source-retirement commands in `backend/tests/integration/db/test_w3_deletion_target_migration.py` and `backend/tests/contract/test_w3_source_retirement_contract.py`
+- [X] T037 [P] [US3] Add failing transaction tests proving W1 deletion stages exactly one W3 target/outbox command with the current owner epoch in `backend/tests/integration/db/test_w3_deletion_dispatch.py`
+- [X] T038 [P] [US3] Add failing worker tests for duplicate owner deletion and Source retirement, stale epoch, transient unavailable/unknown Source, W3 unavailable, restart, idempotent ACK, and retryable failure mapping in `backend/tests/runtime/test_w3_deletion_worker.py` and `backend/tests/runtime/test_w3_source_retirement_worker.py`
+- [X] T039 [P] [US3] Add failing lifecycle tests for relay/expire/inspect/redacted quarantine backup, HELD alert/no-auto-replay, exact `w3.retention/1.1` deadlines, migration blockers, and raw-restore rejection in `backend/tests/runtime/test_w3_runtime_operations.py`
+- [X] T040 [P] [US3] Add failing PostgreSQL/W3 race tests for deletion-first, send-first, late SQS delivery, permanent retirement versus transient unavailable/unknown, and another-owner/unrelated-Source preservation in `backend/tests/integration/db/test_w3_deletion_races.py`
 
 ### Implementation for User Story 3
 
-- [ ] T041 [US3] Add the forward-only `W3_CORE_RUNTIME` deletion target constraint, required runtime grants, and publish the candidate Source-retirement schema in `backend/migrations/versions/031_w3_core_runtime_deletion_target.py` and `backend/contracts/w1/v1/w3-source-retirement.request.schema.json`
-- [ ] T042 [US3] Update the ORM deletion target constraint and typed store set in `backend/app/models/deletion.py`
-- [ ] T043 [US3] Stage one versioned W3 target/command inside confirmed owner deletion and permanent Source-retirement transactions, while excluding transient unavailable/unknown states, in `backend/app/services/deletion.py` and `backend/app/services/source_retirement.py`
-- [ ] T044 [US3] After W3-C adoption, implement the approved private transport plus idempotent `delete_owner`/`retire_source` result mapping and W1 acknowledge/failure transitions in `backend/app/runtime/w3_deletion_worker.py` and `backend/app/runtime/w3_source_retirement_worker.py`
-- [ ] T045 [US3] Add bounded owner-deletion and Source-retirement worker entrypoints with authenticated input and secret-safe structured output in `backend/scripts/run_w3_deletion_worker.py` and `backend/scripts/run_w3_source_retirement_worker.py`
-- [ ] T046 [US3] Add relay-once, expire, inspect, redacted backup, deletion and Source-retirement profiles sharing the single W3 state volume in `backend/infra/w3-runtime.compose.yml`
-- [ ] T047 [P] [US3] Add bounded systemd service/timer templates for relay, expire, and HELD inspection in `backend/infra/systemd/epick-w3-core-runtime.service` and `backend/infra/systemd/epick-w3-core-runtime.timer`
-- [ ] T048 [US3] Implement HELD count detection, alert output, and an explicit prohibition on automatic replay in `backend/scripts/inspect_w3_core_runtime.py`
-- [ ] T049 [P] [US3] Document `w3.retention/1.1`, five-minute expire cadence, fifteen-minute logical-deletion SLO, Source-retirement rules, HELD ownership, manual replay authorization, quarantine backup lifecycle, and unsupported raw restore in `md/deploy/W1_W3_Runtime_Operations_Runbook_2026-09-20.md`
-- [ ] T050 [US3] Run owner-deletion/Source-retirement duplicate/restart/race and lifecycle tests and store count-only M3 results in `specs/007-w1-w3-runtime-integration/evidence/m3-deletion-operations.json`
+- [X] T041 [US3] Add the forward-only `W3_CORE_RUNTIME` deletion target constraint, required runtime grants, and publish the Source-retirement schema later adopted exactly from W3 in `backend/migrations/versions/035_w3_core_runtime_deletion_target.py` and `backend/contracts/w1/v1/w3-source-retirement.request.schema.json` (`031` was corrected to `035` because the integrated Alembic head was already `034`)
+- [X] T042 [US3] Update the ORM deletion target constraint and typed store set in `backend/app/models/deletion.py`
+- [X] T043 [US3] Stage one versioned W3 target/command inside confirmed owner deletion and permanent Source-retirement transactions, while excluding transient unavailable/unknown states, in `backend/app/services/deletion.py` and `backend/app/services/source_retirement.py`
+- [X] T044 [US3] After W3-C adoption, implement the W1 side of the approved dedicated-SQS transport plus authenticated, schema/binding-checked, receipt-body-digest-idempotent `delete_owner`/`retire_source` receipt mapping and W1 acknowledge/failure transitions in `backend/app/runtime/outbox_relay.py`, `backend/app/runtime/w3_deletion_worker.py`, and `backend/app/runtime/w3_source_retirement_worker.py`
+- [X] T045 [US3] Add one bounded authenticated receipt-worker entrypoint for both owner deletion and Source retirement with secret-safe count-only structured output in `backend/scripts/run_w3_retention_receipt_worker.py`; a single consumer owns the shared receipt queue so two processes cannot race or steal each other's operation
+- [X] T046 [US3] Add least-privilege W1 retention command-relay and receipt-worker profiles in `backend/infra/w1-runtime.compose.yml`, keep relay-once/expire/inspect/redacted-backup on the single W3 state volume, and remove the obsolete assumption that direct operator deletion/retirement profiles satisfy W3-C
+- [X] T046A [US3] Pin W3 implementation `66a0e3e1...`/receipt HEAD `bad8671...`, adopt its exact command/receipt schemas, add the authenticated bounded command-consumer profile on the same `/state/core.db` volume, and verify receipt-outbox-first restart behavior; actual Queue/Role values remain deployment-only inputs
+- [X] T047 [P] [US3] Add bounded systemd service/timer templates for relay, expire, and HELD inspection in `backend/infra/systemd/epick-w3-core-runtime.service` and `backend/infra/systemd/epick-w3-core-runtime.timer`
+- [X] T048 [US3] Implement HELD count detection, alert output, and an explicit prohibition on automatic replay in `backend/scripts/inspect_w3_core_runtime.py`
+- [X] T049 [P] [US3] Document `w3.retention/1.1`, five-minute expire cadence, fifteen-minute logical-deletion SLO, Source-retirement rules, HELD ownership, manual replay authorization, quarantine backup lifecycle, and unsupported raw restore in `md/deploy/W1_W3_Runtime_Operations_Runbook_2026-09-20.md`
+- [X] T050 [US3] With actual private Queue URLs/policies and W1/W3 stable Role IDs injected outside Git, run owner-deletion/Source-retirement duplicate/restart/race and lifecycle E2E tests and store count-only M3 results in `specs/007-w1-w3-runtime-integration/evidence/m3-deletion-operations.json`
 
 **Checkpoint**: W3 private state participates in W1's durable deletion workflow and approved operations; no production READY claim precedes all M3 evidence.
 
@@ -244,8 +246,9 @@ Phase 1 Setup
 - **US1/M1**: Re-baselining starts immediately after Phase 2; W3-D is required only for final M1 closure.
 - **US2/M2**: W1 Authority work T023–T032 starts after Phase 2; actual caller/client binding T033–T034
   waits for W3-A/B and does not require US1 to begin.
-- **US3/M3**: W1 persistence/tests/operations work starts after Phase 2 because W3-E is verified;
-  dispatcher implementation T044–T045 and M3 closure wait for W3-C transport adoption.
+- **US3/M3**: W1 persistence/tests/operations work starts after Phase 2 because W3-E is verified.
+  W3-C and T046A are complete against `66a0e3e1...`; T050 actual private queue/policy/role
+  binding and live duplicate/restart E2E completed on 2026-09-21.
 - **US4/M4**: Depends on completed US1 and US2 because both the deployed workload and actual
   currentness identity must be known.
 - **US5/M5**: Depends on completed US1–US4 and W3-F.
@@ -266,8 +269,9 @@ Phase 1 Setup
 - Phase 2 test tasks T004–T006 can run in parallel; T007–T009 then implement separate utilities.
 - US1 tests T010–T013 and implementation files T014/T015/T019 are independent after re-baseline.
 - US2 contract, DB, and HTTP tests T023–T025 can run in parallel now; only T033–T034 wait for W3-A/B.
-- US3 migration, worker, lifecycle, and race tests T036–T040 can run in parallel now; T044–T045 wait
-  for W3-C private transport adoption.
+- US3 migration, worker, lifecycle, and race tests T036–T040 can run in parallel; W1-side
+  transport/receipt work T044–T049, T046A, and actual AWS runtime/deployment verification T050 are
+  complete.
 - US4 policy and preflight tests T052/T053 and policy templates T054/T055 are parallelizable.
 - US5 evidence contract and harness tests T060/T061 are parallel; scenario execution remains
   sequential because all scenarios share one pinned environment and require deterministic reset.
@@ -307,7 +311,7 @@ Task T040: Cross-store race test
 ### MVP First — M1 Re-baseline
 
 1. Complete Phase 1 and Phase 2.
-2. Reopen stale M1 tasks and rebuild US1 from W3 implementation `3b23e084...`.
+2. Reopen stale M1 tasks and rebuild US1 from W3 implementation `66a0e3e1...`.
 3. Send T021 to W3 for W3-D review.
 4. Stop and validate M1; W1-owned M2/M3 work may continue, but do not guess W3-A/B/C/D/F.
 5. Close M1 only after W3-D disposition is recorded.
@@ -316,8 +320,8 @@ Task T040: Cross-store race test
 
 1. **M1**: re-baselined immutable W3 runtime and durable single-host state.
 2. **M2**: W1 Authority first, then actual caller/client cutover after W3-A/B.
-3. **M3**: approved retention operations and durable owner deletion/Source retirement, with dispatcher
-   closure after W3-C transport adoption.
+3. **M3**: approved retention operations and durable owner deletion/Source retirement, with
+   dispatcher closure at W3-C and verified actual private-queue duplicate/restart E2E.
 4. **M4**: actual IAM/SQS binding after M1/M2.
 5. **M5**: actual-producer joint CT-12 and teardown after all gates.
 

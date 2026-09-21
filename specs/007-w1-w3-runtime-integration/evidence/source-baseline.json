@@ -1,20 +1,20 @@
 {
   "recorded_at": "2026-09-20",
-  "w1_source_sha": "6352347748f3cfb664672e3a5b35c92e14570aca",
+  "w1_source_sha": "e5af86c72324e2838d9666d4a170f63fd0ec29f9",
   "w3_clone_path": "w3/Project_EPICK_Service",
   "w3_branch": "feat/w3-knowledge-validation",
-  "w3_implementation_sha": "3b23e0843a134fb341e6a256576ccf52fedbf4a8",
-  "w3_receipt_head_sha": "34660343f197c74cc03459a93e0160e46adbcd2b",
+  "w3_implementation_sha": "66a0e3e1b087bf7f9d1b6d7730934ea27f55e94b",
+  "w3_receipt_head_sha": "bad8671b2ea8d02bdce2157120b94d2b7edf09d8",
   "w3_runtime_drift_from_implementation_to_receipt": false,
   "w3_readiness_path": "w3/Project_EPICK_Service/contracts/core-runtime/readiness.json",
   "adopted_event_schema": "w3.private.core-decision/0.1-candidate",
   "adopted_policy_revision": "w3.retention/1.1",
   "focused_verification": {
     "test_files": [
-      "tests/integration/test_core_runtime.py",
+      "tests/integration/test_lifecycle_dispatch.py",
       "tests/integration/test_retention_policy.py"
     ],
-    "passed": 32,
+    "passed": 25,
     "failed": 0
   },
   "superseded_m1": {
@@ -25,7 +25,7 @@
   "gates": {
     "W3-A": {"status": "OPEN", "owner": "analysis pipeline owner / integration coordinator"},
     "W3-B": {"status": "OPEN", "owner": "W3 runtime owner + W1 integration owner"},
-    "W3-C": {"status": "RECEIVED", "owner": "W3 runtime owner + W1 integration owner"},
+    "W3-C": {"status": "VERIFIED", "owner": "W3 runtime owner + W1 integration owner"},
     "W3-D": {"status": "OPEN", "owner": "W3 runtime owner"},
     "W3-E": {"status": "VERIFIED", "owner": "W3 runtime owner + product/privacy approver"},
     "W3-F": {"status": "OPEN", "owner": "W3/analysis runtime owner"}

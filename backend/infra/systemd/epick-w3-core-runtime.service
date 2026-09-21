@@ -1,0 +1,27 @@
+[Unit]
+Description=EPICK W3 bounded lifecycle, relay, expiry, and HELD inspection
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/opt/epick/worker/w3-runtime.env
+WorkingDirectory=/opt/epick/service
+# Relay failure is recorded by W3 as RETRY/HELD. Continue to expiry and inspection
+# so one transport failure cannot suppress retention or the operator alert signal.
+ExecStart=-/usr/bin/docker compose --file backend/infra/w3-runtime.compose.yml --profile w3-lifecycle run --rm w3-core-lifecycle
+ExecStart=-/usr/bin/docker compose --file backend/infra/w3-runtime.compose.yml --profile w3-relay run --rm w3-core-relay
+ExecStart=/usr/bin/docker compose --file backend/infra/w3-runtime.compose.yml --profile w3-expire run --rm w3-core-expire
+ExecStart=/usr/bin/python3 backend/scripts/inspect_w3_core_runtime.py --compose-file backend/infra/w3-runtime.compose.yml
+TimeoutStartSec=240
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+RestrictSUIDSGID=true
+LockPersonality=true
+UMask=0077
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=epick-w3-core-runtime

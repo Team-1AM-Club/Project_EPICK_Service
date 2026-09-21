@@ -317,7 +317,15 @@ class OutboxMessage(Base):
             "AND recommendation_run_id IS NOT NULL AND job_id IS NULL AND command_id IS NULL "
             "AND execution_fence IS NULL AND owner_deletion_epoch IS NOT NULL "
             "AND deletion_request_id IS NULL AND deletion_target_id IS NULL "
-            "AND jsonb_typeof(payload) = 'object')",
+            "AND jsonb_typeof(payload) = 'object') "
+            "OR (visibility_scope = 'PRIVATE' "
+            "AND message_type = 'w1.private.w3.source-retirement.v1' "
+            "AND schema_version = 'w1.w3.source-retirement/1' "
+            "AND aggregate_type = 'W3_SOURCE_RETIREMENT' "
+            "AND owner_user_id IS NULL AND job_id IS NULL AND command_id IS NULL "
+            "AND execution_fence IS NULL AND owner_deletion_epoch IS NULL "
+            "AND deletion_request_id IS NULL AND deletion_target_id IS NULL "
+            "AND recommendation_run_id IS NULL AND jsonb_typeof(payload) = 'object')",
             name="visibility_reference_scope",
         ),
     )

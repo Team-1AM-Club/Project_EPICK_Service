@@ -6,8 +6,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).parents[3]
 DOCKERFILE = REPO_ROOT / "backend" / "infra" / "w3-runtime.Dockerfile"
 ECR_POLICY = REPO_ROOT / "backend" / "infra" / "w3-runtime-ecr-policy.template.json"
-IMPLEMENTATION_SHA = "3b23e0843a134fb341e6a256576ccf52fedbf4a8"
-RECEIPT_HEAD_SHA = "34660343f197c74cc03459a93e0160e46adbcd2b"
+IMPLEMENTATION_SHA = "0c4f01f9537a3129c976fae5e63111a7982c5da6"
+RUNTIME_SHA = "402f7a63bf8f8d601cc6ada1ce685280f47320ce"
+RECEIPT_HEAD_SHA = RUNTIME_SHA
 
 
 def test_w3_image_is_locked_non_root_and_source_attributable() -> None:
@@ -16,7 +17,8 @@ def test_w3_image_is_locked_non_root_and_source_attributable() -> None:
     assert "python:3.12.14-slim-bookworm@sha256:" in dockerfile
     assert "uv==0.8.15" in dockerfile
     assert "uv sync --frozen --no-dev --no-editable" in dockerfile
-    assert f'org.opencontainers.image.revision="{IMPLEMENTATION_SHA}"' in dockerfile
+    assert f'org.opencontainers.image.revision="{RUNTIME_SHA}"' in dockerfile
+    assert f'io.epick.w3.upstream-implementation="{IMPLEMENTATION_SHA}"' in dockerfile
     assert f'io.epick.w3.receipt-head="{RECEIPT_HEAD_SHA}"' in dockerfile
     assert 'io.epick.w3.policy-revision="w3.retention/1.1"' in dockerfile
     assert "USER 10001:10001" in dockerfile

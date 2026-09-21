@@ -66,7 +66,7 @@ def test_account_deletion_fences_jobs_stages_targets_and_retries_only_failed_tar
                 select(OutboxMessage).where(OutboxMessage.deletion_request_id == request_id)
             )
         )
-        assert len(deletion_outbox) == 5
+        assert len(deletion_outbox) == 6
         assert {message.deletion_target_id for message in deletion_outbox} == {
             item.id
             for item in session.scalars(

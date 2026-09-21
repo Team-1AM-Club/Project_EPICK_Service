@@ -10,14 +10,14 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.models.deletion import DeletionRequest, DeletionTarget
+from app.models.deletion import DELETION_STORE_TYPES, DeletionRequest, DeletionTarget
 from app.models.jobs import OutboxMessage
 from app.repo.deletion import DeletionRepository
 from app.services.jobs import JobService
 from app.services.w2_commit_gate import W2CommitGateService
 
 _DEFAULT_PREVIEW_TTL: Final = timedelta(minutes=30)
-_DELETION_STORES: Final = ("POSTGRESQL", "NEO4J", "VECTOR", "CACHE", "CHECKPOINT")
+_DELETION_STORES: Final = DELETION_STORE_TYPES
 _ACTIVE_REQUEST_STATUSES: Final = frozenset(
     {"REQUESTED", "CONFIRMED", "RUNNING", "PARTIALLY_COMPLETED", "FAILED_RETRYABLE"}
 )
@@ -373,7 +373,11 @@ class DeletionOrchestrationService:
         target.status = "QUEUED"
         target.updated_at = datetime.now(UTC)
         message = OutboxMessage(
-            message_type="w1.deletion.command",
+            message_type=(
+                "w1.private.w3.owner-deletion.v1"
+                if target.store_type == "W3_CORE_RUNTIME"
+                else "w1.deletion.command"
+            ),
             schema_version="1.0",
             visibility_scope="PRIVATE",
             aggregate_type="DELETION_TARGET",
