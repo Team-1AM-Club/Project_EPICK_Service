@@ -1,6 +1,6 @@
 {
   "status": "W3_LIFECYCLE_LOCAL_VERIFIED_ENVIRONMENT_PENDING",
-  "w3_full_sha": "35933e8037dc899f646b7b9af36909ae0e4b8f34",
+  "w3_full_sha": "0c4f01f9537a3129c976fae5e63111a7982c5da6",
   "contract": "w3.private.core-decision/0.1-candidate",
   "analysis_supplier": {
     "status": "LOCAL_VERIFIED_AUTHORITY_AND_ANALYSIS_CALLER_INTEGRATION_PENDING",
@@ -28,12 +28,12 @@
     "live_e2e": "NOT_RUN"
   },
   "c01_w2_integration": {
-    "status": "W3_LOCAL_READY_W2_TRANSPORT_ADAPTER_BLOCKED",
+    "status": "PINNED_WIRE_AND_SYNTHETIC_BIDIRECTIONAL_HTTP_PASS_POSTGRES_E2E_PENDING",
     "entrypoint": "python -m w3_knowledge.c01.http",
-    "source_authority": "Required module:factory implementing is_registered(UUID); checked before event, replay, snapshot, and index; errors fail closed",
-    "w2_full_sha": "2cc9153b8401c04c93a2f5a069904ee32ac79cb2",
-    "fixture_sha256": "1a3e8986e08adf8247de9b9b686335ab3d96751d32bd7ab56cbcf2176517787e",
-    "compatibility": "Raw W2 internal wire rejected 4/4; explicit agreed-envelope mapping accepted 4/4; W2 restriction event is not deliverable at the pinned SHA",
+    "source_authority": "w3_knowledge.c01.source_authority_http:create_source_authority; literal registered=true only; connect/read/total timeout fail closed",
+    "w2_full_sha": "40ca63447287432d5a127f6001fc984dc8980dd5",
+    "w2_wire_sha256": "c964bdd81bda7c9c5b3710c8cc6310a3521178839a24b744ba277f4b4e489b3e",
+    "compatibility": "W2 actual source_event_to_w3_wire output accepted 4/4, revisions 1..4 and restriction revision 1; synthetic W2 publisher/W3 HTTP plus W3/W2 authority HTTP pass with fake W2 DB session",
     "live_e2e": "NOT_RUN"
   },
   "iam": {
@@ -60,5 +60,5 @@
   },
   "joint_window": null,
   "joint_ct12": "NOT_RUN",
-  "evidence": "Implementation pin 35933e8037dc899f646b7b9af36909ae0e4b8f34; docs/w3-lifecycle-dispatch-handoff-2026-09-20.md; docs/w3-integration-input-request-2026-09-20.md; docs/w2-w3-integration-completion-response-2026-09-21.md"
+  "evidence": "Implementation pin 0c4f01f9537a3129c976fae5e63111a7982c5da6; docs/w3-lifecycle-dispatch-handoff-2026-09-20.md; docs/w3-integration-input-request-2026-09-20.md; docs/w2-w3-local-e2e-contract-response-2026-09-21.md"
 }

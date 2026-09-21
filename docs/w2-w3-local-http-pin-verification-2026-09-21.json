@@ -1,0 +1,48 @@
+{
+  "status": "W2_PINNED_WIRE_LOCAL_ACCEPTED",
+  "actual_environment": false,
+  "w2_sha": "40ca63447287432d5a127f6001fc984dc8980dd5",
+  "w3_sha": "0c4f01f9537a3129c976fae5e63111a7982c5da6",
+  "w2_wire_sha256": "c964bdd81bda7c9c5b3710c8cc6310a3521178839a24b744ba277f4b4e489b3e",
+  "manual_envelope_mapping": false,
+  "w2_adapter": "epick_engine.source_collection.w3_public_transport.source_event_to_w3_wire",
+  "w2_internal_events_valid": 4,
+  "w2_outbox_rebuilt_deliverable_types": [
+    "source.version.available",
+    "source.version.available",
+    "source.observation.changed",
+    "source.restriction.changed"
+  ],
+  "w2_restriction_delivery": "DELIVERABLE",
+  "outer_revisions": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "restriction_revisions": [
+    1
+  ],
+  "w2_public_wire_validated_by_w3": 4,
+  "w3_local_consume_outcomes": [
+    "APPLIED",
+    "APPLIED",
+    "APPLIED",
+    "APPLIED"
+  ],
+  "w3_local_status": {
+    "event_cursor": 4,
+    "restriction_revision": 1,
+    "index_ack": false,
+    "reason": "OBSERVATION_BLOCKED"
+  },
+  "synthetic_bidirectional_http": {
+    "status": "PASS",
+    "w2_publisher_receipts": 4,
+    "w3_event_cursor": 4,
+    "w3_restriction_revision": 1,
+    "w3_index_ack": false,
+    "w2_authority_backend": "SYNTHETIC_SESSION_NOT_POSTGRESQL"
+  },
+  "postgres_outbox_e2e": "NOT_RUN"
+}

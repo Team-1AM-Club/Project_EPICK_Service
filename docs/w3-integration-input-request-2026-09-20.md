@@ -4,7 +4,7 @@
 
 기준 정책: `w3.retention/1.1`
 
-W3 구현 pin: `35933e8037dc899f646b7b9af36909ae0e4b8f34`
+W3 구현 pin: `0c4f01f9537a3129c976fae5e63111a7982c5da6`
 
 실제 값이 제공되지 않은 endpoint, factory, 담당자, role, queue, registry 경로를 W3가 임의로
 만들지 않는다. 아래 값이 확보되면 실제 adapter와 caller 연결을 시작한다.
@@ -63,7 +63,7 @@ W3는 supply와 매 relay/replay 직전에 전체 context, owner, epoch, active�
 
 | 항목 | 필요한 값 |
 |---|---|
-| source pin | W3 `35933e8037dc899f646b7b9af36909ae0e4b8f34`; W1 producer의 채택 SHA는 미제공 |
+| source pin | W3 `0c4f01f9537a3129c976fae5e63111a7982c5da6`; W1 producer의 채택 SHA는 미제공 |
 | 전달 방식 | 전용 private Standard SQS 두 개의 실제 URL과 queue policy |
 | schema | W1 owner deletion target type 확장, Source `target_ref = Source.id`, W3 lifecycle receipt의 W1 채택 pin |
 | epoch | higher-epoch 판정의 authoritative source와 등록 전 삭제 규칙 |
@@ -79,7 +79,8 @@ W3는 supply와 매 relay/replay 직전에 전체 context, owner, epoch, active�
 - `company_id`, `source_id`, 영구 종료 시각 및 동일 Source ID 재사용 금지 보장
 - 조회 인증, timeout, not-found/error 의미와 source pin
 - 영구 종료를 `CoreRuntime.retire_source`에 전달하는 adapter/재처리 규칙
-- `SourceAuthority.is_registered(UUID) -> bool`를 구현하는 실제 `module:factory`
+- W2 `40ca63447287432d5a127f6001fc984dc8980dd5`의 인증된 내부 GET을 운영 환경에서
+  접근 가능하게 하는 실제 endpoint·신뢰된 token 전달 경로
 - C-01 consumer의 event/replay/snapshot/index 전 조회에 적용할 connect/read/전체 timeout
 
 `command_id`가 결속된 Source 종료, receipt outbox, retired marker와 counter purge는 구현되어 있다.
@@ -87,17 +88,18 @@ W3는 supply와 매 relay/replay 직전에 전체 context, owner, epoch, active�
 
 ## 4.1. W2 public event adapter
 
-W2 `2cc9153b8401c04c93a2f5a069904ee32ac79cb2` 검증에서 내부 `SourceEvent`와 합의 C-01
-envelope의 직접 호환이 확인되지 않았다. W2가 다음 산출물을 제공해야 한다.
+W2 `40ca63447287432d5a127f6001fc984dc8980dd5`에서 아래 adapter와 outbox 전달 경로가
+제공됐다. W3는 해당 SHA의 실제 wire 4건을 로컬 수용했고 합성 양방향 HTTP를 통과했다.
+운영 및 PostgreSQL 공동 E2E에는 다음 입력이 남았다.
 
-- outer `schema_version=1.0`, `producer=w2`, `aggregate_type=source`, 연속 `revision`을 생성하는
-  versioned adapter
-- observation/restriction payload의 `schema_version=w2.source.v1`
-- `source.restriction.changed`를 실제 public outbox 전달 허용 목록에 포함한 채택 SHA
-- `PublicSourceEventPublisher` concrete 구현, 실제 transport binding과 재시도/ACK 규칙
+- 승인된 로컬 또는 운영 PostgreSQL과 W2 migration·producer 합성 fixture
+- W2 outbox operator의 실행 환경 및 W3 C-01 endpoint로 가는 네트워크·인증 설정
+- W2 SourceAuthority ASGI의 실행 환경 및 W3에서 접근할 endpoint·인증 설정
+- duplicate/gap/conflict/replay/snapshot/cleared 재색인 공동 실행·재시작 증거
 
-검증 근거는 `docs/w2-w3-pin-verification-2026-09-21.json`과
-`docs/w2-w3-integration-completion-response-2026-09-21.md`에 기록한다.
+새 검증 근거는 `docs/w2-w3-local-http-pin-verification-2026-09-21.json`과
+`docs/w2-w3-local-e2e-contract-response-2026-09-21.md`에 기록한다. 이전 W2 SHA의 불일치
+증거는 이력으로 유지한다.
 
 ## 5. W1 실행·배포 입력
 
