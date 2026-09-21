@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import sys
 from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -30,6 +33,7 @@ from app.services.application_workspace import ApplicationWorkspaceService
 from app.services.core_decision_inbound import CoreDecisionInboundService
 from app.services.direct_source_registration import DirectSourceRegistrationService
 from app.services.jobs import JobService
+from app.services.lifecycle_operations import LifecycleOperationsService
 
 EXECUTION_QUEUE_URL = "https://sqs.ap-northeast-2.amazonaws.com/123/w1-execution"
 W2_COMMAND_QUEUE_URL = "https://sqs.ap-northeast-2.amazonaws.com/123/w2-command"
@@ -206,6 +210,8 @@ def _run_execution_to_w2_dispatch(
         .limit(1)
     )
     assert w2_command is not None
+    assert w2_command.payload["w2_command"]["resume_stage"] == "policy"
+    assert w2_command.payload["w2_command"]["policy_revision"] is None
     return relay_sqs, job_id, w2_command.id
 
 
@@ -240,6 +246,8 @@ def _run_direct_registration_to_w2_dispatch(
         .limit(1)
     )
     assert w2_command is not None
+    assert w2_command.payload["w2_command"]["resume_stage"] == "policy"
+    assert w2_command.payload["w2_command"]["policy_revision"] is None
     return relay_sqs, job_id, w2_command.id
 
 
@@ -1150,6 +1158,7 @@ def test_w2_core_partial_result_appends_checkpoint_and_opens_continue_limited_ac
     ]
     payload["resume_stage"] = "fetch"
     payload["checkpoint_ref"] = "fetch:checkpoint-0001"
+    payload["policy_revision"] = 7
     payload["required_actions"] = [
         {
             "code": "core_failure_decision",
@@ -1177,6 +1186,7 @@ def test_w2_core_partial_result_appends_checkpoint_and_opens_continue_limited_ac
     assert checkpoint is not None
     assert checkpoint.checkpoint_revision == 1
     assert checkpoint.resume_stage == "fetch"
+    assert checkpoint.policy_revision == 7
     assert checkpoint.state_ref == "fetch:checkpoint-0001"
     assert job is not None and job.status == "WAITING_USER" and job.active_lease_id is None
     assert db_session.scalar(
@@ -1185,6 +1195,198 @@ def test_w2_core_partial_result_appends_checkpoint_and_opens_continue_limited_ac
             JobRequiredAction.action_code == "CONTINUE_LIMITED",
         )
     )
+
+
+@pytest.mark.postgres
+@pytest.mark.parametrize("direct", [False, True], ids=["core", "direct"])
+def test_w2_fetch_checkpoint_retry_preserves_revision_pin_and_current_fence(
+    migrated_engine: Engine,
+    db_session: Session,
+    direct: bool,
+) -> None:
+    if direct:
+        relay_sqs, job_id, w2_command_id = _run_direct_registration_to_w2_dispatch(
+            migrated_engine, db_session, key="fetch-resume-direct"
+        )
+    else:
+        relay_sqs, job_id, w2_command_id = _run_execution_to_w2_dispatch(
+            migrated_engine, db_session, key="fetch-resume-core"
+        )
+    assert _relay(migrated_engine, relay_sqs).drain_once(limit=10).published == 1
+    db_session.expire_all()
+    first_command = db_session.get(JobCommand, w2_command_id)
+    assert first_command is not None
+    envelope = _w2_result_envelope(command=first_command)
+    payload = envelope["payload"]
+    assert isinstance(payload, dict)
+    payload["successful_source_refs"] = []
+    payload["failures"] = [
+        {
+            "source_id": payload["source_id"],
+            "stage": "fetch",
+            "code": "RATE_LIMITED",
+            "missing_sections": [],
+            "impact": "수집 재시도가 필요합니다.",
+            "core_decision_revision": 1,
+        }
+    ]
+    payload["completion_kind"] = "none"
+    payload["resume_stage"] = "fetch"
+    payload["checkpoint_ref"] = "fetch:checkpoint-0001"
+    payload["policy_revision"] = 7
+    payload["retry_not_before"] = "2026-09-21T12:00:00Z"
+    payload["required_actions"] = [
+        {
+            "code": "user_retry",
+            "label_ko": "재시도",
+            "context": {
+                "source_id": payload["source_id"],
+                "resume_stage": "fetch",
+                "retry_not_before": None,
+            },
+        }
+    ]
+    result_sqs = InMemorySqsPort()
+    result_sqs.inject_message(queue_url=W2_RESULT_QUEUE_URL, body=json.dumps(envelope))
+    assert CollectionResultWorker(
+        session_factory=_factory(migrated_engine),
+        sqs=result_sqs,
+        result_queue_url=W2_RESULT_QUEUE_URL,
+    ).drain_once().acknowledged == 1
+    db_session.expire_all()
+    checkpoint = db_session.scalar(
+        select(JobCheckpoint).where(JobCheckpoint.job_id == job_id)
+    )
+    job = db_session.get(Job, job_id)
+    assert checkpoint is not None and job is not None
+    assert checkpoint.policy_revision == 7
+    assert job.status == "PAUSED_RATE_LIMIT"
+    first_fence = job.execution_fence
+    accepted = LifecycleOperationsService(db_session).resume_rate_limited_job_from_checkpoint(
+        owner_user_id=job.owner_user_id,
+        job_id=job.id,
+        checkpoint_id=checkpoint.id,
+        from_stage="fetch",
+        idempotency_key="fetch-resume-retry",
+        request_hash="f" * 64,
+    )
+    assert accepted.command is not None
+    db_session.commit()
+    assert _relay(migrated_engine, relay_sqs).drain_once(limit=10).published == 1
+    execution_sqs = InMemorySqsPort()
+    execution_sqs.inject_message(
+        queue_url=EXECUTION_QUEUE_URL, body=relay_sqs.sent_messages[-1].body
+    )
+    assert JobWorker(
+        session_factory=_factory(migrated_engine),
+        sqs=execution_sqs,
+        execution_queue_url=EXECUTION_QUEUE_URL,
+        worker_id="fetch-resume-worker",
+    ).drain_once().acknowledged == 1
+    db_session.expire_all()
+    resumed = db_session.scalar(
+        select(JobCommand)
+        .where(
+            JobCommand.job_id == job_id,
+            JobCommand.command_type == (
+                "W2_DIRECT_SOURCE_REGISTRATION" if direct else "W2_SOURCE_COLLECTION"
+            ),
+        )
+        .order_by(JobCommand.command_sequence.desc())
+        .limit(1)
+    )
+    assert resumed is not None and resumed.id != first_command.id
+    resumed_payload = resumed.payload["w2_command"]
+    assert resumed_payload["resume_stage"] == "fetch"
+    assert resumed_payload["policy_revision"] == 7
+    assert resumed_payload["execution_fence"] == str(first_fence + 1)
+    assert resumed_payload["owner_deletion_epoch"] == job.owner_deletion_epoch
+    links = db_session.scalars(
+        select(JobSourceLink)
+        .where(JobSourceLink.job_id == job_id)
+        .order_by(JobSourceLink.created_at)
+    ).all()
+    assert len(links) == 2
+    assert {link.command_id for link in links} == {first_command.id, resumed.id}
+    assert _relay(migrated_engine, relay_sqs).drain_once(limit=10).published == 1
+    delivery = json.loads(relay_sqs.sent_messages[-1].body)
+    lookup = TestClient(
+        create_lookup_app(
+            session_factory=_factory(migrated_engine),
+            expected_bearer_token="test-token",
+        )
+    )
+    available = lookup.post(
+        "/internal/v1/job-commands/lookup",
+        json={
+            "schema_version": "w1.private.command-lookup.v1",
+            "command_id": str(resumed.id),
+            "execution_fence": resumed.execution_fence,
+            "owner_deletion_epoch": resumed.owner_deletion_epoch,
+        },
+        headers=_lookup_headers(),
+    )
+    assert available.status_code == 200
+    assert available.json()["status"] == "AVAILABLE"
+    assert available.json()["command"] == delivery["payload"]
+    w2_source_root = os.environ.get("W2_ENGINE_SOURCE_ROOT")
+    if w2_source_root:
+        parser_environment = dict(os.environ)
+        parser_environment["PYTHONPATH"] = os.pathsep.join(
+            filter(None, (w2_source_root, parser_environment.get("PYTHONPATH")))
+        )
+        parsed = subprocess.run(
+            [
+                os.environ.get("W2_SEMANTIC_PARSER_PYTHON", sys.executable),
+                "-c",
+                "import sys; from epick_engine.source_collection.contracts import "
+                "CollectionCommand; CollectionCommand.model_validate_json(sys.stdin.read())",
+            ],
+            input=json.dumps(available.json()["command"]),
+            text=True,
+            capture_output=True,
+            env=parser_environment,
+            timeout=20,
+            check=False,
+        )
+        assert parsed.returncode == 0, parsed.stderr
+    stale_fence = lookup.post(
+        "/internal/v1/job-commands/lookup",
+        json={
+            "schema_version": "w1.private.command-lookup.v1",
+            "command_id": str(resumed.id),
+            "execution_fence": first_fence,
+            "owner_deletion_epoch": resumed.owner_deletion_epoch,
+        },
+        headers=_lookup_headers(),
+    )
+    assert stale_fence.json()["status"] == "STALE_FENCE"
+    stale_epoch = lookup.post(
+        "/internal/v1/job-commands/lookup",
+        json={
+            "schema_version": "w1.private.command-lookup.v1",
+            "command_id": str(resumed.id),
+            "execution_fence": resumed.execution_fence,
+            "owner_deletion_epoch": resumed.owner_deletion_epoch + 1,
+        },
+        headers=_lookup_headers(),
+    )
+    assert stale_epoch.json()["status"] == "STALE_DELETION_EPOCH"
+    JobService(db_session).request_cancellation(
+        owner_user_id=job.owner_user_id, job_id=job.id
+    )
+    db_session.commit()
+    cancelled = lookup.post(
+        "/internal/v1/job-commands/lookup",
+        json={
+            "schema_version": "w1.private.command-lookup.v1",
+            "command_id": str(resumed.id),
+            "execution_fence": resumed.execution_fence,
+            "owner_deletion_epoch": resumed.owner_deletion_epoch,
+        },
+        headers=_lookup_headers(),
+    )
+    assert cancelled.json()["status"] == "STALE_FENCE"
 
 
 @pytest.mark.postgres

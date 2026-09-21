@@ -4,6 +4,7 @@ import re
 from collections.abc import Iterator
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
+from uuid import uuid4
 
 import pytest
 from alembic import command
@@ -51,6 +52,34 @@ def alembic_config() -> Config:
     config = Config(str(BACKEND_ROOT / "alembic.ini"))
     config.set_main_option("sqlalchemy.url", settings.test_database_url)
     return config
+
+
+@pytest.fixture
+def fresh_migration_config(alembic_config: Config) -> Iterator[Config]:
+    """Give historical upgrade tests a blank DB without downgrading live policy revisions."""
+
+    del alembic_config
+    admin_url, database_name = _admin_database_url(settings.test_database_url)
+    fresh_name = f"{database_name[:32]}_migration_{uuid4().hex[:8]}"
+    parsed = urlsplit(settings.test_database_url)
+    fresh_url = urlunsplit((parsed.scheme, parsed.netloc, f"/{fresh_name}", "", ""))
+    admin_engine = create_engine(admin_url, isolation_level="AUTOCOMMIT")
+    try:
+        with admin_engine.connect() as connection:
+            connection.execute(text(f'CREATE DATABASE "{fresh_name}"'))
+        role_engine = create_engine(fresh_url)
+        try:
+            with role_engine.begin() as connection:
+                connection.execute(text(RUNTIME_ROLE_TEMPLATE_SQL.read_text(encoding="utf-8")))
+        finally:
+            role_engine.dispose()
+        config = Config(str(BACKEND_ROOT / "alembic.ini"))
+        config.set_main_option("sqlalchemy.url", fresh_url)
+        yield config
+    finally:
+        with admin_engine.connect() as connection:
+            connection.execute(text(f'DROP DATABASE IF EXISTS "{fresh_name}" WITH (FORCE)'))
+        admin_engine.dispose()
 
 
 @pytest.fixture(scope="session")

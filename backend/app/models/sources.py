@@ -8,11 +8,13 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKeyConstraint,
+    Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
@@ -339,7 +341,14 @@ class JobSourceLink(Base):
         ),
         UniqueConstraint("id", "source_id", name="id_source_id"),
         UniqueConstraint("id", "command_id", name="id_command_id"),
-        UniqueConstraint("job_id", "source_id", "purpose_ref", name="job_id_source_id_purpose_ref"),
+        Index(
+            "uq_job_source_links_unbound",
+            "job_id",
+            "source_id",
+            "purpose_ref",
+            unique=True,
+            postgresql_where=text("command_id IS NULL"),
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)

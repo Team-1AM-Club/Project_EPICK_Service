@@ -168,10 +168,10 @@ def test_runtime_roles_receive_only_required_staged_result_dml(migrated_engine: 
         )
 
 
-def test_revision_027_downgrades_and_upgrades_cleanly(
-    alembic_config: Config, migrated_engine: Engine
+def test_revision_027_upgrades_from_026_to_head(
+    fresh_migration_config: Config,
 ) -> None:
-    del migrated_engine
-    command.downgrade(alembic_config, "026_w3_core_decision_inbound")
-    command.upgrade(alembic_config, "head")
+    command.upgrade(fresh_migration_config, "026_w3_core_decision_inbound")
+    command.upgrade(fresh_migration_config, "027_w2_staged_result_adoption")
+    command.upgrade(fresh_migration_config, "head")
     assert W2StagedResult.__table__.name == "w2_staged_results"
