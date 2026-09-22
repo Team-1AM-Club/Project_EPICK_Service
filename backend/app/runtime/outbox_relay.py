@@ -611,13 +611,15 @@ class OutboxRelay:
                 != operation.purge_owner_deletion_epoch
             )
             or (action != "PURGE" and "purge_owner_deletion_epoch" in payload)
-            # ABORT/PURGE are deliberately emitted after a W1 cancellation or
-            # deletion fence.  Their original W2 command may therefore already
-            # be INVALIDATED/CONSUMED, unlike PREPARE/FINALIZE.
+            # Applying a staged result consumes the W2 command before FINALIZE
+            # is published. ABORT/PURGE may follow a cancellation or deletion
+            # fence and therefore also permit an invalidated command.
             or command.status
             not in (
                 {"PENDING", "ENQUEUED"}
-                if action in {"PREPARE", "FINALIZE"}
+                if action == "PREPARE"
+                else {"PENDING", "ENQUEUED", "CONSUMED"}
+                if action == "FINALIZE"
                 else {"PENDING", "ENQUEUED", "CLAIMED", "CONSUMED", "INVALIDATED"}
             )
         ):
