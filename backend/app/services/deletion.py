@@ -315,7 +315,7 @@ class DeletionOrchestrationService:
         # the broader active-Job locks below.  The owner epoch is already
         # advanced in this transaction: PREPARE-stage work becomes ABORT and
         # W1-committed private work becomes PURGE tied to this new epoch.
-        for job_id in self.repository.list_active_job_ids(owner_user_id=request.owner_user_id):
+        for job_id in self.repository.list_w2_gate_job_ids(owner_user_id=request.owner_user_id):
             W2CommitGateService(self.session).reconcile_open_operations_for_owner_deletion(
                 owner_user_id=request.owner_user_id,
                 job_id=job_id,

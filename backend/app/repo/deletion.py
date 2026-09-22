@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.models.deletion import DeletionRequest, DeletionTarget
 from app.models.identity import AuthSession, User
 from app.models.jobs import Job, JobCoreDecisionBinding, OutboxMessage
+from app.models.w2_commit_operations import W2CommitOperation
 
 
 class DeletionRepository:
@@ -94,15 +95,26 @@ class DeletionRepository:
             )
         )
 
-    def list_active_job_ids(self, *, owner_user_id: UUID) -> list[UUID]:
-        """Read stable Job identifiers before each W2 ordered lock acquisition."""
+    def list_w2_gate_job_ids(self, *, owner_user_id: UUID) -> list[UUID]:
+        """Read owner-scoped gate IDs, including finalized results on terminal Jobs."""
 
-        terminal_statuses = ("SUCCEEDED", "FAILED_FINAL", "CANCELLED")
         return list(
             self.session.scalars(
-                select(Job.id)
-                .where(Job.owner_user_id == owner_user_id, Job.status.not_in(terminal_statuses))
-                .order_by(Job.created_at, Job.id)
+                select(W2CommitOperation.job_id)
+                .where(
+                    W2CommitOperation.owner_user_id == owner_user_id,
+                    W2CommitOperation.state.in_(
+                        (
+                            "PREPARE_PENDING",
+                            "PREPARED",
+                            "W1_COMMITTED",
+                            "FINALIZE_PENDING",
+                            "FINALIZED",
+                        )
+                    ),
+                )
+                .distinct()
+                .order_by(W2CommitOperation.job_id)
             )
         )
 
