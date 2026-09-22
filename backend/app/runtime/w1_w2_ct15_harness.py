@@ -38,6 +38,7 @@ from app.services.w2_commit_gate import W2CommitGateService
 _RUN_ID_PATTERN = re.compile(r"^ct15-[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$")
 _PRIMARY_OWNER = "primary"
 _SECONDARY_OWNER = "secondary"
+_CONFLICT_OWNER = "conflict"
 _W2_COMMAND_TYPE = "W2_SOURCE_COLLECTION"
 _ANALYSIS_INPUT_VERSION = "ct15-input-v1"
 
@@ -100,16 +101,24 @@ class Ct15Fixture:
     run_id: str
     primary: Ct15CommandBinding
     secondary: Ct15CommandBinding
+    conflict: Ct15CommandBinding
 
     def as_safe_dict(self) -> dict[str, object]:
-        if self.primary.source_id != self.secondary.source_id:
+        if len(
+            {
+                self.primary.source_id,
+                self.secondary.source_id,
+                self.conflict.source_id,
+            }
+        ) != 1:
             raise Ct15HarnessError("CT15 fixture must retain one shared public Source")
         return {
             "status": "ok",
             "run_id": self.run_id,
-            "fixture": "two_owners_one_shared_source",
+            "fixture": "three_owners_one_shared_source",
             "primary": self.primary.as_safe_dict(),
             "secondary": self.secondary.as_safe_dict(),
+            "conflict": self.conflict.as_safe_dict(),
         }
 
 
@@ -123,7 +132,13 @@ def validate_run_id(run_id: str) -> str:
 
 
 def seed_fixture(*, session: Session, run_id: str) -> Ct15Fixture:
-    """Create two live synthetic bindings that intentionally share one public Source."""
+    """Create three live synthetic bindings that share one public Source.
+
+    Primary covers FINALIZE/PURGE, secondary covers cancel/ABORT, and conflict
+    is isolated for the same-ID/different-digest retry/DLQ case.  Keeping the
+    destructive conflict case on its own command permits CT15-01~09 to retain
+    one run identifier without corrupting either successful terminal path.
+    """
 
     run_id = validate_run_id(run_id)
     labels = _owner_labels(run_id)
@@ -166,6 +181,7 @@ def seed_fixture(*, session: Session, run_id: str) -> Ct15Fixture:
         run_id=run_id,
         primary=bindings[_PRIMARY_OWNER],
         secondary=bindings[_SECONDARY_OWNER],
+        conflict=bindings[_CONFLICT_OWNER],
     )
 
 
@@ -181,6 +197,7 @@ def inspect_fixture(*, session: Session, run_id: str) -> dict[str, object]:
             session=session,
             primary=fixture.primary,
             secondary=fixture.secondary,
+            conflict=fixture.conflict,
         ),
     }
 
@@ -215,12 +232,15 @@ def delete_primary(*, session: Session, run_id: str) -> dict[str, object]:
     )
     primary_owner = session.get(User, fixture.primary.owner_id)
     secondary_owner = session.get(User, fixture.secondary.owner_id)
+    conflict_owner = session.get(User, fixture.conflict.owner_id)
     source = session.get(Source, fixture.primary.source_id)
     if (
         primary_owner is None
         or secondary_owner is None
+        or conflict_owner is None
         or source is None
         or secondary_owner.account_status != "ACTIVE"
+        or conflict_owner.account_status != "ACTIVE"
     ):
         raise Ct15HarnessError("CT15 deletion fixture no longer preserves owner/source isolation")
     return {
@@ -231,6 +251,7 @@ def delete_primary(*, session: Session, run_id: str) -> dict[str, object]:
         "deletion_request_id": str(request.id),
         "shared_source_retained": True,
         "secondary_owner_active": True,
+        "conflict_owner_active": True,
     }
 
 
@@ -260,15 +281,21 @@ def _fixture_counts(
     session: Session,
     primary: Ct15CommandBinding,
     secondary: Ct15CommandBinding,
+    conflict: Ct15CommandBinding,
 ) -> dict[str, object]:
     """Return comparable W1 aggregates for the two allow-listed CT15 commands."""
 
     return {
         _PRIMARY_OWNER: _command_counts(session=session, command_ids=(primary.command_id,)),
         _SECONDARY_OWNER: _command_counts(session=session, command_ids=(secondary.command_id,)),
+        _CONFLICT_OWNER: _command_counts(session=session, command_ids=(conflict.command_id,)),
         "total": _command_counts(
             session=session,
-            command_ids=(primary.command_id, secondary.command_id),
+            command_ids=(
+                primary.command_id,
+                secondary.command_id,
+                conflict.command_id,
+            ),
         ),
     }
 
@@ -341,6 +368,7 @@ def _owner_labels(run_id: str) -> dict[str, str]:
     return {
         _PRIMARY_OWNER: f"CT15 synthetic {run_id} primary",
         _SECONDARY_OWNER: f"CT15 synthetic {run_id} secondary",
+        _CONFLICT_OWNER: f"CT15 synthetic {run_id} conflict",
     }
 
 
@@ -479,8 +507,15 @@ def _load_fixture(*, session: Session, run_id: str) -> Ct15Fixture:
         run_id=run_id,
         primary=bindings[_PRIMARY_OWNER],
         secondary=bindings[_SECONDARY_OWNER],
+        conflict=bindings[_CONFLICT_OWNER],
     )
-    if fixture.primary.source_id != fixture.secondary.source_id:
+    if len(
+        {
+            fixture.primary.source_id,
+            fixture.secondary.source_id,
+            fixture.conflict.source_id,
+        }
+    ) != 1:
         raise Ct15HarnessError("CT15 synthetic fixture lost shared Source isolation")
     return fixture
 
