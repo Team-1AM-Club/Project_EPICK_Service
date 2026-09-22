@@ -28,15 +28,16 @@
     "live_e2e": "NOT_RUN"
   },
   "c01_w2_integration": {
-    "status": "W2_PRODUCT_FLOW_PASS_REPORTED_W3_JOINT_ACCEPTANCE_EVIDENCE_PENDING",
+    "status": "W2_W3_SYNTHETIC_PRODUCT_FLOW_JOINT_GATE_PASS_BY_EVIDENCE_REVIEW",
     "entrypoint": "python -m w3_knowledge.c01.http",
     "source_authority": "w3_knowledge.c01.source_authority_http:create_source_authority; literal registered=true only; connect/read/total timeout fail closed",
     "w2_full_sha": "40ca63447287432d5a127f6001fc984dc8980dd5",
     "w2_wire_sha256": "c964bdd81bda7c9c5b3710c8cc6310a3521178839a24b744ba277f4b4e489b3e",
     "w2_product_code_sha": "7523d757d59ed0e28c9102ebf456140e76e2c493",
     "w2_product_harness_sha": "df10726cb2dfa90f1742505d76e2e03108c62b0d",
-    "product_flow_joint_gate": "BLOCKED_ENVIRONMENT: W2 reports synthetic product runtime to PostgreSQL outbox to W3 HTTP PASS, but 2026-09-22 raw result JSON/log is unavailable to W3 and approved isolated PostgreSQL settings are absent for independent rerun",
-    "compatibility": "Initial 2026-09-21 W2 wire pin and isolated PostgreSQL synthetic OutboxEvent/W3 HTTP joint evidence remain valid; 2026-09-22 W2 product-flow script uses actual collection handler without directly inserting its product outbox row; W3 pinned C01 local tests 76 passed; product-flow joint acceptance awaits raw result JSON/log or approved rerun",
+    "w2_execution_checkout_sha": "d99eb516c64dc16e92a5a76e528a8098024c1778",
+    "product_flow_joint_gate": "PASS by W3 review of W2 committed 2026-09-22 result JSON, pinned verification script, and code diff; not independently rerun by W3; synthetic fixture and isolated PostgreSQL/HTTP only",
+    "compatibility": "Initial 2026-09-21 W2 wire pin and isolated PostgreSQL synthetic OutboxEvent/W3 HTTP joint evidence remain valid; 2026-09-22 W2 product-flow result status PASS exit 0 with 15 Evidence, product W3 cursor 1, 11 total deliveries, unregistered/authority/conflict/replay/snapshot/restriction cases true; W3 pinned C01 local tests 76 passed; W2 executed d99eb... with only unrelated SQS preflight source change from product baseline 7523d...",
     "live_e2e": "NOT_RUN"
   },
   "iam": {
@@ -63,5 +64,5 @@
   },
   "joint_window": null,
   "joint_ct12": "NOT_RUN",
-  "evidence": "Implementation pin 0c4f01f9537a3129c976fae5e63111a7982c5da6; W2 Engine feat/crawler 69f8984dba2f3c56d66c97f8a9edd5de5c4513ff supplied Postgres/HTTP JSON Git blob SHA256 F5F910FD5AE57144FA129873D0536B089E395B8F7D3DFC15C5CF17BE1E5052F2; docs/w3-lifecycle-dispatch-handoff-2026-09-20.md; docs/w3-integration-input-request-2026-09-20.md; docs/w2-w3-local-e2e-contract-response-2026-09-21.md; docs/w3-w2-joint-revalidation-response-2026-09-22.md"
+  "evidence": "Implementation pin 0c4f01f9537a3129c976fae5e63111a7982c5da6; W2 Engine feat/crawler 69f8984dba2f3c56d66c97f8a9edd5de5c4513ff supplied 2026-09-21 Postgres/HTTP JSON Git blob SHA256 F5F910FD5AE57144FA129873D0536B089E395B8F7D3DFC15C5CF17BE1E5052F2; W2 Engine 2bf8156371b87894b92cd92959bc31b44c534795 docs/w2-w3-product-flow-e2e-result-2026-09-22.json; docs/w3-lifecycle-dispatch-handoff-2026-09-20.md; docs/w3-integration-input-request-2026-09-20.md; docs/w2-w3-local-e2e-contract-response-2026-09-21.md; docs/w3-w2-joint-revalidation-response-2026-09-22.md"
 }
