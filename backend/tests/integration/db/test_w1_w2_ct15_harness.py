@@ -53,6 +53,20 @@ def test_seeded_fixture_is_two_owner_and_shared_source(migrated_engine: Engine) 
         assert session.get(JobCommand, fixture.primary.command_id).status == "ENQUEUED"
 
 
+def test_seeded_command_is_identical_to_stored_initial_policy_command(
+    migrated_engine: Engine,
+) -> None:
+    with _factory(migrated_engine).begin() as session:
+        fixture = seed_fixture(session=session, run_id=RUN_ID)
+        for binding in (fixture.primary, fixture.secondary):
+            exported = binding.as_safe_dict()["w2_collection_command"]
+            stored_command = session.get(JobCommand, binding.command_id)
+            assert stored_command is not None
+            assert exported == stored_command.payload["w2_command"]
+            assert exported["resume_stage"] == "policy"
+            assert exported["policy_revision"] is None
+
+
 def test_inspection_reports_only_scoped_w1_counts(migrated_engine: Engine) -> None:
     factory = _factory(migrated_engine)
     with factory.begin() as session:

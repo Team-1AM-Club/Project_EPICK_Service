@@ -79,7 +79,7 @@ class Ct15CommandBinding:
                 "decision_revision": 1,
                 "analysis_input_version": 1,
             },
-            "resume_stage": "fetch",
+            "resume_stage": "policy",
             "policy_revision": None,
             "owner_deletion_epoch": self.owner_deletion_epoch,
         }
@@ -421,7 +421,7 @@ def _create_live_binding(
                     "decision_revision": 1,
                     "analysis_input_version": 1,
                 },
-                "resume_stage": "fetch",
+                "resume_stage": "policy",
                 "policy_revision": None,
                 "owner_deletion_epoch": 0,
             },
