@@ -64,5 +64,5 @@
   },
   "joint_window": null,
   "joint_ct12": "NOT_RUN",
-  "evidence": "Implementation pin 0c4f01f9537a3129c976fae5e63111a7982c5da6; W2 Engine feat/crawler 69f8984dba2f3c56d66c97f8a9edd5de5c4513ff supplied 2026-09-21 Postgres/HTTP JSON Git blob SHA256 F5F910FD5AE57144FA129873D0536B089E395B8F7D3DFC15C5CF17BE1E5052F2; W2 Engine 2bf8156371b87894b92cd92959bc31b44c534795 docs/w2-w3-product-flow-e2e-result-2026-09-22.json; docs/w3-lifecycle-dispatch-handoff-2026-09-20.md; docs/w3-integration-input-request-2026-09-20.md; docs/w2-w3-local-e2e-contract-response-2026-09-21.md; docs/w3-w2-joint-revalidation-response-2026-09-22.md"
+  "evidence": "Implementation pin 0c4f01f9537a3129c976fae5e63111a7982c5da6; W2 Engine feat/crawler 69f8984dba2f3c56d66c97f8a9edd5de5c4513ff supplied 2026-09-21 Postgres/HTTP JSON Git blob SHA256 F5F910FD5AE57144FA129873D0536B089E395B8F7D3DFC15C5CF17BE1E5052F2; W2 Engine 2bf8156371b87894b92cd92959bc31b44c534795 docs/w2-w3-product-flow-e2e-result-2026-09-22.json; W2 Engine 5a2d73f74ee6be54dc4af259a68610ff9b3761ad corrected SHA boundary in docs/w2-w3-product-flow-e2e-result-2026-09-22.md; docs/w3-lifecycle-dispatch-handoff-2026-09-20.md; docs/w3-integration-input-request-2026-09-20.md; docs/w2-w3-local-e2e-contract-response-2026-09-21.md; docs/w3-w2-joint-revalidation-response-2026-09-22.md"
 }
