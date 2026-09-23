@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -11,12 +12,14 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.models.jobs import Job, JobCommand, OutboxMessage
 from app.models.w2_commit_operations import W2CommitOperation, W2StagedResult
+from app.runtime.outbox_relay import OutboxRelay, QueueUrlRegistry
 from app.runtime.sqs import InMemorySqsPort
 from app.runtime.w2_commit_gate_contracts import parse_w2_staged_result, staged_result_digest
 from app.runtime.w2_commit_gate_worker import (
     W2CommitGateAck,
     W2CommitGateAckWorker,
     W2CommitGateInboundWorker,
+    W2CommitGateRecoveryWorker,
 )
 from app.runtime.workers import CollectionResultWorker
 from app.services.deletion import DeletionOrchestrationService
@@ -197,6 +200,20 @@ def test_staged_result_creates_prepare_only_then_prepare_ack_finalizes_once(
         assert actions == ["PREPARE"]
         assert session.scalar(select(Job).where(Job.id == job_id)).status == "RUNNING"
 
+    gate_sqs = InMemorySqsPort()
+    relay = OutboxRelay(
+        session_factory=factory,
+        sqs=gate_sqs,
+        queues=QueueUrlRegistry(
+            w1_execution_queue_url="https://sqs.example/w1-execution",
+            w2_collection_command_queue_url="https://sqs.example/w2-collection",
+            w2_commit_gate_command_queue_url="https://sqs.example/w2-gate",
+        ),
+        relay_id="staged-result-gate-test",
+    )
+    assert relay.drain_once(limit=10).published == 1
+    assert json.loads(gate_sqs.sent_messages[-1].body)["action"] == "PREPARE"
+
     ack_result = W2CommitGateAckWorker(session_factory=factory).apply_ack(
         ack=W2CommitGateAck(
             message_id=uuid4(),
@@ -224,6 +241,36 @@ def test_staged_result_creates_prepare_only_then_prepare_ack_finalizes_once(
         assert command.status == "CONSUMED"
         actions = [message.payload["action"] for message in session.scalars(select(OutboxMessage))]
         assert actions == ["PREPARE", "FINALIZE"]
+
+    # Re-drive the same durable FINALIZE after a relay crash or terminal rejection.
+    with factory.begin() as session:
+        final_outbox = session.scalar(
+            select(OutboxMessage).where(OutboxMessage.payload["action"].astext == "FINALIZE")
+        )
+        assert final_outbox is not None
+        final_outbox.status = "FAILED_FINAL"
+        final_outbox.last_error_code = "OUTBOX_COMMIT_GATE_BINDING_MISMATCH"
+        final_outbox.last_error_at = datetime.now(UTC)
+    recovery = W2CommitGateRecoveryWorker(session_factory=factory).recover_once(limit=10)
+    assert recovery.requeued == 1
+
+    final_delivery = relay.drain_once(limit=10)
+    assert (final_delivery.published, final_delivery.failed_final) == (1, 0)
+    assert json.loads(gate_sqs.sent_messages[-1].body)["action"] == "FINALIZE"
+    final_ack = W2CommitGateAckWorker(session_factory=factory).apply_ack(
+        ack=W2CommitGateAck(
+            message_id=uuid4(),
+            operation_id=operation.id,
+            operation_revision=4,
+            action="FINALIZE",
+            command_id=command_id,
+            job_id=job_id,
+            execution_fence=1,
+            owner_deletion_epoch=0,
+            result_digest=proposal.result_digest,
+        )
+    )
+    assert (final_ack.outcome_code, final_ack.state) == ("APPLIED", "FINALIZED")
 
 
 def test_wrong_sender_is_terminal_and_creates_no_staged_gate_effect(

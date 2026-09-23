@@ -36,21 +36,44 @@ def _factory(migrated_engine: Engine) -> sessionmaker[Session]:
     return sessionmaker(bind=migrated_engine, autoflush=False, expire_on_commit=False)
 
 
-def test_seeded_fixture_is_two_owner_and_shared_source(migrated_engine: Engine) -> None:
+def test_seeded_fixture_is_three_owner_and_shared_source(migrated_engine: Engine) -> None:
     with _factory(migrated_engine).begin() as session:
         fixture = seed_fixture(session=session, run_id=RUN_ID)
         result = fixture.as_safe_dict()
 
-        assert result["fixture"] == "two_owners_one_shared_source"
+        assert result["fixture"] == "three_owners_one_shared_source"
         assert fixture.primary.source_id == fixture.secondary.source_id
+        assert fixture.primary.source_id == fixture.conflict.source_id
         assert fixture.primary.owner_id != fixture.secondary.owner_id
+        assert fixture.conflict.owner_id not in {
+            fixture.primary.owner_id,
+            fixture.secondary.owner_id,
+        }
         assert fixture.primary.command_id != fixture.secondary.command_id
+        assert fixture.conflict.command_id not in {
+            fixture.primary.command_id,
+            fixture.secondary.command_id,
+        }
         assert result["primary"]["w2_collection_command"]["command_id"] == str(
             fixture.primary.command_id
         )
         assert session.get(Source, fixture.primary.source_id) is not None
         assert session.get(Job, fixture.primary.job_id).status == "RUNNING"
         assert session.get(JobCommand, fixture.primary.command_id).status == "ENQUEUED"
+
+
+def test_seeded_command_is_identical_to_stored_initial_policy_command(
+    migrated_engine: Engine,
+) -> None:
+    with _factory(migrated_engine).begin() as session:
+        fixture = seed_fixture(session=session, run_id=RUN_ID)
+        for binding in (fixture.primary, fixture.secondary, fixture.conflict):
+            exported = binding.as_safe_dict()["w2_collection_command"]
+            stored_command = session.get(JobCommand, binding.command_id)
+            assert stored_command is not None
+            assert exported == stored_command.payload["w2_command"]
+            assert exported["resume_stage"] == "policy"
+            assert exported["policy_revision"] is None
 
 
 def test_inspection_reports_only_scoped_w1_counts(migrated_engine: Engine) -> None:
@@ -85,6 +108,13 @@ def test_inspection_reports_only_scoped_w1_counts(migrated_engine: Engine) -> No
             "checkpoints": 0,
             "commit_gate_outbox_by_action_and_status": {},
         },
+        "conflict": {
+            "operations_by_state": {},
+            "staged_results_by_state": {},
+            "result_effects": 0,
+            "checkpoints": 0,
+            "commit_gate_outbox_by_action_and_status": {},
+        },
         "total": {
             "operations_by_state": {"PREPARE_PENDING": 1},
             "staged_results_by_state": {},
@@ -111,8 +141,10 @@ def test_cancel_fences_the_primary_without_touching_the_secondary(migrated_engin
         }
         primary = session.get(Job, fixture.primary.job_id)
         secondary = session.get(Job, fixture.secondary.job_id)
+        conflict = session.get(Job, fixture.conflict.job_id)
         assert primary is not None and primary.status == "CANCEL_REQUESTED"
         assert secondary is not None and secondary.status == "RUNNING"
+        assert conflict is not None and conflict.status == "RUNNING"
 
 
 def test_delete_advances_only_primary_epoch_and_retains_shared_source(

@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.models.jobs import Job, JobCommand
 from app.models.sources import AnalysisSourceDecision, JobSourceLink, Source
-from app.services.jobs import JobAcceptance, JobService
+from app.services.jobs import JobAcceptance, JobInputReference, JobService
 
 DIRECT_SOURCE_REGISTRATION_SCOPE = "DIRECT_SOURCE_REGISTRATION"
 DIRECT_SOURCE_REGISTRATION_JOB_TYPE = "SOURCE_REGISTRATION"
@@ -85,6 +85,9 @@ class DirectSourceRegistrationService:
         source_id: UUID,
         idempotency_key: str,
         request_hash: str,
+        project_id: UUID | None = None,
+        project_version_id: UUID | None = None,
+        path_scope: str = "/internal/source-registrations",
     ) -> DirectSourceRegistrationAcceptance:
         source = self.session.scalar(
             select(Source)
@@ -112,13 +115,21 @@ class DirectSourceRegistrationService:
             idempotency_key=idempotency_key,
             request_hash=request_hash,
             analysis_input_version=registration_input_version,
-            path_scope="/internal/source-registrations",
+            project_id=project_id,
+            input_refs=(
+                (JobInputReference(project_version_id=project_version_id),)
+                if project_version_id is not None
+                else ()
+            ),
+            path_scope=path_scope,
         )
         if accepted.command is None:
             raise DirectSourceRegistrationError("DIRECT_SOURCE_REGISTRATION_COMMAND_MISSING")
 
         if accepted.replayed:
-            return self._replayed_acceptance(accepted)
+            return self._replayed_acceptance(
+                accepted, company_id=company_id, source_id=source_id
+            )
 
         decision = AnalysisSourceDecision(
             decision_scope=DIRECT_SOURCE_REGISTRATION_SCOPE,
@@ -160,7 +171,7 @@ class DirectSourceRegistrationService:
         )
 
     def _replayed_acceptance(
-        self, accepted: JobAcceptance
+        self, accepted: JobAcceptance, *, company_id: UUID, source_id: UUID
     ) -> DirectSourceRegistrationAcceptance:
         command = accepted.command
         if command is None or command.analysis_source_decision_id is None:
@@ -177,7 +188,13 @@ class DirectSourceRegistrationService:
             .order_by(JobSourceLink.created_at, JobSourceLink.id)
             .limit(1)
         )
-        if decision is None or source_link is None:
+        if (
+            decision is None
+            or source_link is None
+            or decision.company_id != company_id
+            or decision.source_id != source_id
+            or source_link.source_id != source_id
+        ):
             raise DirectSourceRegistrationError("DIRECT_SOURCE_REGISTRATION_REPLAY_MISMATCH")
         return DirectSourceRegistrationAcceptance(
             job=accepted.job,

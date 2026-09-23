@@ -10,7 +10,7 @@ from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.models.deletion import DeletionTarget
-from app.models.jobs import OutboxMessage
+from app.models.jobs import Job, OutboxMessage
 from app.models.lifecycle_operations import JobCheckpoint
 from app.models.w2_commit_operations import W2CommitOperation
 from app.runtime.outbox_relay import OutboxRelay, QueueUrlRegistry
@@ -884,6 +884,72 @@ def test_cancellation_holds_the_gate_lock_then_aborts_and_rejects_late_prepare_a
         assert session.scalar(
             select(JobCheckpoint).where(JobCheckpoint.job_id == job_id)
         ) is None
+
+
+@pytest.mark.postgres
+def test_owner_deletion_purges_finalized_result_on_succeeded_job(
+    migrated_engine: Engine,
+) -> None:
+    """A terminal Job must not hide its still-visible private W2 result."""
+
+    owner_id, job_id, command_id, lease_id = _seed_active_w2_command(migrated_engine)
+    factory = _owner_scoped_factory(migrated_engine, owner_id)
+    result_digest = "sha256:" + "e" * 64
+    accepted = CollectionResultWorker(
+        session_factory=factory,
+        sqs=InMemorySqsPort(),
+        result_queue_url="https://sqs.ap-northeast-2.amazonaws.com/123/w2-result",
+    ).accept_commit_ready(
+        staged_result=_commit_ready(
+            owner_id=owner_id,
+            job_id=job_id,
+            command_id=command_id,
+            lease_id=lease_id,
+            result_digest=result_digest,
+        )
+    )
+    assert accepted.operation_id is not None
+    ack_worker = W2CommitGateAckWorker(session_factory=factory)
+    assert ack_worker.apply_ack(
+        ack=W2CommitGateAck(
+            message_id=uuid4(), operation_id=accepted.operation_id,
+            operation_revision=1, action="PREPARE", command_id=command_id,
+            job_id=job_id, execution_fence=1, owner_deletion_epoch=0,
+            result_digest=result_digest,
+        )
+    ).state == "PREPARED"
+    with factory.begin() as session:
+        W2CommitGateService(session).finalize_prepared_operation(
+            owner_user_id=owner_id, job_id=job_id, command_id=command_id,
+            operation_id=accepted.operation_id, expected_revision=2,
+            apply_w1_owned=lambda _context: None,
+        )
+    assert ack_worker.apply_ack(
+        ack=W2CommitGateAck(
+            message_id=uuid4(), operation_id=accepted.operation_id,
+            operation_revision=4, action="FINALIZE", command_id=command_id,
+            job_id=job_id, execution_fence=1, owner_deletion_epoch=0,
+            result_digest=result_digest,
+        )
+    ).state == "FINALIZED"
+    with factory.begin() as session:
+        job = session.get(Job, job_id)
+        assert job is not None
+        job.status = "SUCCEEDED"
+    with factory.begin() as session:
+        deletion = DeletionOrchestrationService(session)
+        preview = deletion.create_account_deletion_preview(
+            owner_user_id=owner_id, preview_token="ct15-terminal-job-delete"
+        )
+        deletion.confirm_and_start_account_deletion(
+            owner_user_id=owner_id,
+            deletion_request_id=preview.request.id,
+            preview_token=preview.preview_token,
+        )
+        operation = session.get(W2CommitOperation, accepted.operation_id)
+        assert operation is not None
+        assert operation.state == "PURGE_PENDING"
+        assert operation.purge_owner_deletion_epoch == 1
 
 
 @pytest.mark.postgres

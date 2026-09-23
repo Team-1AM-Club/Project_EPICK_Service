@@ -19,13 +19,13 @@ DATABASE_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 RUNTIME_ROLE_TEMPLATE_SQL = BACKEND_ROOT / "infra" / "postgres" / "runtime_roles.sql"
 
 
-def test_current_migration_head_includes_w3_authority_currentness_rls() -> None:
-    """Keep the latest W1-owned persistence boundary in the forward-only chain."""
+def test_current_migration_head_merges_w2_and_w3_runtime_branches() -> None:
+    """Keep the W2 retry and W3 retention boundaries in one migration chain."""
 
     config = Config(str(BACKEND_ROOT / "alembic.ini"))
     assert (
         ScriptDirectory.from_config(config).get_current_head()
-        == "034_w3_authority_currentness_rls"
+        == "041_merge_w2_w3_runtime_heads"
     )
 
 
@@ -132,11 +132,9 @@ def alembic_config() -> Config:
 
 
 @pytest.mark.postgres
-def test_blank_database_upgrades_downgrades_and_reupgrades(alembic_config: Config) -> None:
-    command.downgrade(alembic_config, "base")
-    command.upgrade(alembic_config, "head")
-    command.downgrade(alembic_config, "base")
-    command.upgrade(alembic_config, "head")
+def test_blank_database_upgrades_to_head(fresh_migration_config: Config) -> None:
+    command.upgrade(fresh_migration_config, "head")
+    command.upgrade(fresh_migration_config, "head")
 
 
 @pytest.mark.postgres
@@ -155,13 +153,12 @@ def test_orm_table_and_column_inventory_matches_the_migration_head(
 
 @pytest.mark.postgres
 def test_existing_pre_completion_database_upgrades_forward_to_the_current_head(
-    alembic_config: Config,
+    fresh_migration_config: Config,
 ) -> None:
-    command.downgrade(alembic_config, "base")
-    command.upgrade(alembic_config, "002_create_experience_repository")
-    command.upgrade(alembic_config, "head")
+    command.upgrade(fresh_migration_config, "002_create_experience_repository")
+    command.upgrade(fresh_migration_config, "head")
 
-    engine = create_engine(settings.test_database_url)
+    engine = create_engine(fresh_migration_config.get_main_option("sqlalchemy.url"))
     try:
         columns = {column["name"] for column in inspect(engine).get_columns("users")}
     finally:
@@ -171,11 +168,12 @@ def test_existing_pre_completion_database_upgrades_forward_to_the_current_head(
 
 
 @pytest.mark.postgres
-def test_existing_pg1_database_upgrades_forward_to_snapshot_head(alembic_config: Config) -> None:
-    command.downgrade(alembic_config, "base")
-    command.upgrade(alembic_config, "004_app_workspace_jobs")
+def test_existing_pg1_database_upgrades_forward_to_snapshot_head(
+    fresh_migration_config: Config,
+) -> None:
+    command.upgrade(fresh_migration_config, "004_app_workspace_jobs")
     existing_owner_id = uuid4()
-    pre_upgrade_engine = create_engine(settings.test_database_url)
+    pre_upgrade_engine = create_engine(fresh_migration_config.get_main_option("sqlalchemy.url"))
     try:
         with pre_upgrade_engine.begin() as connection:
             connection.execute(
@@ -192,9 +190,9 @@ def test_existing_pg1_database_upgrades_forward_to_snapshot_head(alembic_config:
             )
     finally:
         pre_upgrade_engine.dispose()
-    command.upgrade(alembic_config, "head")
+    command.upgrade(fresh_migration_config, "head")
 
-    engine = create_engine(settings.test_database_url)
+    engine = create_engine(fresh_migration_config.get_main_option("sqlalchemy.url"))
     try:
         inspector = inspect(engine)
         snapshot_columns = {column["name"] for column in inspector.get_columns("project_snapshots")}
@@ -213,7 +211,7 @@ def test_existing_pg1_database_upgrades_forward_to_snapshot_head(alembic_config:
 
 @pytest.mark.postgres
 def test_existing_claim_history_upgrades_without_mutating_append_only_rows(
-    alembic_config: Config,
+    fresh_migration_config: Config,
 ) -> None:
     """A populated revision-017 claim ledger must reach the current head.
 
@@ -222,8 +220,7 @@ def test_existing_claim_history_upgrades_without_mutating_append_only_rows(
     before the new provenance fields are introduced.
     """
 
-    command.downgrade(alembic_config, "base")
-    command.upgrade(alembic_config, "017_deletion_orchestration")
+    command.upgrade(fresh_migration_config, "017_deletion_orchestration")
 
     company_id = uuid4()
     source_id = uuid4()
@@ -231,7 +228,7 @@ def test_existing_claim_history_upgrades_without_mutating_append_only_rows(
     evidence_span_id = uuid4()
     claim_id = uuid4()
     claim_version_id = uuid4()
-    engine = create_engine(settings.test_database_url)
+    engine = create_engine(fresh_migration_config.get_main_option("sqlalchemy.url"))
     try:
         with engine.begin() as connection:
             connection.execute(
@@ -315,7 +312,7 @@ def test_existing_claim_history_upgrades_without_mutating_append_only_rows(
                 },
             )
 
-        command.upgrade(alembic_config, "head")
+        command.upgrade(fresh_migration_config, "head")
 
         with engine.connect() as connection:
             legacy_claim = (

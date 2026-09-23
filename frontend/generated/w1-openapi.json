@@ -200,7 +200,8 @@
               "NEO4J",
               "VECTOR",
               "CACHE",
-              "CHECKPOINT"
+              "CHECKPOINT",
+              "W3_CORE_RUNTIME"
             ],
             "title": "Store",
             "type": "string"
@@ -4816,6 +4817,141 @@
         "title": "SelectionWarning",
         "type": "object"
       },
+      "SourceCollectionAcceptanceResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "job_id": {
+            "format": "uuid",
+            "title": "Job Id",
+            "type": "string"
+          },
+          "replayed": {
+            "title": "Replayed",
+            "type": "boolean"
+          },
+          "source_id": {
+            "format": "uuid",
+            "title": "Source Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "WAITING_USER",
+              "PAUSED_RATE_LIMIT"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "source_id",
+          "status",
+          "replayed"
+        ],
+        "title": "SourceCollectionAcceptanceResponse",
+        "type": "object"
+      },
+      "SourceCollectionCreateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "official_url": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "title": "Official Url",
+            "type": "string"
+          },
+          "purpose": {
+            "enum": [
+              "COMPANY_PROFILE",
+              "JOB_POSTING"
+            ],
+            "title": "Purpose",
+            "type": "string"
+          },
+          "source_type": {
+            "const": "OFFICIAL_URL",
+            "title": "Source Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_type",
+          "official_url",
+          "purpose"
+        ],
+        "title": "SourceCollectionCreateRequest",
+        "type": "object"
+      },
+      "SourceCollectionErrorResponse": {
+        "additionalProperties": false,
+        "description": "Named public error envelope for generated source-collection clients.",
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ApiErrorBody"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "title": "SourceCollectionErrorResponse",
+        "type": "object"
+      },
+      "SourceCollectionProgressResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "job_id": {
+            "format": "uuid",
+            "title": "Job Id",
+            "type": "string"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/JobProgressResponse"
+          },
+          "source_id": {
+            "format": "uuid",
+            "title": "Source Id",
+            "type": "string"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          },
+          "status": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "WAITING_USER",
+              "PAUSED_RATE_LIMIT",
+              "SUCCEEDED",
+              "FAILED_RETRYABLE",
+              "FAILED_FINAL",
+              "CANCEL_REQUESTED",
+              "CANCELLED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "source_id",
+          "status",
+          "stage",
+          "progress"
+        ],
+        "title": "SourceCollectionProgressResponse",
+        "type": "object"
+      },
       "UserMeResponse": {
         "additionalProperties": false,
         "properties": {
@@ -7581,6 +7717,379 @@
         "summary": "Create Question",
         "tags": [
           "project-questions"
+        ]
+      }
+    },
+    "/api/v1/application-projects/{project_id}/source-collections": {
+      "get": {
+        "operationId": "get_latest_source_collection_api_v1_application_projects__project_id__source_collections_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceCollectionProgressResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "인증 정보가 없거나 유효하지 않습니다."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청한 리소스를 찾을 수 없습니다."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "현재 상태 또는 멱등성 키가 요청과 충돌합니다."
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "If-Match version이 현재 리소스와 다릅니다."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청 값 또는 완료 조건이 유효하지 않습니다."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "현재 구성되지 않은 실행 정책이 필요합니다."
+          }
+        },
+        "summary": "Get Latest Source Collection",
+        "tags": [
+          "source-collections"
+        ]
+      },
+      "post": {
+        "operationId": "create_source_collection_api_v1_application_projects__project_id__source_collections_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceCollectionCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceCollectionAcceptanceResponse"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceCollectionErrorResponse"
+                }
+              }
+            },
+            "description": "지원하지 않거나 안전하지 않은 공식 URL입니다."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "인증 정보가 없거나 유효하지 않습니다."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청한 리소스를 찾을 수 없습니다."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "현재 상태 또는 멱등성 키가 요청과 충돌합니다."
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "If-Match version이 현재 리소스와 다릅니다."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청 값 또는 완료 조건이 유효하지 않습니다."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "현재 구성되지 않은 실행 정책이 필요합니다."
+          }
+        },
+        "summary": "Create Source Collection",
+        "tags": [
+          "source-collections"
+        ]
+      }
+    },
+    "/api/v1/application-projects/{project_id}/source-collections/{job_id}": {
+      "get": {
+        "operationId": "get_source_collection_progress_api_v1_application_projects__project_id__source_collections__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceCollectionProgressResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "인증 정보가 없거나 유효하지 않습니다."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청한 리소스를 찾을 수 없습니다."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "현재 상태 또는 멱등성 키가 요청과 충돌합니다."
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "If-Match version이 현재 리소스와 다릅니다."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청 값 또는 완료 조건이 유효하지 않습니다."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "현재 구성되지 않은 실행 정책이 필요합니다."
+          }
+        },
+        "summary": "Get Source Collection Progress",
+        "tags": [
+          "source-collections"
         ]
       }
     },

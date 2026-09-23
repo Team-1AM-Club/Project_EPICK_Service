@@ -277,7 +277,7 @@ def _source_is_active(
             JobSourceLink.owner_user_id == context.owner_user_id,
             JobSourceLink.source_id == context.source_id,
             JobSourceLink.analysis_input_version == context.analysis_input_version,
-        )
+        ).limit(1)
     ).mappings().one_or_none()
     source = session.execute(
         select(Source.id, Source.company_id).where(Source.id == context.source_id)
