@@ -1,0 +1,80 @@
+openapi: 3.1.0
+info:
+  title: EPICK collection-start API addition
+  version: 1.0.0
+paths:
+  /api/v1/application-projects/{project_id}/source-collections:
+    post:
+      summary: Start an owner-scoped collection for an official source URL
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 255
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SourceCollectionCreate'
+      responses:
+        '202':
+          description: Collection Job accepted or an idempotent replay returned
+          headers:
+            Location:
+              required: true
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SourceCollectionAcceptance'
+        '400':
+          description: Unsupported or invalid official URL
+        '401':
+          description: Authentication required
+        '404':
+          description: Project or verified Company not found for this owner
+        '409':
+          description: Idempotency conflict or stale project selection
+        '422':
+          description: URL and Company authority mismatch
+components:
+  schemas:
+    SourceCollectionCreate:
+      type: object
+      additionalProperties: false
+      required: [source_type, official_url, purpose]
+      properties:
+        source_type:
+          const: OFFICIAL_URL
+        official_url:
+          type: string
+          format: uri
+          maxLength: 2048
+        purpose:
+          enum: [COMPANY_PROFILE, JOB_POSTING]
+    SourceCollectionAcceptance:
+      type: object
+      additionalProperties: false
+      required: [job_id, source_id, status, replayed]
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        source_id:
+          type: string
+          format: uuid
+        status:
+          enum: [QUEUED, RUNNING, WAITING_USER, PAUSED_RATE_LIMIT]
+        replayed:
+          type: boolean

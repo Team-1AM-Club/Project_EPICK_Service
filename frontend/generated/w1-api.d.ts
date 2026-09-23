@@ -246,6 +246,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/application-projects/{project_id}/source-collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Latest Source Collection */
+        get: operations["get_latest_source_collection_api_v1_application_projects__project_id__source_collections_get"];
+        put?: never;
+        /** Create Source Collection */
+        post: operations["create_source_collection_api_v1_application_projects__project_id__source_collections_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/application-projects/{project_id}/source-collections/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Source Collection Progress */
+        get: operations["get_source_collection_progress_api_v1_application_projects__project_id__source_collections__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/application-projects/{project_id}/versions": {
         parameters: {
             query?: never;
@@ -2866,6 +2901,69 @@ export interface components {
              */
             severity: "WARNING";
         };
+        /** SourceCollectionAcceptanceResponse */
+        SourceCollectionAcceptanceResponse: {
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            /** Replayed */
+            replayed: boolean;
+            /**
+             * Source Id
+             * Format: uuid
+             */
+            source_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "QUEUED" | "RUNNING" | "WAITING_USER" | "PAUSED_RATE_LIMIT";
+        };
+        /** SourceCollectionCreateRequest */
+        SourceCollectionCreateRequest: {
+            /** Official Url */
+            official_url: string;
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "COMPANY_PROFILE" | "JOB_POSTING";
+            /**
+             * Source Type
+             * @constant
+             */
+            source_type: "OFFICIAL_URL";
+        };
+        /**
+         * SourceCollectionErrorResponse
+         * @description Named public error envelope for generated source-collection clients.
+         */
+        SourceCollectionErrorResponse: {
+            error: components["schemas"]["ApiErrorBody"];
+        };
+        /** SourceCollectionProgressResponse */
+        SourceCollectionProgressResponse: {
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            progress: components["schemas"]["JobProgressResponse"];
+            /**
+             * Source Id
+             * Format: uuid
+             */
+            source_id: string;
+            /** Stage */
+            stage: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "QUEUED" | "RUNNING" | "WAITING_USER" | "PAUSED_RATE_LIMIT" | "SUCCEEDED" | "FAILED_RETRYABLE" | "FAILED_FINAL" | "CANCEL_REQUESTED" | "CANCELLED";
+        };
         /** UserMeResponse */
         UserMeResponse: {
             /** Account Status */
@@ -4495,6 +4593,256 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QuestionResponse"];
+                };
+            };
+            /** @description 인증 정보가 없거나 유효하지 않습니다. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 요청한 리소스를 찾을 수 없습니다. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 현재 상태 또는 멱등성 키가 요청과 충돌합니다. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description If-Match version이 현재 리소스와 다릅니다. */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 요청 값 또는 완료 조건이 유효하지 않습니다. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 현재 구성되지 않은 실행 정책이 필요합니다. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    get_latest_source_collection_api_v1_application_projects__project_id__source_collections_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceCollectionProgressResponse"];
+                };
+            };
+            /** @description 인증 정보가 없거나 유효하지 않습니다. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 요청한 리소스를 찾을 수 없습니다. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 현재 상태 또는 멱등성 키가 요청과 충돌합니다. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description If-Match version이 현재 리소스와 다릅니다. */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 요청 값 또는 완료 조건이 유효하지 않습니다. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 현재 구성되지 않은 실행 정책이 필요합니다. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    create_source_collection_api_v1_application_projects__project_id__source_collections_post: {
+        parameters: {
+            query?: never;
+            header: {
+                authorization?: string | null;
+                "Idempotency-Key": string;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceCollectionCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceCollectionAcceptanceResponse"];
+                };
+            };
+            /** @description 지원하지 않거나 안전하지 않은 공식 URL입니다. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceCollectionErrorResponse"];
+                };
+            };
+            /** @description 인증 정보가 없거나 유효하지 않습니다. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 요청한 리소스를 찾을 수 없습니다. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 현재 상태 또는 멱등성 키가 요청과 충돌합니다. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description If-Match version이 현재 리소스와 다릅니다. */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 요청 값 또는 완료 조건이 유효하지 않습니다. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 현재 구성되지 않은 실행 정책이 필요합니다. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    get_source_collection_progress_api_v1_application_projects__project_id__source_collections__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                job_id: string;
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceCollectionProgressResponse"];
                 };
             };
             /** @description 인증 정보가 없거나 유효하지 않습니다. */

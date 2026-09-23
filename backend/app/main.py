@@ -13,8 +13,9 @@ from app.api.errors import ApiFieldError, ApiProblem, ResourceNotFoundError
 from app.api.middleware import correlation_id_middleware, get_correlation_id
 from app.api.schemas.common import ApiErrorBody, ApiErrorResponse, ErrorFieldResponse
 from app.api.v1.router import router as api_v1_router
-from app.core.config import settings
+from app.core.config import settings, validate_api_auth_settings
 from app.db.session import engine
+from app.runtime.integration_preflight import validate_integration_startup
 
 OPENAPI_TAGS = [
     {"name": "health", "description": "프로세스와 데이터베이스 준비 상태를 확인합니다."},
@@ -53,6 +54,8 @@ OPENAPI_TAGS = [
 def create_app() -> FastAPI:
     """Create an application instance without making health semantics depend on v1."""
 
+    validate_api_auth_settings(settings)
+    validate_integration_startup(settings)
     app = FastAPI(
         title="EPICK Service API",
         version="1.0.0",

@@ -73,6 +73,16 @@ class InvalidInputError(ApiProblem):
         )
 
 
+class UnsupportedSourceUrlError(ApiProblem):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=400,
+            code="INVALID_SOURCE_URL",
+            message_ko="지원하지 않는 공식 URL입니다.",
+            fields=(ApiFieldError(field="official_url", reason="UNSUPPORTED_URL"),),
+        )
+
+
 class IdempotencyConflictError(ApiProblem):
     def __init__(self) -> None:
         super().__init__(

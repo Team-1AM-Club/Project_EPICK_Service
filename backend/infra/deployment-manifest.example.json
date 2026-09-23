@@ -1,0 +1,81 @@
+{
+  "schema_version": "epick.deployment/1.0",
+  "release_id": "SET_RELEASE_ID",
+  "environment": "local-e2e",
+  "status": "DRAFT",
+  "policy_manifest_revision": "SET_APPROVED_POLICY_REVISION",
+  "components": [
+    {
+      "name": "frontend",
+      "repository": "frontend",
+      "source_sha": "SET_FULL_SOURCE_SHA",
+      "lock_hash": "SET_LOCKFILE_SHA256",
+      "contract_hashes": ["SET_CONTRACT_SHA256"],
+      "artifact": {"kind": "vercel-deployment", "immutable_id": "SET_DEPLOYMENT_ID"},
+      "entrypoints": ["SET_ENTRYPOINT"],
+      "health_probe": "SET_HEALTH_PROBE",
+      "rollback_artifact": "SET_IMMUTABLE_ROLLBACK_ID"
+    },
+    {
+      "name": "w1",
+      "repository": "w1-service",
+      "source_sha": "SET_FULL_SOURCE_SHA",
+      "lock_hash": "SET_LOCKFILE_SHA256",
+      "contract_hashes": ["SET_CONTRACT_SHA256"],
+      "migration_head": "SET_MIGRATION_HEAD",
+      "artifact": {"kind": "oci-image", "immutable_id": "SET_IMAGE_MANIFEST_DIGEST"},
+      "entrypoints": ["SET_ENTRYPOINT"],
+      "health_probe": "SET_HEALTH_PROBE",
+      "writable_state": [],
+      "identity_ref": "SET_IDENTITY_REFERENCE",
+      "config_revision": "SET_CONFIG_REVISION",
+      "rollback_artifact": "SET_IMMUTABLE_ROLLBACK_DIGEST"
+    },
+    {
+      "name": "w2",
+      "repository": "w2-engine",
+      "source_sha": "SET_FULL_SOURCE_SHA",
+      "lock_hash": "SET_LOCKFILE_SHA256",
+      "contract_hashes": ["SET_CONTRACT_SHA256"],
+      "migration_head": "SET_MIGRATION_HEAD",
+      "artifact": {"kind": "oci-image", "immutable_id": "SET_IMAGE_MANIFEST_DIGEST"},
+      "entrypoints": ["SET_ENTRYPOINT"],
+      "health_probe": "SET_HEALTH_PROBE",
+      "writable_state": [],
+      "identity_ref": "SET_IDENTITY_REFERENCE",
+      "config_revision": "SET_CONFIG_REVISION",
+      "rollback_artifact": "SET_IMMUTABLE_ROLLBACK_DIGEST"
+    },
+    {
+      "name": "w3",
+      "repository": "w3-service",
+      "source_sha": "SET_FULL_SOURCE_SHA",
+      "lock_hash": "SET_LOCKFILE_SHA256",
+      "contract_hashes": ["SET_CONTRACT_SHA256"],
+      "migration_head": null,
+      "artifact": {"kind": "oci-image", "immutable_id": "SET_IMAGE_MANIFEST_DIGEST"},
+      "entrypoints": ["SET_ENTRYPOINT"],
+      "health_probe": "SET_HEALTH_PROBE",
+      "writable_state": ["SET_LOCAL_VOLUME_NAME"],
+      "identity_ref": "SET_IDENTITY_REFERENCE",
+      "config_revision": "SET_CONFIG_REVISION",
+      "rollback_artifact": "SET_IMMUTABLE_ROLLBACK_DIGEST"
+    },
+    {
+      "name": "w4",
+      "repository": "w4-engine",
+      "source_sha": "SET_FULL_SOURCE_SHA",
+      "lock_hash": "SET_LOCKFILE_SHA256",
+      "contract_hashes": ["SET_CONTRACT_SHA256"],
+      "migration_head": null,
+      "artifact": {"kind": "oci-image", "immutable_id": "SET_IMAGE_MANIFEST_DIGEST"},
+      "entrypoints": ["SET_ENTRYPOINT"],
+      "health_probe": "SET_HEALTH_PROBE",
+      "writable_state": ["SET_LOCAL_VOLUME_NAME"],
+      "identity_ref": "SET_IDENTITY_REFERENCE",
+      "config_revision": "SET_CONFIG_REVISION",
+      "rollback_artifact": "SET_IMMUTABLE_ROLLBACK_DIGEST"
+    }
+  ],
+  "created_at": "SET_UTC_TIMESTAMP"
+}

@@ -2,12 +2,21 @@ import json
 from ipaddress import ip_address
 from urllib.parse import urlsplit
 
-from pydantic import SecretStr, field_validator, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     app_env: str = "local"
+    # End-to-end integration is opt-in. REAL remains closed until an approved,
+    # versioned policy manifest has a separately verified deployment path.
+    integration_enabled: bool = False
+    integration_real_data_enabled: bool = False
+    integration_policy_revision: str | None = None
+    integration_w2_private_origin: str | None = None
+    integration_w3_private_origin: str | None = None
+    integration_w4_private_origin: str | None = None
+    integration_contract_pins: dict[str, str] = Field(default_factory=dict)
     database_url: str = "postgresql+psycopg://epick:epick_2026_local@localhost:5432/epick_local"
     migration_database_url: str | None = None
     test_database_url: str = "postgresql+psycopg://epick:epick_2026_local@localhost:5432/epick_test"
@@ -305,32 +314,38 @@ class Settings(BaseSettings):
                 raise ValueError("Frontend origins must be explicit HTTP(S) origins")
             if origin.endswith("/"):
                 raise ValueError("Frontend origins must not have a trailing slash")
-        if self.app_env.lower() in {"staging", "production", "prod"}:
-            if not all(
-                (
-                    self.google_client_id,
-                    self.google_client_secret,
-                    self.epick_auth_signing_key,
-                    self.epick_refresh_token_pepper,
-                )
-            ):
-                raise ValueError("OIDC and EPICK auth secrets are required outside local/test")
-            auth_urls = (
-                self.google_oidc_redirect_uri,
-                self.epick_auth_issuer,
-                self.epick_frontend_url,
-                *self.epick_allowed_frontend_origins,
-            )
-            if any(not item.startswith("https://") for item in auth_urls):
-                raise ValueError("Authentication URLs must use HTTPS outside local/test")
-            if not self.epick_auth_cookie_secure:
-                raise ValueError("Authentication cookies must be Secure outside local/test")
         return self
 
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore",
     )
+
+
+def validate_api_auth_settings(api_settings: Settings) -> None:
+    """Reject an insecure staging/production API without constraining private workers."""
+
+    if api_settings.app_env.lower() not in {"staging", "production", "prod"}:
+        return
+    if not all(
+        (
+            api_settings.google_client_id,
+            api_settings.google_client_secret,
+            api_settings.epick_auth_signing_key,
+            api_settings.epick_refresh_token_pepper,
+        )
+    ):
+        raise ValueError("OIDC and EPICK auth secrets are required outside local/test")
+    auth_urls = (
+        api_settings.google_oidc_redirect_uri,
+        api_settings.epick_auth_issuer,
+        api_settings.epick_frontend_url,
+        *api_settings.epick_allowed_frontend_origins,
+    )
+    if any(not item.startswith("https://") for item in auth_urls):
+        raise ValueError("Authentication URLs must use HTTPS outside local/test")
+    if not api_settings.epick_auth_cookie_secure:
+        raise ValueError("Authentication cookies must be Secure outside local/test")
 
 
 settings = Settings()
