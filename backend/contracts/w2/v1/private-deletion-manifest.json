@@ -1,0 +1,11 @@
+{
+  "contract": "w2.private-deletion.v1",
+  "w2_repository": "Team-1AM-Club/Project_EPICK_Engine",
+  "w2_branch": "feat/crawler",
+  "w2_source_sha": "dbd698f801783ac6ad9d4840e49c841ec8f54c09",
+  "w2_migration_head": "0009_private_deletion_receipt",
+  "command_schema": "private-deletion.command.schema.json",
+  "command_schema_sha256": "0ae7362c461a69bd180cb6a66e76c79c93b91c142bf3873beb8621361b970cdf",
+  "ack_schema": "private-deletion.ack.schema.json",
+  "ack_schema_sha256": "49af3c209b5e2fb80f2ff49d7af3f485535a6c408d5571c125684589204a60fa"
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w2/private-deletion-ack.schema.json",
+  "title": "PrivateDeletionAcknowledgement",
+  "description": "W2-owned private acknowledgement for an authenticated W1 private deletion command.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "deletion_id", "owner_user_id", "deletion_epoch", "outcome"],
+  "properties": {
+    "schema_version": {"const": "w2.private-deletion-ack.v1", "type": "string"},
+    "deletion_id": {"type": "string", "format": "uuid", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"},
+    "owner_user_id": {"type": "string", "format": "uuid", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"},
+    "deletion_epoch": {"type": "integer", "minimum": 1, "maximum": 9223372036854775807},
+    "outcome": {"type": "string", "enum": ["APPLIED", "DUPLICATE", "STALE"]}
+  }
+}
