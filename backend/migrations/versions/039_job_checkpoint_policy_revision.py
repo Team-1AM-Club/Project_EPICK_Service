@@ -1,7 +1,7 @@
 """Preserve W2's effective policy revision on immutable Job checkpoints.
 
 Revision ID: 039_w2_checkpoint_revision
-Revises: 038_w3_retention_deleter_rls
+Revises: 034_w3_authority_currentness_rls
 Create Date: 2026-09-21
 """
 
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "039_w2_checkpoint_revision"
-down_revision = "038_w3_retention_deleter_rls"
+down_revision = "034_w3_authority_currentness_rls"
 branch_labels = None
 depends_on = None
 
