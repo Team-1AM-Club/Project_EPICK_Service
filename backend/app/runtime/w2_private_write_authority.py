@@ -60,6 +60,20 @@ class PrivateWriteAuthorityResponse(PrivateWriteAuthorityRequest):
     authority_ref: str
 
 
+class TerminalCleanupAuthorityRequest(PrivateWriteAuthorityRequest):
+    """Authorize disposal of existing W2 private state, never a new write or send."""
+
+    schema_version: Literal["w1.private.w2-terminal-cleanup.v1"]
+    cleanup_kind: Literal["RESERVATION_RELEASE", "CLAIM_RELEASE", "STAGED_OUTBOX"]
+
+
+class TerminalCleanupAuthorityResponse(TerminalCleanupAuthorityRequest):
+    authority_ref: str
+    allowed_effect: Literal["OWNER_LOCKED_PRIVATE_CLEANUP_ONLY"] = (
+        "OWNER_LOCKED_PRIVATE_CLEANUP_ONLY"
+    )
+
+
 class GateAuthorityRequest(PrivateWriteAuthorityRequest):
     """Fresh decision for one W1-issued commit-gate action or its ACK delivery."""
 
@@ -358,5 +372,107 @@ def decide_private_write_authority(
         authority_ref=(
             f"w1:command:{request.command_id}:fence:{request.execution_fence}"
             f":epoch:{request.owner_deletion_epoch}"
+        ),
+    )
+
+
+def decide_terminal_cleanup_authority(
+    *, session: Session, request: TerminalCleanupAuthorityRequest
+) -> TerminalCleanupAuthorityResponse:
+    """Permit only bound cleanup after W1 has made the original write stale.
+
+    W2 must still match its local owner-locked row and may only release/tombstone it.
+    This decision cannot be used to stage content, apply a gate, or send SQS.
+    """
+    command = (
+        session.execute(
+            select(
+                JobCommand.id,
+                JobCommand.job_id,
+                JobCommand.owner_user_id,
+                JobCommand.command_type,
+                JobCommand.execution_fence,
+                JobCommand.owner_deletion_epoch,
+                JobCommand.status,
+            ).where(JobCommand.id == request.command_id)
+        )
+        .mappings()
+        .one_or_none()
+    )
+    if command is None or command["owner_user_id"] != request.owner_user_id:
+        raise PrivateWriteAuthorityDenied("terminal cleanup command is not bound")
+    set_local_owner_context(session, command["owner_user_id"])
+    job = (
+        session.execute(
+            select(
+                Job.id,
+                Job.owner_user_id,
+                Job.project_id,
+                Job.status,
+                Job.execution_fence,
+                Job.owner_deletion_epoch,
+            ).where(Job.id == command["job_id"])
+        )
+        .mappings()
+        .one_or_none()
+    )
+    owner = (
+        session.execute(
+            select(User.id, User.deletion_epoch, User.account_status).where(
+                User.id == command["owner_user_id"]
+            )
+        )
+        .mappings()
+        .one_or_none()
+    )
+    if (
+        job is None
+        or owner is None
+        or command["job_id"] != request.job_id
+        or command["command_type"] not in _W2_COMMAND_TYPES
+        or command["execution_fence"] != request.execution_fence
+        or command["owner_deletion_epoch"] != request.owner_deletion_epoch
+        or job["owner_user_id"] != request.owner_user_id
+        or owner["deletion_epoch"] < request.owner_deletion_epoch
+    ):
+        raise PrivateWriteAuthorityDenied("terminal cleanup binding is not exact")
+    project_archived = False
+    if job["project_id"] is None:
+        if request.scope != {"type": "ACCOUNT"}:
+            raise PrivateWriteAuthorityDenied("terminal cleanup scope does not match")
+    else:
+        project = (
+            session.execute(
+                select(
+                    ApplicationProject.id,
+                    ApplicationProject.owner_user_id,
+                    ApplicationProject.status,
+                ).where(ApplicationProject.id == job["project_id"])
+            )
+            .mappings()
+            .one_or_none()
+        )
+        if (
+            project is None
+            or project["owner_user_id"] != request.owner_user_id
+            or request.scope != {"type": "PROJECT", "project_id": str(job["project_id"])}
+        ):
+            raise PrivateWriteAuthorityDenied("terminal cleanup project is not bound")
+        project_archived = project["status"] == "ARCHIVED"
+    if not (
+        command["status"] in _DISALLOWED_COMMAND_STATUSES
+        or job["status"] in _DISALLOWED_JOB_STATUSES
+        or job["execution_fence"] != request.execution_fence
+        or job["owner_deletion_epoch"] != request.owner_deletion_epoch
+        or owner["account_status"] != "ACTIVE"
+        or owner["deletion_epoch"] != request.owner_deletion_epoch
+        or project_archived
+    ):
+        raise PrivateWriteAuthorityDenied("active W2 writes cannot use terminal cleanup")
+    return TerminalCleanupAuthorityResponse(
+        **request.model_dump(),
+        authority_ref=(
+            f"w1:terminal-cleanup:{request.command_id}:fence:{request.execution_fence}"
+            f":epoch:{request.owner_deletion_epoch}:kind:{request.cleanup_kind}"
         ),
     )

@@ -150,9 +150,21 @@ def test_worker_and_lookup_roles_receive_only_their_operational_rls_access(
             with pytest.raises(DBAPIError):
                 with connection.begin_nested():
                     connection.execute(text("SELECT id FROM outbox_messages"))
+            assert connection.scalar(
+                text("SELECT id FROM w2_commit_operations WHERE id = :operation_id"),
+                {"operation_id": operation_id},
+            ) is None
+            connection.execute(
+                text("SELECT set_config('app.current_user_id', :owner_id, true)"),
+                {"owner_id": str(owner_id)},
+            )
+            assert connection.scalar(
+                text("SELECT id FROM w2_commit_operations WHERE id = :operation_id"),
+                {"operation_id": operation_id},
+            ) == operation_id
             with pytest.raises(DBAPIError):
                 with connection.begin_nested():
-                    connection.execute(text("SELECT id FROM w2_commit_operations"))
+                    connection.execute(text("SELECT created_at FROM w2_commit_operations"))
 
     with migrated_engine.connect() as connection:
         with connection.begin():

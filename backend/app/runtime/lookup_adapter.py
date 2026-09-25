@@ -32,8 +32,11 @@ from app.runtime.w2_private_write_authority import (
     PrivateWriteAuthorityDenied,
     PrivateWriteAuthorityRequest,
     PrivateWriteAuthorityResponse,
+    TerminalCleanupAuthorityRequest,
+    TerminalCleanupAuthorityResponse,
     decide_gate_authority,
     decide_private_write_authority,
+    decide_terminal_cleanup_authority,
 )
 
 _W2_SERVICE_PRINCIPAL = "w2"
@@ -174,6 +177,24 @@ def create_lookup_app(
         except PrivateWriteAuthorityDenied as error:
             raise _LookupAuthorizationError(
                 status_code=403, code="PRIVATE_WRITE_AUTHORITY_DENIED"
+            ) from error
+        except SQLAlchemyError:
+            return _private_error(code="INTERNAL_RETRYABLE", retryable=True, status_code=503)
+
+    @app.post(
+        "/internal/v1/w2-private/terminal-cleanup-authority",
+        response_model=TerminalCleanupAuthorityResponse,
+        dependencies=[Depends(require_w2_service_principal)],
+    )
+    def authorize_w2_terminal_cleanup(
+        body: TerminalCleanupAuthorityRequest,
+    ) -> TerminalCleanupAuthorityResponse | JSONResponse:
+        try:
+            with session_factory.begin() as session:
+                return decide_terminal_cleanup_authority(session=session, request=body)
+        except PrivateWriteAuthorityDenied as error:
+            raise _LookupAuthorizationError(
+                status_code=403, code="PRIVATE_TERMINAL_CLEANUP_DENIED"
             ) from error
         except SQLAlchemyError:
             return _private_error(code="INTERNAL_RETRYABLE", retryable=True, status_code=503)

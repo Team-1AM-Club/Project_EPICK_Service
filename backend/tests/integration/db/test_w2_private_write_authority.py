@@ -2,16 +2,18 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from pathlib import Path
+from unittest.mock import Mock
 from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine, event, text
+from sqlalchemy.exc import DBAPIError, SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.models.application_workspace import ApplicationProject
 from app.models.identity import User
-from app.models.jobs import OutboxMessage
+from app.models.jobs import Job, OutboxMessage
 from app.models.w2_commit_operations import W2CommitOperation
 from app.runtime.lookup_adapter import create_lookup_app
 from app.services.deletion import DeletionOrchestrationService
@@ -245,6 +247,221 @@ def test_w2_private_write_authority_is_current_only_across_deletion_order(
         session.commit()
 
     assert lookup_client.post(url, json=body, headers=headers).status_code == 403
+
+
+@pytest.mark.parametrize("account", [False, True])
+def test_w2_terminal_cleanup_is_bound_and_never_authorizes_active_writes(
+    migrated_engine: Engine,
+    lookup_client: TestClient,
+    account: bool,
+) -> None:
+    with Session(migrated_engine) as session:
+        owner = User(display_name="Terminal owner", locale="ko-KR", timezone="Asia/Seoul")
+        session.add(owner)
+        session.flush()
+        project = None if account else ApplicationProject(owner_user_id=owner.id)
+        if project is not None:
+            session.add(project)
+            session.flush()
+        accepted = JobService(session).accept_job(
+            owner_user_id=owner.id,
+            project_id=project.id if project is not None else None,
+            job_type="SOURCE_COLLECTION",
+            idempotency_key="terminal-cleanup",
+            request_hash="e" * 64,
+        )
+        assert accepted.command is not None
+        accepted.command.command_type = "W2_SOURCE_COLLECTION"
+        body = {
+            "schema_version": "w1.private.w2-terminal-cleanup.v1",
+            "owner_user_id": str(owner.id),
+            "owner_deletion_epoch": 0,
+            "command_id": str(accepted.command.id),
+            "job_id": str(accepted.job.id),
+            "execution_fence": 1,
+            "scope": {"type": "ACCOUNT"}
+            if account
+            else {"type": "PROJECT", "project_id": str(project.id)},
+            "cleanup_kind": "STAGED_OUTBOX",
+        }
+        owner_id = owner.id
+        project_id = project.id if project is not None else None
+        session.commit()
+
+    url = "/internal/v1/w2-private/terminal-cleanup-authority"
+    headers = {
+        "Authorization": "Bearer test-w2-bearer",
+        "X-EPICK-Service-Principal": "w2",
+    }
+    assert lookup_client.post(url, json=body).status_code == 401
+    assert lookup_client.post(url, json=body, headers=headers).status_code == 403
+    with Session(migrated_engine) as session:
+        deletion = DeletionOrchestrationService(session)
+        if account:
+            preview = deletion.create_account_deletion_preview(
+                owner_user_id=owner_id, preview_token="terminal-account-preview"
+            )
+            deletion.confirm_and_start_account_deletion(
+                owner_user_id=owner_id,
+                deletion_request_id=preview.request.id,
+                preview_token=preview.preview_token,
+            )
+        else:
+            assert project_id is not None
+            preview = deletion.create_project_deletion_preview(
+                owner_user_id=owner_id,
+                project_id=project_id,
+                preview_token="terminal-project-preview",
+            )
+            deletion.confirm_and_start_project_deletion(
+                owner_user_id=owner_id,
+                deletion_request_id=preview.request.id,
+                preview_token=preview.preview_token,
+            )
+        session.commit()
+
+    active_body = {**body, "schema_version": "w1.private.w2-write-authority.v1"}
+    active_body.pop("cleanup_kind")
+    assert (
+        lookup_client.post(
+            "/internal/v1/w2-private/authority", json=active_body, headers=headers
+        ).status_code
+        == 403
+    )
+    response = lookup_client.post(url, json=body, headers=headers)
+    assert response.status_code == 200
+    assert response.json()["authority_ref"].startswith("w1:terminal-cleanup:")
+    for change in (
+        {"owner_user_id": str(uuid4())},
+        {"command_id": str(uuid4())},
+        {"job_id": str(uuid4())},
+        {"execution_fence": 2},
+        {"owner_deletion_epoch": 1},
+        {
+            "scope": {"type": "ACCOUNT"}
+            if not account
+            else {"type": "PROJECT", "project_id": str(uuid4())}
+        },
+    ):
+        assert lookup_client.post(url, json={**body, **change}, headers=headers).status_code == 403
+
+
+def test_w2_command_binding_cannot_be_hard_deleted_after_outbox_removal(
+    migrated_engine: Engine,
+) -> None:
+    with Session(migrated_engine) as session:
+        owner = User(display_name="Retained owner", locale="ko-KR", timezone="Asia/Seoul")
+        session.add(owner)
+        session.flush()
+        accepted = JobService(session).accept_job(
+            owner_user_id=owner.id,
+            job_type="SOURCE_COLLECTION",
+            idempotency_key="retained-w2-binding",
+            request_hash="f" * 64,
+        )
+        assert accepted.command is not None
+        accepted.command.command_type = "W2_SOURCE_COLLECTION"
+        command_id = accepted.command.id
+        session.commit()
+    with migrated_engine.begin() as connection:
+        connection.execute(
+            text("DELETE FROM outbox_messages WHERE command_id = :command_id"),
+            {"command_id": command_id},
+        )
+    with pytest.raises(DBAPIError, match="w2_command_binding_retained"):
+        with migrated_engine.begin() as connection:
+            connection.execute(
+                text("DELETE FROM job_commands WHERE id = :command_id"),
+                {"command_id": command_id},
+            )
+    with pytest.raises(DBAPIError, match="w2_command_binding_retained"):
+        with migrated_engine.begin() as connection:
+            connection.execute(
+                text("UPDATE job_commands SET execution_fence = 2 WHERE id = :command_id"),
+                {"command_id": command_id},
+            )
+
+
+@pytest.mark.parametrize("terminal_status", ["CANCEL_REQUESTED", "CANCELLED", "FAILED_FINAL"])
+def test_w2_terminal_cleanup_requires_terminal_job_state(
+    migrated_engine: Engine,
+    lookup_client: TestClient,
+    terminal_status: str,
+) -> None:
+    with Session(migrated_engine) as session:
+        owner = User(display_name="Terminal job", locale="ko-KR", timezone="Asia/Seoul")
+        session.add(owner)
+        session.flush()
+        accepted = JobService(session).accept_job(
+            owner_user_id=owner.id,
+            job_type="SOURCE_COLLECTION",
+            idempotency_key="terminal-job-state",
+            request_hash="7" * 64,
+        )
+        assert accepted.command is not None
+        accepted.command.command_type = "W2_DIRECT_SOURCE_REGISTRATION"
+        body = {
+            "schema_version": "w1.private.w2-terminal-cleanup.v1",
+            "owner_user_id": str(owner.id),
+            "owner_deletion_epoch": 0,
+            "command_id": str(accepted.command.id),
+            "job_id": str(accepted.job.id),
+            "execution_fence": 1,
+            "scope": {"type": "ACCOUNT"},
+            "cleanup_kind": "CLAIM_RELEASE",
+        }
+        job_id = accepted.job.id
+        session.commit()
+    url = "/internal/v1/w2-private/terminal-cleanup-authority"
+    headers = {
+        "Authorization": "Bearer test-w2-bearer",
+        "X-EPICK-Service-Principal": "w2",
+    }
+    assert lookup_client.post(url, json=body, headers=headers).status_code == 403
+    with Session(migrated_engine) as session:
+        job = session.get(Job, job_id)
+        assert job is not None
+        job.status = "FAILED_RETRYABLE"
+        session.commit()
+    assert lookup_client.post(url, json=body, headers=headers).status_code == 403
+    with Session(migrated_engine) as session:
+        job = session.get(Job, job_id)
+        assert job is not None
+        job.status = terminal_status
+        session.commit()
+    assert lookup_client.post(url, json=body, headers=headers).status_code == 200
+
+
+def test_w2_terminal_cleanup_database_failure_is_retryable_without_leaking_binding() -> None:
+    session_factory = Mock()
+    session_factory.begin.side_effect = SQLAlchemyError("sensitive database failure")
+    client = TestClient(
+        create_lookup_app(
+            session_factory=session_factory,
+            expected_bearer_token="test-w2-bearer",
+        )
+    )
+    response = client.post(
+        "/internal/v1/w2-private/terminal-cleanup-authority",
+        json={
+            "schema_version": "w1.private.w2-terminal-cleanup.v1",
+            "owner_user_id": str(uuid4()),
+            "owner_deletion_epoch": 0,
+            "command_id": str(uuid4()),
+            "job_id": str(uuid4()),
+            "execution_fence": 1,
+            "scope": {"type": "ACCOUNT"},
+            "cleanup_kind": "STAGED_OUTBOX",
+        },
+        headers={
+            "Authorization": "Bearer test-w2-bearer",
+            "X-EPICK-Service-Principal": "w2",
+        },
+    )
+    assert response.status_code == 503
+    assert response.json()["code"] == "INTERNAL_RETRYABLE"
+    assert response.json()["retryable"] is True
+    assert "sensitive" not in response.text
 
 
 @pytest.mark.parametrize(

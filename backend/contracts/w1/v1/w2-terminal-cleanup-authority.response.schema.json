@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w1/v1/w2-terminal-cleanup-authority.response.schema.json",
+  "title": "W1 decision response for W2 terminal private cleanup",
+  "description": "Only allows W2 to release or tombstone its own existing owner-bound private row while holding its owner lock. Not an authorization to send SQS or create new private state.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "owner_user_id", "owner_deletion_epoch", "command_id", "job_id", "execution_fence", "scope", "cleanup_kind", "authority_ref", "allowed_effect"],
+  "properties": {
+    "schema_version": { "const": "w1.private.w2-terminal-cleanup.v1" },
+    "owner_user_id": { "type": "string", "format": "uuid" },
+    "owner_deletion_epoch": { "type": "integer", "minimum": 0, "maximum": 9223372036854775807 },
+    "command_id": { "type": "string", "format": "uuid" },
+    "job_id": { "type": "string", "format": "uuid" },
+    "execution_fence": { "type": "integer", "minimum": 1, "maximum": 9223372036854775807 },
+    "scope": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["type"], "properties": { "type": { "const": "ACCOUNT" } } },
+        { "type": "object", "additionalProperties": false, "required": ["type", "project_id"], "properties": { "type": { "const": "PROJECT" }, "project_id": { "type": "string", "format": "uuid" } } }
+      ]
+    },
+    "cleanup_kind": { "enum": ["RESERVATION_RELEASE", "CLAIM_RELEASE", "STAGED_OUTBOX"] },
+    "authority_ref": { "type": "string", "pattern": "^w1:terminal-cleanup:[0-9a-f-]+:fence:[1-9][0-9]*:epoch:[0-9]+:kind:(RESERVATION_RELEASE|CLAIM_RELEASE|STAGED_OUTBOX)$" },
+    "allowed_effect": { "const": "OWNER_LOCKED_PRIVATE_CLEANUP_ONLY" }
+  }
+}
