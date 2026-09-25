@@ -1,4 +1,7 @@
+import json
 from pathlib import Path
+
+from jsonschema import Draft202012Validator
 
 
 ROOT = Path(__file__).parents[2]
@@ -36,9 +39,7 @@ def test_c01_compose_keeps_code_immutable_state_durable_and_network_private():
 
 
 def test_phase4_runbook_covers_each_required_operator_path_without_secret_values():
-    value = (ROOT / "docs" / "w3-c01-phase4-runbook-2026-09-25.md").read_text(
-        encoding="utf-8"
-    )
+    value = (ROOT / "docs" / "w3-c01-phase4-runbook-2026-09-25.md").read_text(encoding="utf-8")
     for required in (
         "GET /health",
         "GET /c01/v1/status/{source_id}",
@@ -53,3 +54,24 @@ def test_phase4_runbook_covers_each_required_operator_path_without_secret_values
     ):
         assert required in value
     assert "actual-token" not in value
+
+
+def test_t058_count_evidence_example_is_schema_valid_and_anonymous():
+    schema_path = ROOT / "contracts" / "c01" / "v0.2-candidate" / "t058-count-evidence.schema.json"
+    example_path = schema_path.parent / "examples" / "t058-count-evidence.json"
+
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    example = json.loads(example_path.read_text(encoding="utf-8"))
+    Draft202012Validator.check_schema(schema)
+    Draft202012Validator(schema).validate(example)
+
+    serialized = json.dumps(example, sort_keys=True).lower()
+    for prohibited in (
+        "source_id",
+        "version_id",
+        "owner",
+        "bearer",
+        "raw_body",
+        "database_url",
+    ):
+        assert prohibited not in serialized
