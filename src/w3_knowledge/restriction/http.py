@@ -19,7 +19,15 @@ from .store import Store
 MAX_BODY = 2_000_000
 
 
-def make_server(store, tokens, *, port=8763, contracts=legacy_contracts, prefix="/v1"):
+def make_server(
+    store,
+    tokens,
+    *,
+    port=8763,
+    host="127.0.0.1",
+    contracts=legacy_contracts,
+    prefix="/v1",
+):
     if (
         set(tokens) != {"w2", "operator", "w4"}
         or any(not token for token in tokens.values())
@@ -155,7 +163,7 @@ def make_server(store, tokens, *, port=8763, contracts=legacy_contracts, prefix=
             except sqlite3.Error:
                 self.reply(503, {"error": "STORAGE_UNAVAILABLE", "index_ack": False})
 
-    return HTTPServer(("127.0.0.1", port), Handler)
+    return HTTPServer((host, port), Handler)
 
 
 def main(argv=None):

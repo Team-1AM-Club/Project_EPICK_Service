@@ -21,13 +21,21 @@ def load_source_authority(spec):
     return authority
 
 
-def make_server(store, tokens, *, port=8764):
-    return shared_server(store, tokens, port=port, contracts=contracts, prefix="/c01/v1")
+def make_server(store, tokens, *, port=8764, host="127.0.0.1"):
+    return shared_server(
+        store,
+        tokens,
+        port=port,
+        host=host,
+        contracts=contracts,
+        prefix="/c01/v1",
+    )
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="W2 C01 / W3 integration candidate")
     parser.add_argument("--db", required=True)
+    parser.add_argument("--host", default="127.0.0.1", choices=["127.0.0.1", "0.0.0.0"])
     parser.add_argument("--port", type=int, default=8764)
     parser.add_argument("--restriction-scope", required=True, choices=["version"])
     parser.add_argument("--max-ttl-seconds", required=True, type=int)
@@ -43,11 +51,11 @@ def main(argv=None):
             max_ttl_seconds=args.max_ttl_seconds,
             source_authority=load_source_authority(args.source_authority),
         ) as store:
-            server = make_server(store, tokens, port=args.port)
+            server = make_server(store, tokens, port=args.port, host=args.host)
             print(
                 json.dumps(
                     {
-                        "url": f"http://127.0.0.1:{server.server_port}",
+                        "url": f"http://{args.host}:{server.server_port}",
                         "schema_version": contracts.VERSION,
                         "adoption": "PENDING",
                     }
