@@ -277,6 +277,27 @@ GRANT SELECT (
 ON TABLE job_commands
 TO epick_lookup;
 
+GRANT SELECT (
+    id,
+    command_id,
+    job_id,
+    owner_user_id,
+    execution_fence,
+    owner_deletion_epoch,
+    purge_owner_deletion_epoch,
+    result_digest,
+    operation_revision,
+    state
+)
+ON TABLE w2_commit_operations
+TO epick_lookup;
+
+-- Only a boolean proof of an exact W1-issued gate wire is exposed. The lookup
+-- login never receives SELECT on private outbox payloads.
+GRANT EXECUTE ON FUNCTION public.w2_gate_outbox_was_issued(
+    uuid, bigint, text, uuid, uuid, uuid, bigint, bigint, text, bigint
+) TO epick_lookup;
+
 -- QUESTION_MATCHING decisions deliberately retain a null company pin.  The lookup adapter may
 -- resolve the W2 company only through these current, owner-scoped relation columns.  This is not
 -- a general table grant: no prompt, URL, content, mutation, or unrelated projection is exposed.

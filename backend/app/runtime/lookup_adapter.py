@@ -27,9 +27,12 @@ from app.runtime.question_core_binding import (
     resolve_question_collection_company_for_lookup,
 )
 from app.runtime.w2_private_write_authority import (
+    GateAuthorityRequest,
+    GateAuthorityResponse,
     PrivateWriteAuthorityDenied,
     PrivateWriteAuthorityRequest,
     PrivateWriteAuthorityResponse,
+    decide_gate_authority,
     decide_private_write_authority,
 )
 
@@ -175,6 +178,24 @@ def create_lookup_app(
         except SQLAlchemyError:
             return _private_error(code="INTERNAL_RETRYABLE", retryable=True, status_code=503)
 
+    @app.post(
+        "/internal/v1/w2-private/gate-authority",
+        response_model=GateAuthorityResponse,
+        dependencies=[Depends(require_w2_service_principal)],
+    )
+    def authorize_w2_gate_action(
+        body: GateAuthorityRequest,
+    ) -> GateAuthorityResponse | JSONResponse:
+        try:
+            with session_factory.begin() as session:
+                return decide_gate_authority(session=session, request=body)
+        except PrivateWriteAuthorityDenied as error:
+            raise _LookupAuthorizationError(
+                status_code=403, code="PRIVATE_GATE_AUTHORITY_DENIED"
+            ) from error
+        except SQLAlchemyError:
+            return _private_error(code="INTERNAL_RETRYABLE", retryable=True, status_code=503)
+
     return app
 
 
@@ -182,19 +203,23 @@ def _lookup_command(*, session: Session, request: LookupRequest) -> LookupRespon
     # The lookup login intentionally has column-level grants only.  Do not replace these
     # projections with `select(JobCommand)` or `select(Job)`: that would silently require more
     # privileges than `runtime_privileges.sql` grants in staging.
-    command = session.execute(
-        select(
-            JobCommand.id,
-            JobCommand.job_id,
-            JobCommand.owner_user_id,
-            JobCommand.command_type,
-            JobCommand.execution_fence,
-            JobCommand.owner_deletion_epoch,
-            JobCommand.analysis_source_decision_id,
-            JobCommand.payload,
-            JobCommand.status,
-        ).where(JobCommand.id == request.command_id)
-    ).mappings().one_or_none()
+    command = (
+        session.execute(
+            select(
+                JobCommand.id,
+                JobCommand.job_id,
+                JobCommand.owner_user_id,
+                JobCommand.command_type,
+                JobCommand.execution_fence,
+                JobCommand.owner_deletion_epoch,
+                JobCommand.analysis_source_decision_id,
+                JobCommand.payload,
+                JobCommand.status,
+            ).where(JobCommand.id == request.command_id)
+        )
+        .mappings()
+        .one_or_none()
+    )
     if command is None:
         return _semantic_response(
             request=request,
@@ -205,23 +230,31 @@ def _lookup_command(*, session: Session, request: LookupRequest) -> LookupRespon
     # Only after resolving it do we set the transaction-local RLS scope used for its owner-bound
     # Job, binding, Question and Source projections.  No caller-controlled owner value is used.
     set_local_owner_context(session, command["owner_user_id"])
-    job = session.execute(
-        select(
-            Job.id,
-            Job.owner_user_id,
-            Job.status,
-            Job.execution_fence,
-            Job.owner_deletion_epoch,
-            Job.project_id,
-            Job.analysis_input_version,
-            Job.active_lease_id,
-        ).where(Job.id == command["job_id"])
-    ).mappings().one_or_none()
-    owner = session.execute(
-        select(User.id, User.deletion_epoch, User.account_status).where(
-            User.id == command["owner_user_id"]
+    job = (
+        session.execute(
+            select(
+                Job.id,
+                Job.owner_user_id,
+                Job.status,
+                Job.execution_fence,
+                Job.owner_deletion_epoch,
+                Job.project_id,
+                Job.analysis_input_version,
+                Job.active_lease_id,
+            ).where(Job.id == command["job_id"])
         )
-    ).mappings().one_or_none()
+        .mappings()
+        .one_or_none()
+    )
+    owner = (
+        session.execute(
+            select(User.id, User.deletion_epoch, User.account_status).where(
+                User.id == command["owner_user_id"]
+            )
+        )
+        .mappings()
+        .one_or_none()
+    )
     if request.execution_fence != command["execution_fence"]:
         return _semantic_response(
             request=request,
@@ -319,9 +352,7 @@ def _lookup_command(*, session: Session, request: LookupRequest) -> LookupRespon
     )
 
 
-def _semantic_response(
-    *, request: LookupRequest, status: str, reason_code: str
-) -> LookupResponse:
+def _semantic_response(*, request: LookupRequest, status: str, reason_code: str) -> LookupResponse:
     return LookupResponse(
         command_id=request.command_id,
         status=status,  # type: ignore[arg-type]
