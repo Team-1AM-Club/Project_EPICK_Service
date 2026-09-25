@@ -4,7 +4,7 @@
 
 W3 owner 브랜치 `feat/w3-knowledge-validation`에 Phase 4 C-01 구현·테스트·운영 패키징을 채택했다.
 
-- W3 artifact full SHA: `87ac87f95c9f4f90ec95d94f1f92f9ca7e430b3c`
+- W3 artifact full SHA: `b94986b6a5d191446a474d2d6193fcd04a6d4542`
 - W1 요청 기준 SHA: `b68c45afafa8b5dc99757388eb47940b4852cae6`
 - W3 상태: `W3_OWNER_READY_JOINT_RUN_PENDING`
 - T058 상태: `NOT_RUN`
@@ -19,7 +19,7 @@ W3 owner 브랜치 `feat/w3-knowledge-validation`에 Phase 4 C-01 구현·테스
 | T054 | `deploy/Dockerfile`, `.dockerignore` | `uv.lock` 고정 설치, non-root `w3` UID/GID 10001, read-only 배포 전제, `/health` 점검 |
 | T055 | `deploy/c01.compose.yml` | durable SQLite volume, W2/operator/W4 분리 token, internal network, TTL·Authority timeout·CA 설정, 제한된 restart |
 | 운영 | `src/w3_knowledge/c01/operator.py` | SQLite online backup, 무결성·schema 확인 restore, 기존 파일 덮어쓰기 거부 |
-| HTTP | `src/w3_knowledge/c01/http.py`, `src/w3_knowledge/restriction/http.py` | 명시적 `127.0.0.1`/`0.0.0.0` bind; 기본값은 loopback 유지 |
+| HTTP | `src/w3_knowledge/c01/http.py`, `src/w3_knowledge/restriction/http.py` | 명시적 `127.0.0.1`/`0.0.0.0` bind, 기본 loopback 유지, 권한 거부 POST의 안정적 응답 |
 | 운영 회귀 | `tests/integration/test_c01_operability.py` | 컨테이너 bind, READY 상태 backup/restore, 잘못된 DB·덮어쓰기 거부 |
 | 배포 회귀 | `tests/integration/test_c01_deploy_artifacts.py` | Docker/Compose/runbook 및 T058 익명 증거 schema 검증 |
 | runbook | `docs/w3-c01-phase4-runbook-2026-09-25.md` | health/inspect/replay/snapshot/re-index/expire/backup/restore 절차 |

@@ -64,7 +64,7 @@
   },
   "phase4_t058": {
     "status": "W3_OWNER_READY_JOINT_RUN_PENDING",
-    "w3_artifact_sha": "87ac87f95c9f4f90ec95d94f1f92f9ca7e430b3c",
+    "w3_artifact_sha": "b94986b6a5d191446a474d2d6193fcd04a6d4542",
     "runtime": "W3 C-01 source-authority failure handling, restriction clear/re-index, replacement, duplicate/gap/conflict/replay/snapshot and durable restart are locally verified",
     "deployment": "deploy/Dockerfile and deploy/c01.compose.yml build/config validation passed; actual W1 private topology has not run",
     "count_evidence_schema": "contracts/c01/v0.2-candidate/t058-count-evidence.schema.json",
