@@ -52,6 +52,17 @@ def make_server(
             self.end_headers()
             self.wfile.write(data)
 
+        def discard_small_request_body(self):
+            """Avoid a TCP reset when rejecting a small POST before parsing its body."""
+            if self.command != "POST" or self.headers.get("Transfer-Encoding"):
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                return
+            if 0 < length <= MAX_BODY:
+                self.rfile.read(length)
+
         def authorized(self, roles):
             authorization = self.headers.get("Authorization", "")
             role = next(
@@ -63,6 +74,7 @@ def make_server(
                 None,
             )
             if role not in roles:
+                self.discard_small_request_body()
                 self.reply(
                     401 if role is None else 403,
                     {"error": "UNAUTHORIZED" if role is None else "FORBIDDEN"},
