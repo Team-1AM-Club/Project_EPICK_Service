@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -8,7 +9,7 @@ from sqlalchemy import Engine, select, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
-from app.models.application_workspace import Company
+from app.models.application_workspace import ApplicationProject, Company
 from app.models.deletion import DeletionTarget
 from app.models.experience import Episode
 from app.models.identity import User
@@ -17,6 +18,7 @@ from app.models.privacy_controls import AnalyticsEvent, SensitivityFinding
 from app.models.sources import Source
 from app.models.w2_commit_operations import W2CommitOperation
 from app.services.deletion import (
+    DeletionConflictError,
     DeletionOrchestrationService,
     StaleDeletionAcknowledgementError,
 )
@@ -192,19 +194,39 @@ def test_deletion_requires_all_current_store_acks_and_fences_active_jobs(
         "CACHE",
         "CHECKPOINT",
         "W3_CORE_RUNTIME",
+        "W2_SOURCE_RUNTIME",
     }
-    assert len(targets) == 6
+    assert len(targets) == 7
     messages = list(
         db_session.scalars(
             select(OutboxMessage).where(OutboxMessage.deletion_request_id == request.id)
         )
     )
-    assert len(messages) == 6
+    assert len(messages) == 7
     assert all(message.visibility_scope == "PRIVATE" for message in messages)
-    assert {message.payload["target_type"] for message in messages} == {
-        target.store_type for target in targets
+    legacy_messages = [
+        message
+        for message in messages
+        if message.message_type != "w1.private.w2.deletion-command.v2"
+    ]
+    assert {message.payload["target_type"] for message in legacy_messages} == {
+        target.store_type for target in targets if target.store_type != "W2_SOURCE_RUNTIME"
     }
-    assert all(UUID(message.payload["command_id"]) == message.id for message in messages)
+    assert all(UUID(message.payload["command_id"]) == message.id for message in legacy_messages)
+    w2_message = next(
+        message
+        for message in messages
+        if message.message_type == "w1.private.w2.deletion-command.v2"
+    )
+    w2_target = next(target for target in targets if target.store_type == "W2_SOURCE_RUNTIME")
+    assert w2_message.payload["payload"] == {
+        "schema_version": "w2.private-deletion.v2",
+        "deletion_id": str(w2_target.id),
+        "owner_user_id": str(owner.id),
+        "deletion_epoch": 1,
+        "scope": {"type": "ACCOUNT"},
+    }
+    assert w2_message.payload["deletion_target_id"] == str(w2_target.id)
 
     with pytest.raises(StaleDeletionAcknowledgementError):
         with db_session.begin_nested():
@@ -215,7 +237,7 @@ def test_deletion_requires_all_current_store_acks_and_fences_active_jobs(
                 ack_epoch=0,
                 ack_event_id=uuid4(),
             )
-    failed_target = targets[0]
+    failed_target = w2_target
     deletion.record_target_failure(
         owner_user_id=owner.id,
         deletion_request_id=request.id,
@@ -228,24 +250,53 @@ def test_deletion_requires_all_current_store_acks_and_fences_active_jobs(
         deletion_target_id=failed_target.id,
     )
     assert retried.attempts == 2
+    retried_w2_message = db_session.scalar(
+        select(OutboxMessage).where(
+            OutboxMessage.deletion_target_id == w2_target.id,
+            OutboxMessage.aggregate_revision == 2,
+        )
+    )
+    assert retried_w2_message is not None
+    assert retried_w2_message.payload == w2_message.payload
     deletion.mark_target_dispatched(
         owner_user_id=owner.id,
         deletion_request_id=request.id,
         deletion_target_id=failed_target.id,
     )
     for target in targets:
-        request = deletion.acknowledge_target(
-            owner_user_id=owner.id,
-            deletion_request_id=request.id,
-            deletion_target_id=target.id,
-            ack_epoch=1,
-            ack_event_id=uuid4(),
-        )
+        if target.store_type == "W2_SOURCE_RUNTIME":
+            request = deletion.apply_w2_private_deletion_ack_v2(
+                owner_user_id=owner.id,
+                deletion_request_id=request.id,
+                deletion_target_id=target.id,
+                ack_body=json.dumps(
+                    {
+                        "schema_version": "w2.private-deletion-ack.v2",
+                        "deletion_id": str(target.id),
+                        "owner_user_id": str(owner.id),
+                        "deletion_epoch": 1,
+                        "scope": {"type": "ACCOUNT"},
+                        "outcome": "APPLIED",
+                    }
+                ),
+            )
+        else:
+            request = deletion.acknowledge_target(
+                owner_user_id=owner.id,
+                deletion_request_id=request.id,
+                deletion_target_id=target.id,
+                ack_epoch=1,
+                ack_event_id=uuid4(),
+            )
     db_session.commit()
 
     assert request.status == "COMPLETED"
     assert request.completed_at is not None
     assert all(target.status == "ACKNOWLEDGED" and target.ack_epoch == 1 for target in targets)
+    with pytest.raises(DeletionConflictError):
+        deletion.create_account_deletion_preview(
+            owner_user_id=owner.id, preview_token="second-epoch-before-account-recovery"
+        )
 
 
 @pytest.mark.w1_isolated_commit_gate
@@ -312,3 +363,135 @@ def test_deletion_with_commit_operation_keeps_public_source_and_other_owner_unch
     assert all(target.resource_id == owner.id for target in targets)
     assert db_session.get(Source, source.id) is not None
     assert db_session.get(User, other_owner.id).deletion_epoch == 0
+
+
+def test_project_deletion_stages_exact_w2_scope_without_deleting_other_projects(
+    db_session: Session,
+) -> None:
+    owner = _create_owner(db_session, "Project deletion owner")
+    other_owner = _create_owner(db_session, "Other owner")
+    project = ApplicationProject(owner_user_id=owner.id)
+    other_project = ApplicationProject(owner_user_id=owner.id)
+    foreign_project = ApplicationProject(owner_user_id=other_owner.id)
+    db_session.add_all((project, other_project, foreign_project))
+    db_session.flush()
+    company = Company(legal_name="Shared company", display_name="Shared company")
+    db_session.add(company)
+    db_session.flush()
+    source = Source(
+        company_id=company.id,
+        source_type="OFFICIAL",
+        canonical_url="https://public.example/project-scope",
+        canonical_url_hash="project-scope-shared-source",
+        url_normalization_version="v1",
+        policy_version="policy-v1",
+        policy_checked_at=datetime.now(UTC),
+    )
+    db_session.add(source)
+    db_session.flush()
+
+    deletion = DeletionOrchestrationService(db_session)
+    with pytest.raises(DeletionConflictError):
+        deletion.create_project_deletion_preview(
+            owner_user_id=owner.id,
+            project_id=foreign_project.id,
+            preview_token="foreign-project",
+        )
+    preview = deletion.create_project_deletion_preview(
+        owner_user_id=owner.id,
+        project_id=project.id,
+        preview_token="project-token",
+    )
+    request = deletion.confirm_and_start_project_deletion(
+        owner_user_id=owner.id,
+        deletion_request_id=preview.request.id,
+        preview_token=preview.preview_token,
+    )
+    target = db_session.scalar(
+        select(DeletionTarget).where(
+            DeletionTarget.deletion_request_id == request.id,
+            DeletionTarget.store_type == "W2_SOURCE_RUNTIME",
+        )
+    )
+    message = db_session.scalar(
+        select(OutboxMessage).where(
+            OutboxMessage.deletion_request_id == request.id,
+            OutboxMessage.message_type == "w1.private.w2.deletion-command.v2",
+        )
+    )
+    assert target is not None and message is not None
+    assert (request.target_type, request.target_id, request.owner_deletion_epoch) == (
+        "PROJECT",
+        project.id,
+        1,
+    )
+    assert (target.resource_type, target.resource_id) == ("PROJECT_PRIVATE_SCOPE", project.id)
+    assert message.payload["payload"]["scope"] == {
+        "type": "PROJECT",
+        "project_id": str(project.id),
+    }
+    assert owner.account_status == "ACTIVE"
+    assert project.status == "ARCHIVED"
+    assert other_project.status == "DRAFT"
+    assert foreign_project.status == "DRAFT"
+    assert db_session.get(Source, source.id) is not None
+    with pytest.raises(DeletionConflictError):
+        deletion.create_project_deletion_preview(
+            owner_user_id=owner.id,
+            project_id=other_project.id,
+            preview_token="next-epoch-before-ack",
+        )
+
+    deletion.record_target_failure(
+        owner_user_id=owner.id,
+        deletion_request_id=request.id,
+        deletion_target_id=target.id,
+        failure_code="W2_RETRYABLE",
+    )
+    retried = deletion.retry_target(
+        owner_user_id=owner.id,
+        deletion_request_id=request.id,
+        deletion_target_id=target.id,
+    )
+    retried_message = db_session.scalar(
+        select(OutboxMessage).where(
+            OutboxMessage.deletion_target_id == target.id,
+            OutboxMessage.aggregate_revision == retried.attempts,
+        )
+    )
+    assert retried_message is not None
+    assert retried_message.payload == message.payload
+    db_session.commit()
+
+    owner.deletion_epoch = 2
+    with pytest.raises(StaleDeletionAcknowledgementError):
+        deletion.replay_after_restore(owner_user_id=owner.id, deletion_request_id=request.id)
+
+
+def test_next_project_epoch_requires_the_previous_w2_target_ack(db_session: Session) -> None:
+    owner = _create_owner(db_session, "Epoch serialization owner")
+    project_a = ApplicationProject(owner_user_id=owner.id)
+    project_b = ApplicationProject(owner_user_id=owner.id)
+    db_session.add_all((project_a, project_b))
+    db_session.flush()
+    deletion = DeletionOrchestrationService(db_session)
+    preview = deletion.create_project_deletion_preview(
+        owner_user_id=owner.id,
+        project_id=project_a.id,
+        preview_token="first-project",
+    )
+    request = deletion.confirm_and_start_project_deletion(
+        owner_user_id=owner.id,
+        deletion_request_id=preview.request.id,
+        preview_token=preview.preview_token,
+    )
+    assert request.owner_deletion_epoch == 1
+    # An incorrectly terminalized request must not bypass the W2 target gate.
+    request.status = "EXPIRED"
+    db_session.flush()
+    with pytest.raises(DeletionConflictError, match="W2"):
+        deletion.create_project_deletion_preview(
+            owner_user_id=owner.id,
+            project_id=project_b.id,
+            preview_token="second-project",
+        )

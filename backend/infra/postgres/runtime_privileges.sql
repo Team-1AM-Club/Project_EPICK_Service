@@ -280,7 +280,7 @@ TO epick_lookup;
 -- QUESTION_MATCHING decisions deliberately retain a null company pin.  The lookup adapter may
 -- resolve the W2 company only through these current, owner-scoped relation columns.  This is not
 -- a general table grant: no prompt, URL, content, mutation, or unrelated projection is exposed.
-GRANT SELECT (id, owner_user_id, current_version_id)
+GRANT SELECT (id, owner_user_id, current_version_id, status)
 ON TABLE application_projects
 TO epick_lookup;
 
@@ -452,7 +452,7 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO epick_deleter;
 -- Receipt reconciliation takes row locks on the current owner and canonical
 -- Source without changing either record. PostgreSQL requires an UPDATE-capable
 -- column for SELECT ... FOR UPDATE, so restrict it to audit timestamps.
-GRANT UPDATE (updated_at) ON TABLE users, sources TO epick_deleter;
+GRANT UPDATE (updated_at) ON TABLE users, sources, application_projects TO epick_deleter;
 GRANT SELECT, INSERT, UPDATE ON TABLE
     deletion_requests,
     deletion_targets,
@@ -471,6 +471,12 @@ TO epick_deleter;
 -- W3 receipt reconciliation records one immutable receipt only after SenderId,
 -- receipt-body digest, operation/target binding and current epoch/time checks.
 GRANT INSERT ON TABLE inbox_receipts TO epick_deleter;
+
+-- A verified W2 v2 ACK atomically detaches W1-private Job references from
+-- retained public collection observations and clears staged private bodies.
+GRANT UPDATE (job_source_link_id, command_id)
+ON TABLE source_collection_attempts TO epick_deleter;
+GRANT DELETE ON TABLE job_source_links TO epick_deleter;
 
 -- Permanent Source retirement is staged as the single allowlisted PRIVATE
 -- outbox shape by the W1 transaction that owns the registry transition.  The

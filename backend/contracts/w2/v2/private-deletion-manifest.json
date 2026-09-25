@@ -1,0 +1,8 @@
+{
+  "w2_source_sha": "e2491a4084ed50090d5135ba177a3772e9a44f5a",
+  "w2_required_migration_head": "0010_private_deletion_scope_v2",
+  "command_schema_path": "private-deletion-command-v2.schema.json",
+  "command_schema_sha256": "73eb3a51d15923969d483b13fdbf498e0a6cd8cfa18c019a66f5f532cfd64067",
+  "ack_schema_path": "private-deletion-ack-v2.schema.json",
+  "ack_schema_sha256": "22cd9cd44061b5c14c9852634417482993a8ffb8f69dc8e98e3b6cd71b891bc9"
+}

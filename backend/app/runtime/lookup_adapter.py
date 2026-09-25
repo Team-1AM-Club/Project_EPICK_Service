@@ -26,6 +26,12 @@ from app.runtime.question_core_binding import (
     QuestionCoreBindingError,
     resolve_question_collection_company_for_lookup,
 )
+from app.runtime.w2_private_write_authority import (
+    PrivateWriteAuthorityDenied,
+    PrivateWriteAuthorityRequest,
+    PrivateWriteAuthorityResponse,
+    decide_private_write_authority,
+)
 
 _W2_SERVICE_PRINCIPAL = "w2"
 _LOOKUP_SCHEMA_VERSION = "w1.private.command-lookup.v1"
@@ -149,6 +155,24 @@ def create_lookup_app(
         except SQLAlchemyError:
             # Do not include driver, URL, command ID, or payload information in the protected
             # error body.  W2 may retry only this infrastructure outcome.
+            return _private_error(code="INTERNAL_RETRYABLE", retryable=True, status_code=503)
+
+    @app.post(
+        "/internal/v1/w2-private/authority",
+        response_model=PrivateWriteAuthorityResponse,
+        dependencies=[Depends(require_w2_service_principal)],
+    )
+    def authorize_w2_private_write(
+        body: PrivateWriteAuthorityRequest,
+    ) -> PrivateWriteAuthorityResponse | JSONResponse:
+        try:
+            with session_factory.begin() as session:
+                return decide_private_write_authority(session=session, request=body)
+        except PrivateWriteAuthorityDenied as error:
+            raise _LookupAuthorizationError(
+                status_code=403, code="PRIVATE_WRITE_AUTHORITY_DENIED"
+            ) from error
+        except SQLAlchemyError:
             return _private_error(code="INTERNAL_RETRYABLE", retryable=True, status_code=503)
 
     return app

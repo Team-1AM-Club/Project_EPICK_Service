@@ -32,6 +32,7 @@ DeletionStoreType = Literal[
     "CACHE",
     "CHECKPOINT",
     "W3_CORE_RUNTIME",
+    "W2_SOURCE_RUNTIME",
 ]
 DELETION_STORE_TYPES: tuple[DeletionStoreType, ...] = (
     "POSTGRESQL",
@@ -40,6 +41,7 @@ DELETION_STORE_TYPES: tuple[DeletionStoreType, ...] = (
     "CACHE",
     "CHECKPOINT",
     "W3_CORE_RUNTIME",
+    "W2_SOURCE_RUNTIME",
 )
 DELETION_STORE_TYPE_VALUES = ", ".join(f"'{value}'" for value in DELETION_STORE_TYPES)
 

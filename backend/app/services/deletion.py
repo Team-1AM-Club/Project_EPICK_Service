@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import json
 import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -10,9 +11,17 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.db.session import set_local_owner_context
 from app.models.deletion import DELETION_STORE_TYPES, DeletionRequest, DeletionTarget
+from app.models.identity import User
 from app.models.jobs import OutboxMessage
 from app.repo.deletion import DeletionRepository
+from app.runtime.w2_private_deletion_v2 import parse_w2_private_deletion_ack_v2
+from app.runtime.w2_private_deletion_v2_boundary import (
+    W2PrivateDeletionV2BoundaryError,
+    require_authorized_w2_deletion_ack_v2,
+    serialize_authorized_w2_deletion_envelope_v2,
+)
 from app.services.jobs import JobService
 from app.services.w2_commit_gate import W2CommitGateService
 
@@ -78,7 +87,10 @@ class DeletionOrchestrationService:
         """Create a one-time confirmation preview and persist only its digest."""
         if preview_ttl <= timedelta(0):
             raise DeletionValidationError("preview TTL must be positive")
-        self._require_owner_for_update(owner_user_id=owner_user_id)
+        owner = self._require_owner_for_update(owner_user_id=owner_user_id)
+        if owner.account_status != "ACTIVE":
+            raise DeletionConflictError("account deletion is already in progress or completed")
+        self._require_no_unacknowledged_w2_target(owner_user_id=owner_user_id)
         now = datetime.now(UTC)
         active = self.repository.get_active_request_for_owner(owner_user_id=owner_user_id)
         if active is not None and active.status == "REQUESTED" and active.preview_expires_at <= now:
@@ -95,6 +107,52 @@ class DeletionOrchestrationService:
             target_type="ACCOUNT",
             target_id=None,
             scope="ALL_PRIVATE_DATA",
+            preview_token_hash=self._hash_token(token),
+            preview_expires_at=now + preview_ttl,
+            status="REQUESTED",
+            requested_at=now,
+            updated_at=now,
+        )
+        self.repository.add_request(request)
+        self.session.flush()
+        return DeletionPreview(request=request, preview_token=token)
+
+    def create_project_deletion_preview(
+        self,
+        *,
+        owner_user_id: UUID,
+        project_id: UUID,
+        preview_token: str | None = None,
+        preview_ttl: timedelta = _DEFAULT_PREVIEW_TTL,
+    ) -> DeletionPreview:
+        """Create a scoped preview only for a current project owned by this user."""
+        if preview_ttl <= timedelta(0):
+            raise DeletionValidationError("preview TTL must be positive")
+        owner = self._require_owner_for_update(owner_user_id=owner_user_id)
+        if owner.account_status != "ACTIVE":
+            raise DeletionConflictError("account deletion is already in progress or completed")
+        self._require_no_unacknowledged_w2_target(owner_user_id=owner_user_id)
+        project = self.repository.get_project_for_update(
+            owner_user_id=owner_user_id, project_id=project_id
+        )
+        if project is None or project.status == "ARCHIVED":
+            raise DeletionConflictError("project is not available for deletion")
+        now = datetime.now(UTC)
+        active = self.repository.get_active_request_for_owner(owner_user_id=owner_user_id)
+        if active is not None and active.status == "REQUESTED" and active.preview_expires_at <= now:
+            active.status = "EXPIRED"
+            active.updated_at = now
+            self.session.flush()
+            active = None
+        if active is not None:
+            raise DeletionConflictError("an active deletion request already exists")
+        token = preview_token or secrets.token_urlsafe(32)
+        self._require_nonempty(token, "preview token")
+        request = DeletionRequest(
+            owner_user_id=owner_user_id,
+            target_type="PROJECT",
+            target_id=project_id,
+            scope="PROJECT_PRIVATE_DATA",
             preview_token_hash=self._hash_token(token),
             preview_expires_at=now + preview_ttl,
             status="REQUESTED",
@@ -147,6 +205,28 @@ class DeletionOrchestrationService:
         self, *, owner_user_id: UUID, deletion_request_id: UUID, preview_token: str
     ) -> DeletionRequest:
         """Convenience path for the API's confirmation action, in its single transaction."""
+        request = self._require_request_for_update(
+            deletion_request_id=deletion_request_id, owner_user_id=owner_user_id
+        )
+        if request.target_type != "ACCOUNT":
+            raise DeletionTransitionError("account deletion requires an account preview")
+        self.confirm_deletion_preview(
+            owner_user_id=owner_user_id,
+            deletion_request_id=deletion_request_id,
+            preview_token=preview_token,
+        )
+        return self.start_confirmed_deletion(
+            owner_user_id=owner_user_id, deletion_request_id=deletion_request_id
+        )
+
+    def confirm_and_start_project_deletion(
+        self, *, owner_user_id: UUID, deletion_request_id: UUID, preview_token: str
+    ) -> DeletionRequest:
+        request = self._require_request_for_update(
+            deletion_request_id=deletion_request_id, owner_user_id=owner_user_id
+        )
+        if request.target_type != "PROJECT":
+            raise DeletionTransitionError("project deletion requires a project preview")
         self.confirm_deletion_preview(
             owner_user_id=owner_user_id,
             deletion_request_id=deletion_request_id,
@@ -188,6 +268,8 @@ class DeletionOrchestrationService:
             deletion_request_id=deletion_request_id,
             deletion_target_id=deletion_target_id,
         )
+        if target.store_type == "W2_SOURCE_RUNTIME":
+            raise DeletionTransitionError("W2 target requires a verified v2 ACK and private purge")
         self._require_current_epoch(
             request=request, owner_user_id=owner_user_id, ack_epoch=ack_epoch
         )
@@ -199,6 +281,69 @@ class DeletionOrchestrationService:
         target.status = "ACKNOWLEDGED"
         target.ack_epoch = ack_epoch
         target.ack_event_id = ack_event_id
+        target.error_code = None
+        target.completed_at = now
+        target.updated_at = now
+        self.session.flush()
+        self._refresh_request_completion(request=request, owner_user_id=owner_user_id, now=now)
+        self.session.flush()
+        return request
+
+    def apply_w2_private_deletion_ack_v2(
+        self,
+        *,
+        owner_user_id: UUID,
+        deletion_request_id: UUID,
+        deletion_target_id: UUID,
+        ack_body: str,
+    ) -> DeletionRequest:
+        """Purge W1-owned private W2 references and ACK in one DB transaction."""
+        owner = self._require_owner_for_update(owner_user_id=owner_user_id)
+        request = self._require_request_for_update(
+            deletion_request_id=deletion_request_id, owner_user_id=owner_user_id
+        )
+        target = self.repository.get_target_for_update(
+            deletion_request_id=deletion_request_id, deletion_target_id=deletion_target_id
+        )
+        if target is None or target.store_type != "W2_SOURCE_RUNTIME":
+            raise DeletionRequestNotFoundError("W2 deletion target does not exist")
+        if request.status not in _RUNNING_REQUEST_STATUSES | {"COMPLETED"}:
+            raise DeletionTransitionError("W2 deletion request is not running")
+        self._require_current_epoch(
+            request=request,
+            owner_user_id=owner_user_id,
+            ack_epoch=request.owner_deletion_epoch,
+        )
+        ack = parse_w2_private_deletion_ack_v2(ack_body)
+        if ack.deletion_epoch != request.owner_deletion_epoch:
+            raise StaleDeletionAcknowledgementError("W2 deletion ACK epoch is stale")
+        # The deletion role sees Project rows only under an explicit owner RLS
+        # context. Resolve the owner from the locked request, never from ACK text.
+        set_local_owner_context(self.session, owner_user_id)
+        project = (
+            self.repository.get_project_for_update(
+                owner_user_id=owner_user_id, project_id=request.target_id
+            )
+            if request.target_type == "PROJECT" and request.target_id is not None
+            else None
+        )
+        require_authorized_w2_deletion_ack_v2(
+            body=ack_body, owner=owner, request=request, target=target, project=project
+        )
+        if target.status == "ACKNOWLEDGED":
+            if target.ack_epoch == ack.deletion_epoch and target.ack_event_id == target.id:
+                return request
+            raise DeletionConflictError("W2 deletion target has a conflicting ACK")
+        if target.status not in {"QUEUED", "DISPATCHED", "FAILED_RETRYABLE"}:
+            raise DeletionTransitionError("W2 deletion target is not pending")
+        self.repository.purge_w2_private_references(
+            owner_user_id=owner_user_id,
+            project_id=request.target_id if request.target_type == "PROJECT" else None,
+        )
+        now = datetime.now(UTC)
+        target.status = "ACKNOWLEDGED"
+        target.ack_epoch = ack.deletion_epoch
+        target.ack_event_id = target.id
         target.error_code = None
         target.completed_at = now
         target.updated_at = now
@@ -275,15 +420,31 @@ class DeletionOrchestrationService:
             raise DeletionTransitionError(
                 "only a started deletion request can be replayed after restore"
             )
-        owner.deletion_epoch = max(owner.deletion_epoch, request.owner_deletion_epoch)
-        owner.account_status = "DELETION_PENDING"
+        if owner.deletion_epoch != request.owner_deletion_epoch:
+            raise StaleDeletionAcknowledgementError("deletion replay epoch is stale")
         now = datetime.now(UTC)
-        for auth_session in self.repository.get_open_auth_sessions_for_update(
-            owner_user_id=owner_user_id
-        ):
-            auth_session.revoked_at = now
-            auth_session.revoke_reason = "DELETION_PENDING"
+        if request.target_type == "ACCOUNT":
+            owner.account_status = "DELETION_PENDING"
+        elif request.target_type == "PROJECT":
+            if request.target_id is None:
+                raise DeletionValidationError("project deletion has no project reference")
+            project = self.repository.get_project_for_update(
+                owner_user_id=owner_user_id, project_id=request.target_id
+            )
+            if project is None:
+                raise DeletionConflictError("project deletion scope is no longer owned")
+            project.status = "ARCHIVED"
+            project.updated_at = now
+        else:
+            raise DeletionValidationError("unsupported deletion scope")
+        if request.target_type == "ACCOUNT":
+            for auth_session in self.repository.get_open_auth_sessions_for_update(
+                owner_user_id=owner_user_id
+            ):
+                auth_session.revoked_at = now
+                auth_session.revoke_reason = "DELETION_PENDING"
         targets = self.repository.get_targets_for_update(deletion_request_id=request.id)
+        request.status = "RUNNING"
         for target in targets:
             target.status = "QUEUED"
             target.ack_epoch = None
@@ -292,21 +453,37 @@ class DeletionOrchestrationService:
             target.error_code = None
             target.updated_at = now
             self._stage_target_dispatch(request=request, target=target)
-        request.status = "RUNNING"
         request.completed_at = None
         request.failure_code = None
         request.updated_at = now
         self.session.flush()
         return request
 
-    def _start_request(self, *, owner: object, request: DeletionRequest) -> DeletionRequest:
-        owner_epoch = getattr(owner, "deletion_epoch", None)
-        if not isinstance(owner_epoch, int):
+    def _start_request(self, *, owner: User, request: DeletionRequest) -> DeletionRequest:
+        owner_epoch = owner.deletion_epoch
+        if not isinstance(owner_epoch, int) or request.owner_user_id is None:
             raise DeletionRequestNotFoundError("deletion request owner does not exist")
+        self._require_no_unacknowledged_w2_target(owner_user_id=request.owner_user_id)
         now = datetime.now(UTC)
         next_epoch = owner_epoch + 1
+        if next_epoch > 2**63 - 1:
+            raise DeletionConflictError("owner deletion epoch exhausted")
+        project = None
+        if request.target_type == "PROJECT":
+            if request.target_id is None or owner.account_status != "ACTIVE":
+                raise DeletionConflictError("project deletion scope is not current")
+            project = self.repository.get_project_for_update(
+                owner_user_id=request.owner_user_id, project_id=request.target_id
+            )
+            if project is None or project.status == "ARCHIVED":
+                raise DeletionConflictError("project deletion scope is not current")
+            project.status = "ARCHIVED"
+            project.updated_at = now
+        elif request.target_type != "ACCOUNT":
+            raise DeletionValidationError("unsupported deletion scope")
         owner.deletion_epoch = next_epoch
-        owner.account_status = "DELETION_PENDING"
+        if request.target_type == "ACCOUNT":
+            owner.account_status = "DELETION_PENDING"
         request.owner_deletion_epoch = next_epoch
         request.status = "RUNNING"
         request.failure_code = None
@@ -321,11 +498,12 @@ class DeletionOrchestrationService:
                 job_id=job_id,
                 purge_owner_deletion_epoch=next_epoch,
             )
-        for auth_session in self.repository.get_open_auth_sessions_for_update(
-            owner_user_id=request.owner_user_id
-        ):
-            auth_session.revoked_at = now
-            auth_session.revoke_reason = "DELETION_PENDING"
+        if request.target_type == "ACCOUNT":
+            for auth_session in self.repository.get_open_auth_sessions_for_update(
+                owner_user_id=request.owner_user_id
+            ):
+                auth_session.revoked_at = now
+                auth_session.revoke_reason = "DELETION_PENDING"
         for job in self.repository.get_active_jobs_for_update(owner_user_id=request.owner_user_id):
             self.jobs.invalidate_for_owner_deletion(
                 owner_user_id=request.owner_user_id,
@@ -338,9 +516,15 @@ class DeletionOrchestrationService:
         # the deleting owner's access.  The repository intentionally does not touch
         # Source or AnalysisSourceDecision rows because another owner may reference
         # the same public company Source.
-        self.repository.delete_core_decision_bindings_for_owner(
-            owner_user_id=request.owner_user_id
-        )
+        if request.target_type == "ACCOUNT":
+            self.repository.delete_core_decision_bindings_for_owner(
+                owner_user_id=request.owner_user_id
+            )
+        else:
+            assert project is not None
+            self.repository.delete_core_decision_bindings_for_project(
+                owner_user_id=request.owner_user_id, project_id=project.id
+            )
         resource_id = request.target_id or request.owner_user_id
         if resource_id is None:
             raise DeletionValidationError("deletion request has no private subject reference")
@@ -348,7 +532,11 @@ class DeletionOrchestrationService:
             target = DeletionTarget(
                 deletion_request_id=request.id,
                 store_type=store_type,
-                resource_type="OWNER_PRIVATE_SCOPE",
+                resource_type=(
+                    "PROJECT_PRIVATE_SCOPE"
+                    if request.target_type == "PROJECT"
+                    else "OWNER_PRIVATE_SCOPE"
+                ),
                 resource_id=resource_id,
                 status="QUEUED",
                 attempts=0,
@@ -372,13 +560,41 @@ class DeletionOrchestrationService:
         target.attempts += 1
         target.status = "QUEUED"
         target.updated_at = datetime.now(UTC)
+        w2_v2 = target.store_type == "W2_SOURCE_RUNTIME"
+        if w2_v2:
+            owner = self._require_owner_for_update(owner_user_id=request.owner_user_id)
+            project = (
+                self.repository.get_project_for_update(
+                    owner_user_id=request.owner_user_id, project_id=request.target_id
+                )
+                if request.target_type == "PROJECT" and request.target_id is not None
+                else None
+            )
+            try:
+                payload = json.loads(
+                    serialize_authorized_w2_deletion_envelope_v2(
+                        owner=owner,
+                        request=request,
+                        target=target,
+                        project=project,
+                        issued_at=target.created_at,
+                    )
+                )
+            except W2PrivateDeletionV2BoundaryError as error:
+                raise DeletionValidationError("W2 private deletion scope is not current") from error
+        else:
+            payload = {}
         message = OutboxMessage(
             message_type=(
-                "w1.private.w3.owner-deletion.v1"
-                if target.store_type == "W3_CORE_RUNTIME"
-                else "w1.deletion.command"
+                "w1.private.w2.deletion-command.v2"
+                if w2_v2
+                else (
+                    "w1.private.w3.owner-deletion.v1"
+                    if target.store_type == "W3_CORE_RUNTIME"
+                    else "w1.deletion.command"
+                )
             ),
-            schema_version="1.0",
+            schema_version="w1.private.w2-deletion-dispatch.v2" if w2_v2 else "1.0",
             visibility_scope="PRIVATE",
             aggregate_type="DELETION_TARGET",
             aggregate_id=target.id,
@@ -387,10 +603,12 @@ class DeletionOrchestrationService:
             deletion_target_id=target.id,
             owner_user_id=request.owner_user_id,
             owner_deletion_epoch=request.owner_deletion_epoch,
-            payload={},
+            payload=payload,
         )
         self.repository.add_outbox_message(message)
         self.session.flush()
+        if w2_v2:
+            return message
         message.payload = {
             "schema_version": "1.0",
             "command_id": str(message.id),
@@ -460,11 +678,15 @@ class DeletionOrchestrationService:
         ):
             raise StaleDeletionAcknowledgementError("deletion acknowledgement epoch is stale")
 
-    def _require_owner_for_update(self, *, owner_user_id: UUID) -> object:
+    def _require_owner_for_update(self, *, owner_user_id: UUID) -> User:
         owner = self.repository.get_owner_for_update(owner_user_id=owner_user_id)
         if owner is None:
             raise DeletionRequestNotFoundError("deletion request owner does not exist")
         return owner
+
+    def _require_no_unacknowledged_w2_target(self, *, owner_user_id: UUID) -> None:
+        if self.repository.has_unacknowledged_w2_target_for_owner(owner_user_id=owner_user_id):
+            raise DeletionConflictError("previous W2 private deletion target is not acknowledged")
 
     def _require_request_for_update(
         self, *, deletion_request_id: UUID, owner_user_id: UUID

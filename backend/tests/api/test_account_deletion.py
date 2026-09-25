@@ -60,6 +60,7 @@ def test_account_deletion_preview_confirmation_is_idempotent_and_owner_scoped(
         "CACHE",
         "CHECKPOINT",
         "W3_CORE_RUNTIME",
+        "W2_SOURCE_RUNTIME",
     }
     assert {target["status"] for target in accepted.json()["targets"]} == {"QUEUED"}
     assert "owner_deletion_epoch" not in accepted.json()

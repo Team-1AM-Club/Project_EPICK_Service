@@ -22,6 +22,7 @@ DeletionStore = Literal[
     "CACHE",
     "CHECKPOINT",
     "W3_CORE_RUNTIME",
+    "W2_SOURCE_RUNTIME",
 ]
 
 

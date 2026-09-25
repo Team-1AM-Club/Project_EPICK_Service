@@ -15,14 +15,32 @@ if str(BACKEND_ROOT) not in sys.path:
 
 from app.core.config import settings  # noqa: E402
 from app.models.registry import load_all_models  # noqa: E402
-from app.runtime.integration_preflight import validate_integration_startup  # noqa: E402
+from app.runtime.integration_preflight import (  # noqa: E402
+    IntegrationPreflightError,
+    require_w2_deletion_activation_proof,
+    validate_integration_startup,
+)
 from app.runtime.outbox_relay import OutboxRelay, QueueUrlRegistry  # noqa: E402
-from app.runtime.session import create_worker_session_factory  # noqa: E402
+from app.runtime.session import (  # noqa: E402
+    create_deletion_worker_session_factory,
+    create_worker_session_factory,
+)
 from app.runtime.sqs import Boto3SqsPort  # noqa: E402
 
 
 def _build_relay(*, scope: str = "all") -> OutboxRelay:
     validate_integration_startup(settings)
+    if scope == "w2-deletion":
+        proof_path = settings.w2_deletion_activation_proof_path
+        image_digest = settings.w2_deletion_image_digest
+        if not proof_path or not image_digest:
+            raise SystemExit("W2 deletion activation proof and image digest are required")
+        try:
+            require_w2_deletion_activation_proof(
+                Path(proof_path), expected_image_digest=image_digest
+            )
+        except IntegrationPreflightError as error:
+            raise SystemExit("W2 deletion activation proof is invalid") from error
     # This narrow worker entrypoint does not import the API router graph. Load
     # every mapped table before SQLAlchemy resolves OutboxMessage's string
     # foreign keys (notably deletion_requests.id) during the first flush.
@@ -31,6 +49,7 @@ def _build_relay(*, scope: str = "all") -> OutboxRelay:
         (
             settings.w1_execution_queue_url,
             settings.w2_collection_command_queue_url,
+            settings.w2_deletion_command_queue_url,
             settings.w2_commit_gate_outbound_queue_url,
             settings.w4_recommendation_execution_queue_url,
             settings.w3_retention_command_queue_url,
@@ -39,16 +58,22 @@ def _build_relay(*, scope: str = "all") -> OutboxRelay:
         raise SystemExit("at least one private outbox destination must be configured")
     relay_id = settings.w1_outbox_relay_instance_id or socket.gethostname()
     return OutboxRelay(
-        session_factory=create_worker_session_factory(),
+        session_factory=(
+            create_deletion_worker_session_factory()
+            if scope == "w2-deletion"
+            else create_worker_session_factory()
+        ),
         sqs=Boto3SqsPort(),
         queues=QueueUrlRegistry(
             w1_execution_queue_url=settings.w1_execution_queue_url,
             w2_collection_command_queue_url=settings.w2_collection_command_queue_url,
+            w2_deletion_command_queue_url=settings.w2_deletion_command_queue_url,
             w2_commit_gate_command_queue_url=settings.w2_commit_gate_outbound_queue_url,
             w4_recommendation_execution_queue_url=(settings.w4_recommendation_execution_queue_url),
             w3_retention_command_queue_url=settings.w3_retention_command_queue_url,
             commit_gate_only=settings.w2_ct15_gate_only_queue_approved,
             retention_only=scope == "w3-retention",
+            deletion_only=scope == "w2-deletion",
         ),
         relay_id=relay_id[:128],
         lease_seconds=settings.w1_outbox_relay_lease_seconds,
@@ -79,7 +104,7 @@ def main() -> None:
     parser.add_argument("--once", action="store_true", help="Drain one bounded batch and exit")
     parser.add_argument(
         "--scope",
-        choices=("all", "w3-retention"),
+        choices=("all", "w3-retention", "w2-deletion"),
         default="all",
         help="Limit claims to one dedicated route set",
     )

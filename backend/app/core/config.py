@@ -66,6 +66,11 @@ class Settings(BaseSettings):
     w4_context_database_url: str | None = None
     w1_w4_context_bearer: str | None = None
     w2_collection_command_queue_url: str | None = None
+    w2_deletion_command_queue_url: str | None = None
+    # Only the dedicated deletion relay reads this fresh, operator-created
+    # proof. The normal W1 API and workers never receive W2 DB credentials.
+    w2_deletion_activation_proof_path: str | None = None
+    w2_deletion_image_digest: str | None = None
     w2_collection_result_queue_url: str | None = None
     # CT15 uses a disposable gate-only outbound queue.  It is intentionally
     # opt-in: normal collection and direct-registration traffic must keep using
@@ -87,6 +92,8 @@ class Settings(BaseSettings):
     w1_lease_heartbeat_seconds: int = 60
     w1_worker_poll_seconds: float = 2.0
     w1_w2_lookup_bearer: str | None = None
+    # Separate write-capable W2 deletion callback; never reuse the lookup bearer.
+    w1_w2_deletion_bearer: str | None = None
     # W3 Core Decision is consumed only by the private W1 runtime. SenderId is
     # SQS-authenticated system metadata; it is never accepted from the JSON body.
     w3_core_decision_queue_url: str | None = None

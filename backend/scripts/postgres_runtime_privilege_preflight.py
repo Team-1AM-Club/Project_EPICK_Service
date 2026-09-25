@@ -74,6 +74,7 @@ COLUMN_PRIVILEGE_EXPECTATIONS = (
     ("epick_lookup", "job_commands", "payload", "SELECT", True),
     ("epick_lookup", "job_commands", "analysis_source_decision_id", "SELECT", True),
     ("epick_lookup", "application_projects", "current_version_id", "SELECT", True),
+    ("epick_lookup", "application_projects", "status", "SELECT", True),
     ("epick_lookup", "application_project_versions", "company_id", "SELECT", True),
     ("epick_lookup", "project_questions", "current_version_id", "SELECT", True),
     ("epick_lookup", "question_versions", "question_id", "SELECT", True),

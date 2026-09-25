@@ -22,6 +22,11 @@
 # only the command queue/runtime DB values; the receipt env contains the receipt/DLQ,
 # expected W3 stable Role ID, and deletion-only DB login:
 #   docker compose -f w1-runtime.compose.yml --profile w3-retention up -d
+# W2 private deletion v2 uses a deletion-only database login and a distinct
+# authenticated callback. First run preflight_w2_deletion_activation.py against
+# the actual W2 DB; mount its fresh proof and pin the same W2 image digest in
+# the relay env. The callback is internal-only until a private ingress is approved:
+#   docker compose -f w1-runtime.compose.yml --profile w2-deletion up -d
 #
 # W4 Question Core inbound is opt-in and uses a separate worker-only env file.
 # Do not start this profile until W4 has supplied its pinned producer, stable
@@ -110,6 +115,60 @@ services:
     security_opt:
       - no-new-privileges:true
     profiles: ["w1-execution"]
+
+  w1-w2-deletion-command-relay:
+    image: ${BACKEND_IMAGE:?set BACKEND_IMAGE to the immutable backend image reference}
+    env_file:
+      - ${W1_W2_DELETION_RELAY_ENV_FILE:?set W1_W2_DELETION_RELAY_ENV_FILE to the deletion-only relay env file}
+    command: ["python", "scripts/run_outbox_relay.py", "--scope", "w2-deletion"]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - type: bind
+        source: ${RDS_CA_BUNDLE_PATH:?set RDS_CA_BUNDLE_PATH to the host RDS CA bundle}
+        target: /run/epick/rds-ca.pem
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${W2_DELETION_ACTIVATION_PROOF_PATH:?set W2_DELETION_ACTIVATION_PROOF_PATH to the preflight proof file}
+        target: /run/epick/w2-deletion-activation.json
+        read_only: true
+        bind:
+          create_host_path: false
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    profiles: ["w2-deletion"]
+
+  w1-w2-deletion-callback:
+    image: ${BACKEND_IMAGE:?set BACKEND_IMAGE to the immutable backend image reference}
+    env_file:
+      - ${W1_W2_DELETION_CALLBACK_ENV_FILE:?set W1_W2_DELETION_CALLBACK_ENV_FILE to the deletion-only callback env file}
+    command: ["python", "scripts/run_w2_deletion_callback.py"]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    expose:
+      - "8081"
+    volumes:
+      - type: bind
+        source: ${RDS_CA_BUNDLE_PATH:?set RDS_CA_BUNDLE_PATH to the host RDS CA bundle}
+        target: /run/epick/rds-ca.pem
+        read_only: true
+        bind:
+          create_host_path: false
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    profiles: ["w2-deletion"]
 
   w1-w3-retention-command-relay:
     image: ${BACKEND_IMAGE:?set BACKEND_IMAGE to the immutable backend image reference}

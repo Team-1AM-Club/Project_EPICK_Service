@@ -25,7 +25,7 @@ def test_current_migration_head_merges_w2_and_w3_runtime_branches() -> None:
     config = Config(str(BACKEND_ROOT / "alembic.ini"))
     assert (
         ScriptDirectory.from_config(config).get_current_head()
-        == "041_merge_w2_w3_runtime_heads"
+        == "043_w2_attempt_detachment"
     )
 
 

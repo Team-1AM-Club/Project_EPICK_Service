@@ -1039,9 +1039,18 @@ def test_owner_deletion_purges_w1_committed_gate_without_targeting_public_source
         targets = session.scalars(
             select(DeletionTarget).where(DeletionTarget.deletion_request_id == request.id)
         ).all()
-        assert len(targets) == 6
+        assert len(targets) == 7
         assert {(target.resource_type, target.resource_id) for target in targets} == {
             ("OWNER_PRIVATE_SCOPE", owner_id)
+        }
+        assert {target.store_type for target in targets} == {
+            "POSTGRESQL",
+            "NEO4J",
+            "VECTOR",
+            "CACHE",
+            "CHECKPOINT",
+            "W3_CORE_RUNTIME",
+            "W2_SOURCE_RUNTIME",
         }
         assert (
             session.scalar(

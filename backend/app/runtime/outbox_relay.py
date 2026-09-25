@@ -12,7 +12,8 @@ from jsonschema import Draft202012Validator, FormatChecker
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from app.models.deletion import DeletionTarget
+from app.models.application_workspace import ApplicationProject
+from app.models.deletion import DeletionRequest, DeletionTarget
 from app.models.identity import User
 from app.models.jobs import (
     Job,
@@ -36,11 +37,17 @@ from app.runtime.question_core_binding import (
     resolve_question_collection_company,
 )
 from app.runtime.sqs import SqsFinalDeliveryError, SqsPort, SqsRetryableError
+from app.runtime.w2_private_deletion_v2_boundary import (
+    W2PrivateDeletionV2BoundaryError,
+    serialize_authorized_w2_deletion_envelope_v2,
+    validate_authorized_w2_deletion_envelope_v2,
+)
 
 _PRIVATE_DISPATCH_MESSAGE_TYPE = "job.command.dispatch"
 _W2_COLLECTION_COMMAND_MESSAGE_TYPE = "w1.private.w2.collection-command.v1"
 _W2_DIRECT_SOURCE_REGISTRATION_MESSAGE_TYPE = "w1.private.w2.direct-source-registration.v1"
 _W2_COMMIT_GATE_MESSAGE_TYPE = "w1.private.w2.commit-gate.v1"
+W2_PRIVATE_DELETION_V2_MESSAGE_TYPE = "w1.private.w2.deletion-command.v2"
 _W4_RECOMMENDATION_EXECUTION_MESSAGE_TYPE = "w1.private.w4.recommendation-execution.v1"
 _W4_RECOMMENDATION_EXECUTION_SCHEMA_VERSION = "w1.w4.recommendation-exec/1"
 W3_OWNER_DELETION_MESSAGE_TYPE = "w1.private.w3.owner-deletion.v1"
@@ -51,6 +58,7 @@ _W3_RETENTION_MESSAGE_TYPES = frozenset(
 _W1_EXECUTION_QUEUE = "w1_execution"
 _W2_COLLECTION_COMMAND_QUEUE = "w2_collection_command"
 _W2_COMMIT_GATE_COMMAND_QUEUE = "w2_commit_gate_command"
+_W2_DELETION_COMMAND_QUEUE = "w2_deletion_command"
 _W4_RECOMMENDATION_EXECUTION_QUEUE = "w4_recommendation_execution"
 _W3_RETENTION_COMMAND_QUEUE = "w3_retention_command"
 _MAX_SQS_BODY_BYTES = 16 * 1024
@@ -100,6 +108,10 @@ class QueueUrlRegistry:
             logical_key=_W2_COMMIT_GATE_COMMAND_QUEUE,
             message_type=_W2_COMMIT_GATE_MESSAGE_TYPE,
         ),
+        W2_PRIVATE_DELETION_V2_MESSAGE_TYPE: QueueRoute(
+            logical_key=_W2_DELETION_COMMAND_QUEUE,
+            message_type=W2_PRIVATE_DELETION_V2_MESSAGE_TYPE,
+        ),
         _W4_RECOMMENDATION_EXECUTION_MESSAGE_TYPE: QueueRoute(
             logical_key=_W4_RECOMMENDATION_EXECUTION_QUEUE,
             message_type=_W4_RECOMMENDATION_EXECUTION_MESSAGE_TYPE,
@@ -120,17 +132,21 @@ class QueueUrlRegistry:
         w1_execution_queue_url: str | None,
         w2_collection_command_queue_url: str | None = None,
         w2_commit_gate_command_queue_url: str | None = None,
+        w2_deletion_command_queue_url: str | None = None,
         w4_recommendation_execution_queue_url: str | None = None,
         w3_retention_command_queue_url: str | None = None,
         commit_gate_only: bool = False,
         retention_only: bool = False,
+        deletion_only: bool = False,
     ) -> None:
-        if sum((commit_gate_only, retention_only)) > 1:
+        if sum((commit_gate_only, retention_only, deletion_only)) > 1:
             raise ValueError("relay scope must select at most one dedicated route")
         if commit_gate_only and not w2_commit_gate_command_queue_url:
             raise ValueError("commit-gate-only relay requires a dedicated commit-gate queue")
         if retention_only and not w3_retention_command_queue_url:
             raise ValueError("retention-only relay requires a dedicated W3 command queue")
+        if deletion_only and not w2_deletion_command_queue_url:
+            raise ValueError("deletion-only relay requires a dedicated W2 deletion queue")
         self._urls = {
             _W1_EXECUTION_QUEUE: w1_execution_queue_url,
             _W2_COLLECTION_COMMAND_QUEUE: w2_collection_command_queue_url,
@@ -140,11 +156,13 @@ class QueueUrlRegistry:
             _W2_COMMIT_GATE_COMMAND_QUEUE: (
                 w2_commit_gate_command_queue_url or w2_collection_command_queue_url
             ),
+            _W2_DELETION_COMMAND_QUEUE: w2_deletion_command_queue_url,
             _W4_RECOMMENDATION_EXECUTION_QUEUE: w4_recommendation_execution_queue_url,
             _W3_RETENTION_COMMAND_QUEUE: w3_retention_command_queue_url,
         }
         self._commit_gate_only = commit_gate_only
         self._retention_only = retention_only
+        self._deletion_only = deletion_only
 
     @property
     def supported_message_types(self) -> tuple[str, ...]:
@@ -152,7 +170,13 @@ class QueueUrlRegistry:
             return (_W2_COMMIT_GATE_MESSAGE_TYPE,)
         if self._retention_only:
             return (W3_OWNER_DELETION_MESSAGE_TYPE, W3_SOURCE_RETIREMENT_MESSAGE_TYPE)
-        return tuple(self._ROUTES)
+        if self._deletion_only:
+            return (W2_PRIVATE_DELETION_V2_MESSAGE_TYPE,)
+        return tuple(
+            message_type
+            for message_type in self._ROUTES
+            if message_type != W2_PRIVATE_DELETION_V2_MESSAGE_TYPE
+        )
 
     def resolve(self, *, message_type: str) -> tuple[QueueRoute, str]:
         route = self._ROUTES.get(message_type)
@@ -398,6 +422,9 @@ class OutboxRelay:
                         binding = None
                         recommendation_run = None
                         self._validate_w3_retention_message(message=message)
+                    elif message.message_type == W2_PRIVATE_DELETION_V2_MESSAGE_TYPE:
+                        binding = None
+                        recommendation_run = None
                     elif message.message_type == _W4_RECOMMENDATION_EXECUTION_MESSAGE_TYPE:
                         binding, recommendation_run = self._require_private_recommendation(
                             session=session,
@@ -412,6 +439,10 @@ class OutboxRelay:
                     _, queue_url = self._queues.resolve(message_type=message.message_type)
                     if message.message_type in _W3_RETENTION_MESSAGE_TYPES:
                         body = self._serialize_w3_retention_command(message=message)
+                    elif message.message_type == W2_PRIVATE_DELETION_V2_MESSAGE_TYPE:
+                        body = self._serialize_w2_private_deletion_v2(
+                            session=session, message=message
+                        )
                     elif binding is not None and recommendation_run is not None:
                         body = self._serialize_w4_recommendation_dispatch(
                             message=message,
@@ -455,6 +486,7 @@ class OutboxRelay:
                                 if message.message_type
                                 in {
                                     _W2_COMMIT_GATE_MESSAGE_TYPE,
+                                    W2_PRIVATE_DELETION_V2_MESSAGE_TYPE,
                                     _W4_RECOMMENDATION_EXECUTION_MESSAGE_TYPE,
                                     *_W3_RETENTION_MESSAGE_TYPES,
                                 }
@@ -468,7 +500,11 @@ class OutboxRelay:
                                 if binding is not None and recommendation_run is not None
                                 else (
                                     {"epick_command_id": str(message.id)}
-                                    if message.message_type in _W3_RETENTION_MESSAGE_TYPES
+                                    if message.message_type
+                                    in (
+                                        *_W3_RETENTION_MESSAGE_TYPES,
+                                        W2_PRIVATE_DELETION_V2_MESSAGE_TYPE,
+                                    )
                                     else {
                                         "epick_command_id": str(command.id),
                                         "epick_job_id": str(job.id),
@@ -507,6 +543,55 @@ class OutboxRelay:
                 .with_for_update(skip_locked=True)
             )
         )
+
+    @staticmethod
+    def _serialize_w2_private_deletion_v2(*, session: Session, message: OutboxMessage) -> str:
+        if (
+            message.schema_version != "w1.private.w2-deletion-dispatch.v2"
+            or message.visibility_scope != "PRIVATE"
+            or message.aggregate_type != "DELETION_TARGET"
+            or message.deletion_request_id is None
+            or message.deletion_target_id is None
+            or message.owner_user_id is None
+            or message.owner_deletion_epoch is None
+            or message.aggregate_id != message.deletion_target_id
+            or message.command_id is not None
+            or message.job_id is not None
+        ):
+            raise OutboxPayloadError("OUTBOX_W2_DELETION_REFERENCE_INVALID")
+        owner = session.get(User, message.owner_user_id)
+        request = session.get(DeletionRequest, message.deletion_request_id)
+        target = session.get(DeletionTarget, message.deletion_target_id)
+        if owner is None or request is None or target is None:
+            raise OutboxPayloadError("OUTBOX_W2_DELETION_REFERENCE_INVALID")
+        if (
+            request.owner_user_id != owner.id
+            or request.owner_deletion_epoch != message.owner_deletion_epoch
+            or target.attempts != message.aggregate_revision
+        ):
+            raise OutboxPayloadError("OUTBOX_W2_DELETION_BINDING_MISMATCH")
+        project = (
+            session.get(ApplicationProject, request.target_id)
+            if request.target_type == "PROJECT" and request.target_id is not None
+            else None
+        )
+        try:
+            expected = serialize_authorized_w2_deletion_envelope_v2(
+                owner=owner,
+                request=request,
+                target=target,
+                project=project,
+                issued_at=target.created_at,
+            )
+            stored = json.dumps(
+                message.payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+            )
+            validate_authorized_w2_deletion_envelope_v2(stored)
+        except (TypeError, ValueError, W2PrivateDeletionV2BoundaryError) as error:
+            raise OutboxPayloadError("OUTBOX_W2_DELETION_PAYLOAD_INVALID") from error
+        if stored != expected:
+            raise OutboxPayloadError("OUTBOX_W2_DELETION_BINDING_MISMATCH")
+        return expected
 
     def _require_private_job_command(
         self, *, session: Session, message: OutboxMessage
@@ -1073,7 +1158,8 @@ class OutboxRelay:
             message.last_error_at = None
 
             if (
-                message.message_type == W3_OWNER_DELETION_MESSAGE_TYPE
+                message.message_type
+                in {W3_OWNER_DELETION_MESSAGE_TYPE, W2_PRIVATE_DELETION_V2_MESSAGE_TYPE}
                 and message.deletion_target_id is not None
             ):
                 target = session.scalar(

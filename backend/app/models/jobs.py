@@ -332,7 +332,7 @@ class OutboxMessage(Base):
 
     id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
     message_type: Mapped[str] = mapped_column(String(128))
-    schema_version: Mapped[str] = mapped_column(String(32))
+    schema_version: Mapped[str] = mapped_column(String(64))
     visibility_scope: Mapped[str] = mapped_column(String(16))
     aggregate_type: Mapped[str] = mapped_column(String(64))
     aggregate_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True))
