@@ -27,6 +27,8 @@ from app.runtime.question_core_binding import (
     resolve_question_collection_company_for_lookup,
 )
 from app.runtime.w2_private_write_authority import (
+    CurrentWriteScopeLookupRequest,
+    CurrentWriteScopeLookupResponse,
     GateAuthorityRequest,
     GateAuthorityResponse,
     GateScopeLookupRequest,
@@ -39,6 +41,7 @@ from app.runtime.w2_private_write_authority import (
     decide_gate_authority,
     decide_private_write_authority,
     decide_terminal_cleanup_authority,
+    resolve_current_write_scope,
     resolve_gate_scope,
 )
 
@@ -180,6 +183,24 @@ def create_lookup_app(
         except PrivateWriteAuthorityDenied as error:
             raise _LookupAuthorizationError(
                 status_code=403, code="PRIVATE_WRITE_AUTHORITY_DENIED"
+            ) from error
+        except SQLAlchemyError:
+            return _private_error(code="INTERNAL_RETRYABLE", retryable=True, status_code=503)
+
+    @app.post(
+        "/internal/v1/w2-private/current-write-scope-lookup",
+        response_model=CurrentWriteScopeLookupResponse,
+        dependencies=[Depends(require_w2_service_principal)],
+    )
+    def lookup_w2_current_write_scope(
+        body: CurrentWriteScopeLookupRequest,
+    ) -> CurrentWriteScopeLookupResponse | JSONResponse:
+        try:
+            with session_factory.begin() as session:
+                return resolve_current_write_scope(session=session, request=body)
+        except PrivateWriteAuthorityDenied as error:
+            raise _LookupAuthorizationError(
+                status_code=403, code="PRIVATE_CURRENT_WRITE_SCOPE_NOT_FOUND"
             ) from error
         except SQLAlchemyError:
             return _private_error(code="INTERNAL_RETRYABLE", retryable=True, status_code=503)

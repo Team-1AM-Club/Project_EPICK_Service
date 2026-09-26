@@ -60,6 +60,28 @@ class PrivateWriteAuthorityResponse(PrivateWriteAuthorityRequest):
     authority_ref: str
 
 
+class CurrentWriteScopeLookupRequest(BaseModel):
+    """Identify a W1 command's current scope before W2's first private write."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal["w1.private.w2-current-write-scope-lookup.v1"]
+    owner_user_id: UUID
+    owner_deletion_epoch: int = Field(ge=0, le=2**63 - 1)
+    command_id: UUID
+    job_id: UUID
+    execution_fence: int = Field(ge=1, le=2**63 - 1)
+
+
+class CurrentWriteScopeLookupResponse(CurrentWriteScopeLookupRequest):
+    scope: dict[str, str]
+
+    @field_validator("scope")
+    @classmethod
+    def require_canonical_scope(cls, value: dict[str, str]) -> dict[str, str]:
+        return PrivateWriteAuthorityRequest.require_canonical_scope(value)
+
+
 class TerminalCleanupAuthorityRequest(PrivateWriteAuthorityRequest):
     """Authorize disposal of existing W2 private state, never a new write or send."""
 
@@ -154,6 +176,87 @@ _GATE_APPLIED_STATES = {
     "ABORT": "ABORTED",
     "PURGE": "PURGED",
 }
+
+
+def resolve_current_write_scope(
+    *, session: Session, request: CurrentWriteScopeLookupRequest
+) -> CurrentWriteScopeLookupResponse:
+    """Return scope only for a current, exactly bound W1-issued W2 command.
+
+    This lookup does not grant a write. The caller must compare the received
+    dispatch project_ref with this scope, then request fresh write authority.
+    """
+
+    command = (
+        session.execute(
+            select(
+                JobCommand.owner_user_id,
+                JobCommand.job_id,
+                JobCommand.command_type,
+                JobCommand.status,
+                JobCommand.execution_fence,
+                JobCommand.owner_deletion_epoch,
+                JobCommand.payload,
+            ).where(JobCommand.id == request.command_id)
+        )
+        .mappings()
+        .one_or_none()
+    )
+    if (
+        command is None
+        or command["owner_user_id"] != request.owner_user_id
+        or command["job_id"] != request.job_id
+        or command["command_type"] not in _W2_COMMAND_TYPES
+        or command["status"] not in {"PENDING", "ENQUEUED"}
+        or command["execution_fence"] != request.execution_fence
+        or command["owner_deletion_epoch"] != request.owner_deletion_epoch
+    ):
+        raise PrivateWriteAuthorityDenied("current write command binding is not current")
+    set_local_owner_context(session, command["owner_user_id"])
+    job = (
+        session.execute(
+            select(Job.project_id, Job.status, Job.active_lease_id).where(Job.id == request.job_id)
+        )
+        .mappings()
+        .one_or_none()
+    )
+    if job is None or job["status"] != "RUNNING" or job["active_lease_id"] is None:
+        raise PrivateWriteAuthorityDenied("current write Job binding is not current")
+    expected_project_ref = str(job["project_id"]) if job["project_id"] is not None else None
+    payload = command["payload"]
+    w2_command = payload.get("w2_command") if isinstance(payload, dict) else None
+    if (
+        not isinstance(w2_command, dict)
+        or w2_command.get("schema_version") != "w2.collection.v1"
+        or w2_command.get("command_id") != str(request.command_id)
+        or w2_command.get("job_id") != str(request.job_id)
+        or w2_command.get("authenticated_owner_ref") != str(request.owner_user_id)
+        or w2_command.get("execution_fence") != str(request.execution_fence)
+        or type(w2_command.get("owner_deletion_epoch")) is not int
+        or w2_command["owner_deletion_epoch"] != request.owner_deletion_epoch
+        or "project_ref" not in w2_command
+        or w2_command.get("project_ref") != expected_project_ref
+    ):
+        raise PrivateWriteAuthorityDenied("current write dispatch scope binding is not current")
+    scope: dict[str, str] = (
+        {"type": "ACCOUNT"}
+        if job["project_id"] is None
+        else {"type": "PROJECT", "project_id": str(job["project_id"])}
+    )
+    # Reuse the existing currentness and authorization checks in the same
+    # transaction. The result below contains no authority_ref and is not a
+    # reusable permission for reservation or any later write.
+    decide_private_write_authority(
+        session=session,
+        request=PrivateWriteAuthorityRequest.model_validate(
+            {
+                **request.model_dump(mode="json"),
+                "schema_version": "w1.private.w2-write-authority.v1",
+                "scope": scope,
+            }
+        ),
+    )
+    return CurrentWriteScopeLookupResponse(**request.model_dump(), scope=scope)
 
 
 def resolve_gate_scope(

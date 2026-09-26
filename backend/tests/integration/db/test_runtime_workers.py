@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine, event, func, select, text
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.models.application_workspace import ApplicationProject
 from app.models.identity import User
 from app.models.jobs import (
     Job,
@@ -59,10 +60,15 @@ def _seed_dispatchable_job(
     *,
     key: str,
     include_core_pin: bool = True,
+    project_scoped: bool = False,
 ) -> tuple[UUID, UUID, UUID, UUID]:
     owner = User(display_name=f"Runtime worker {key}", locale="ko-KR", timezone="Asia/Seoul")
     db_session.add(owner)
     db_session.flush()
+    project = ApplicationProject(owner_user_id=owner.id) if project_scoped else None
+    if project is not None:
+        db_session.add(project)
+        db_session.flush()
     company = ApplicationWorkspaceService(db_session).create_company(
         legal_name=f"EPICK {key}", display_name=f"EPICK {key}"
     )
@@ -92,6 +98,7 @@ def _seed_dispatchable_job(
     db_session.add(decision)
     accepted = JobService(db_session).accept_job(
         owner_user_id=owner.id,
+        project_id=project.id if project is not None else None,
         job_type="SOURCE_COLLECTION",
         idempotency_key=f"runtime-{key}",
         request_hash=f"runtime-{key}",
@@ -137,10 +144,15 @@ def _seed_direct_source_registration(
     db_session: Session,
     *,
     key: str,
+    project_scoped: bool = False,
 ) -> tuple[UUID, UUID, UUID, UUID, UUID]:
     owner = User(display_name=f"Direct registration {key}", locale="ko-KR", timezone="Asia/Seoul")
     db_session.add(owner)
     db_session.flush()
+    project = ApplicationProject(owner_user_id=owner.id) if project_scoped else None
+    if project is not None:
+        db_session.add(project)
+        db_session.flush()
     company = ApplicationWorkspaceService(db_session).create_company(
         legal_name=f"Direct EPICK {key}", display_name=f"Direct EPICK {key}"
     )
@@ -157,6 +169,7 @@ def _seed_direct_source_registration(
     db_session.flush()
     accepted = DirectSourceRegistrationService(db_session).accept(
         owner_user_id=owner.id,
+        project_id=project.id if project is not None else None,
         company_id=company.id,
         source_id=source.id,
         idempotency_key=f"direct-registration-{key}",
@@ -185,8 +198,11 @@ def _run_execution_to_w2_dispatch(
     db_session: Session,
     *,
     key: str,
+    project_scoped: bool = False,
 ) -> tuple[InMemorySqsPort, UUID, UUID]:
-    _, job_id, _, _ = _seed_dispatchable_job(db_session, key=key)
+    _, job_id, _, _ = _seed_dispatchable_job(
+        db_session, key=key, project_scoped=project_scoped
+    )
     db_session.commit()
     relay_sqs = InMemorySqsPort()
     assert _relay(migrated_engine, relay_sqs).drain_once(limit=10).published == 1
@@ -220,8 +236,11 @@ def _run_direct_registration_to_w2_dispatch(
     db_session: Session,
     *,
     key: str,
+    project_scoped: bool = False,
 ) -> tuple[InMemorySqsPort, UUID, UUID]:
-    _, job_id, _, _, _ = _seed_direct_source_registration(db_session, key=key)
+    _, job_id, _, _, _ = _seed_direct_source_registration(
+        db_session, key=key, project_scoped=project_scoped
+    )
     db_session.commit()
     relay_sqs = InMemorySqsPort()
     assert _relay(migrated_engine, relay_sqs).drain_once(limit=10).published == 1
@@ -601,6 +620,59 @@ def test_direct_source_registration_uses_its_own_w1_dispatch_and_lookup_contract
     assert available.status_code == 200
     assert available.json()["status"] == "AVAILABLE"
     assert available.json()["command"] == payload
+
+
+@pytest.mark.postgres
+@pytest.mark.parametrize("project_scoped", [False, True])
+@pytest.mark.parametrize("dispatch_kind", ["core", "direct"])
+def test_actual_w1_dispatch_project_ref_matches_current_write_scope(
+    migrated_engine: Engine,
+    db_session: Session,
+    project_scoped: bool,
+    dispatch_kind: str,
+) -> None:
+    key = f"scope-{dispatch_kind}-{project_scoped}"
+    if dispatch_kind == "core":
+        sqs, job_id, command_id = _run_execution_to_w2_dispatch(
+            migrated_engine, db_session, key=key, project_scoped=project_scoped
+        )
+    else:
+        sqs, job_id, command_id = _run_direct_registration_to_w2_dispatch(
+            migrated_engine, db_session, key=key, project_scoped=project_scoped
+        )
+    assert _relay(migrated_engine, sqs).drain_once(limit=10).published == 1
+    dispatch = json.loads(sqs.sent_messages[-1].body)
+    db_session.expire_all()
+    job = db_session.get(Job, job_id)
+    command = db_session.get(JobCommand, command_id)
+    assert job is not None and command is not None
+    project_ref = str(job.project_id) if job.project_id is not None else None
+    assert dispatch["payload"]["project_ref"] == project_ref
+    assert command.payload["w2_command"]["project_ref"] == project_ref
+    scope = (
+        {"type": "PROJECT", "project_id": project_ref}
+        if project_ref is not None
+        else {"type": "ACCOUNT"}
+    )
+    lookup = TestClient(
+        create_lookup_app(
+            session_factory=_factory(migrated_engine), expected_bearer_token="test-token"
+        )
+    )
+    response = lookup.post(
+        "/internal/v1/w2-private/current-write-scope-lookup",
+        json={
+            "schema_version": "w1.private.w2-current-write-scope-lookup.v1",
+            "owner_user_id": str(job.owner_user_id),
+            "owner_deletion_epoch": command.owner_deletion_epoch,
+            "command_id": str(command_id),
+            "job_id": str(job_id),
+            "execution_fence": command.execution_fence,
+        },
+        headers=_lookup_headers(),
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["scope"] == scope
 
 
 @pytest.mark.postgres
