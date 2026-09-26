@@ -29,6 +29,8 @@ from app.runtime.question_core_binding import (
 from app.runtime.w2_private_write_authority import (
     GateAuthorityRequest,
     GateAuthorityResponse,
+    GateScopeLookupRequest,
+    GateScopeLookupResponse,
     PrivateWriteAuthorityDenied,
     PrivateWriteAuthorityRequest,
     PrivateWriteAuthorityResponse,
@@ -37,6 +39,7 @@ from app.runtime.w2_private_write_authority import (
     decide_gate_authority,
     decide_private_write_authority,
     decide_terminal_cleanup_authority,
+    resolve_gate_scope,
 )
 
 _W2_SERVICE_PRINCIPAL = "w2"
@@ -195,6 +198,25 @@ def create_lookup_app(
         except PrivateWriteAuthorityDenied as error:
             raise _LookupAuthorizationError(
                 status_code=403, code="PRIVATE_TERMINAL_CLEANUP_DENIED"
+            ) from error
+        except SQLAlchemyError:
+            return _private_error(code="INTERNAL_RETRYABLE", retryable=True, status_code=503)
+
+    @app.post(
+        "/internal/v1/w2-private/gate-scope-lookup",
+        response_model=GateScopeLookupResponse,
+        response_model_exclude_none=True,
+        dependencies=[Depends(require_w2_service_principal)],
+    )
+    def lookup_w2_gate_scope(
+        body: GateScopeLookupRequest,
+    ) -> GateScopeLookupResponse | JSONResponse:
+        try:
+            with session_factory.begin() as session:
+                return resolve_gate_scope(session=session, request=body)
+        except PrivateWriteAuthorityDenied as error:
+            raise _LookupAuthorizationError(
+                status_code=403, code="PRIVATE_GATE_SCOPE_NOT_FOUND"
             ) from error
         except SQLAlchemyError:
             return _private_error(code="INTERNAL_RETRYABLE", retryable=True, status_code=503)

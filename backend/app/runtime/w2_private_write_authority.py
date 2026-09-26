@@ -102,6 +102,46 @@ class GateAuthorityResponse(GateAuthorityRequest):
     authority_ref: str
 
 
+class GateScopeLookupRequest(BaseModel):
+    """Resolve an issued gate's W1-owned scope; this is not write authority."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal["w1.private.w2-gate-scope-lookup.v1"]
+    owner_user_id: UUID
+    owner_deletion_epoch: int = Field(ge=0, le=2**63 - 1)
+    command_id: UUID
+    job_id: UUID
+    execution_fence: int = Field(ge=1, le=2**63 - 1)
+    operation_id: UUID
+    operation_revision: int = Field(ge=1, le=2**63 - 1)
+    action: Literal["PREPARE", "FINALIZE", "ABORT", "PURGE"]
+    phase: Literal["APPLY", "ACK_RELAY"]
+    result_digest: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
+    purge_owner_deletion_epoch: int | None = Field(default=None, ge=1, le=2**63 - 1)
+
+    @model_validator(mode="after")
+    def validate_purge_epoch(self) -> GateScopeLookupRequest:
+        if self.action == "PURGE":
+            if (
+                self.purge_owner_deletion_epoch is None
+                or self.purge_owner_deletion_epoch <= self.owner_deletion_epoch
+            ):
+                raise ValueError("PURGE requires a newer owner deletion epoch")
+        elif self.purge_owner_deletion_epoch is not None:
+            raise ValueError("only PURGE permits a purge epoch")
+        return self
+
+
+class GateScopeLookupResponse(GateScopeLookupRequest):
+    scope: dict[str, str]
+
+    @field_validator("scope")
+    @classmethod
+    def require_canonical_scope(cls, value: dict[str, str]) -> dict[str, str]:
+        return PrivateWriteAuthorityRequest.require_canonical_scope(value)
+
+
 _GATE_PENDING_STATES = {
     "PREPARE": "PREPARE_PENDING",
     "FINALIZE": "FINALIZE_PENDING",
@@ -114,6 +154,76 @@ _GATE_APPLIED_STATES = {
     "ABORT": "ABORTED",
     "PURGE": "PURGED",
 }
+
+
+def resolve_gate_scope(
+    *, session: Session, request: GateScopeLookupRequest
+) -> GateScopeLookupResponse:
+    """Return canonical scope only for an exact W1-issued gate, including old v1 wires.
+
+    The result is binding information, never a cached authorization. W2 must
+    separately obtain a fresh gate-authority decision before apply or ACK send.
+    """
+
+    command = (
+        session.execute(
+            select(JobCommand.owner_user_id, JobCommand.job_id).where(
+                JobCommand.id == request.command_id
+            )
+        )
+        .mappings()
+        .one_or_none()
+    )
+    if (
+        command is None
+        or command["owner_user_id"] != request.owner_user_id
+        or command["job_id"] != request.job_id
+    ):
+        raise PrivateWriteAuthorityDenied("gate command binding is not current")
+    set_local_owner_context(session, command["owner_user_id"])
+    job = (
+        session.execute(select(Job.project_id).where(Job.id == request.job_id))
+        .mappings()
+        .one_or_none()
+    )
+    if job is None:
+        raise PrivateWriteAuthorityDenied("gate Job binding is not current")
+    issued = session.scalar(
+        select(
+            func.public.w2_gate_outbox_was_issued(
+                request.operation_id,
+                request.operation_revision,
+                request.action,
+                request.command_id,
+                request.job_id,
+                request.owner_user_id,
+                request.execution_fence,
+                request.owner_deletion_epoch,
+                request.result_digest,
+                request.purge_owner_deletion_epoch,
+            )
+        )
+    )
+    if not issued:
+        raise PrivateWriteAuthorityDenied("gate action was not issued by W1")
+    scope = (
+        {"type": "ACCOUNT"}
+        if job["project_id"] is None
+        else {"type": "PROJECT", "project_id": str(job["project_id"])}
+    )
+    # Reuse the complete currentness, owner, project and revision checks.
+    # Looking up the scope cannot bypass a denied gate authority decision.
+    decide_gate_authority(
+        session=session,
+        request=GateAuthorityRequest.model_validate(
+            {
+                **request.model_dump(mode="json", exclude_none=True),
+                "schema_version": "w1.private.w2-gate-authority.v1",
+                "scope": scope,
+            }
+        ),
+    )
+    return GateScopeLookupResponse(**request.model_dump(exclude_none=True), scope=scope)
 
 
 def decide_gate_authority(

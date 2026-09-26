@@ -84,6 +84,30 @@ epoch를 transaction에서 재검증해 발행하는 별도 가시화 제어 com
   결과의 commit 또는 재노출 권한이 아니다. commit-gate의 `FINALIZE` 전에는 어떤 사용자
   가시 projection도 만들면 안 된다.
 
+#### Stage가 없는 gate의 canonical scope 조회
+
+이미 발행된 `w1.private.w2.commit-gate.v1`에는 ACCOUNT/PROJECT scope가 없다. W2가
+원래 stage·scope binding을 보유하지 못한 경우에는 같은 W2 전용 인증 경계의
+`POST /internal/v1/w2-private/gate-scope-lookup`을 호출한다. 요청·응답의 정본은
+`w2-gate-scope-lookup.request.schema.json`과
+`w2-gate-scope-lookup.response.schema.json`이다.
+
+- 요청은 원래 gate wire의 owner·command·Job·fence·epoch·operation·revision·action·
+  digest 및 PURGE epoch를 그대로 사용하고, 적용 전이면 `phase=APPLY`, 원본 ACK 송신
+  전이면 `phase=ACK_RELAY`를 사용한다. W2는 scope 후보를 보내거나 추측하지 않는다.
+- W1은 **해당 action의 outbox 발행 증거**, 현재/역사적 gate 상태와 원래 binding을
+  검증한 뒤 보존된 Job의 `project_id`에서 canonical scope만 반환한다. 다른 owner,
+  누락·변조된 binding, 발행 증거 소실, 허용되지 않은 상태는 403이다. DB 불확실성은
+  503이다. 이 조회는 취소·계정/Project 삭제 뒤의 정확한 ABORT/PURGE에도 적용된다.
+- 응답은 **식별 정보이지 권한이 아니다.** W2는 결과를 받은 뒤 별도의 신선한
+  `POST /internal/v1/w2-private/gate-authority` 결정을 받아야 한다. 그 사이 W1 상태가
+  달라지면 후속 권한 조회가 거부될 수 있고, 이 경우 W2는 적용·송신하지 않는다.
+- W1에는 W2가 특정 ACK의 내구 적용을 조회할 수 있는 API가 없다. W2는 원시 개인
+  결과를 삭제하더라도 동일 ACK ID·본문과 최소 재전달 제어 기록을 양측 count-only
+  drain 증거 및 별도 승인된 종료 계약 전까지 자동 만료시키지 않는다. SQS send 성공은
+  W1 적용 완료의 증거가 아니다. W1은 동일 ID·본문을 중복 처리하며 다른 본문으로
+  같은 ID를 재사용하면 충돌로 처리한다.
+
 W2 → W1 ACK Schema와 W2 local staging transaction은 W2 소유 artifact다. W1은 W2가
 canonical Schema·fixture·commit SHA를 제공하고 채택할 때까지 이를 backend 소유 정본으로
 표기하거나 W1-R2-03 전체 완료를 선언하지 않는다.
