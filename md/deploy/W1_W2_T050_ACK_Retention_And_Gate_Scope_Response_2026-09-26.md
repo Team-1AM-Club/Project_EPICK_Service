@@ -3,9 +3,6 @@
 - 작성일: 2026-09-26
 - 대상: W2 Source Runtime 담당자
 - 회신 대상: `w2/W2_W1_T050_ACK_Retention_And_Gate_Scope_Clarification_Request_2026-09-26.md`
-- W1 구현 full SHA: `a99de8d39a53444508c4ef2def427eb6ed3c1c91` (`codex/008-phase4-us2`)
-- 기존 W1 authority 기준: `14daafe22dbdfcb6aa7f3e78c6247fef1c2d2ea6`
-- W2 검토 기준: `e2491a4084ed50090d5135ba177a3772e9a44f5a` (이 회신은 W2 코드를 변경하지 않음)
 
 ## 1. ACK 내구 접수 신호: W2가 조회할 수 있는 기존 신호는 없음
 
@@ -43,8 +40,9 @@ authority는 fail-closed `403`이 될 수 있다. **현재 W1이 W2 drain을 확
 W1은 첫 적용에서 gate 상태와 inbox outcome을 함께 commit하고, 동일 ID·digest의 다음
 전달은 `DUPLICATE`로 소비해 상태를 다시 전이하지 않는다. 동일 ID로 digest가 다른
 본문은 `ID_CONFLICT`로 거부한다. DB/SQS 불확실성에는 새 ACK ID나 새 STAGED/private
-result를 만들지 않는다. 위 동작은 계정·Project 삭제 epoch가 증가한 후의 ABORT/PURGE
-각각에 대해 격리 PostgreSQL에서 확인했다.
+result를 만들지 않는다. 격리 PostgreSQL에서 ACCOUNT/PROJECT × ABORT/PURGE의
+삭제 이후 상태를 구성해 위 중복 처리를 확인했다. 실제 W1 삭제 발행 경로를 통한
+stage-less gate 조회는 계정·Project 각각의 ABORT를 별도로 확인했다.
 
 ## 4. Stage 없는 ABORT/PURGE: W1 소유 canonical scope 조회 계약 제공
 
@@ -55,11 +53,6 @@ W2 전용 protected route를 사용한다.
 
 `POST /internal/v1/w2-private/gate-scope-lookup`
 
-- 요청 정본: `backend/contracts/w1/v1/w2-gate-scope-lookup.request.schema.json`
-  - SHA-256: `15ab35ae09dd449b4f0a7d0a0ba707508ef4110d0f898c17c84ca6e3185cf832`
-- 응답 정본: `backend/contracts/w1/v1/w2-gate-scope-lookup.response.schema.json`
-  - SHA-256: `13615def394d4e0c48375a83fe1211574bc290bfbd6b4bbe8d8861ba13d2e3c0`
-- schema version: `w1.private.w2-gate-scope-lookup.v1`
 - 인증: 기존 W2 protected lookup과 동일한 W2 전용 bearer 및 `w2` service principal.
   실제 credential은 이 문서에 싣지 않는다.
 
@@ -87,7 +80,16 @@ W1 구현 경로는 `backend/app/runtime/w2_private_write_authority.py`의
 기존 좁은 lookup DB 권한과 migration `044_w2_gate_lookup_grant`의 exact outbox 증거
 함수를 재사용하므로 새 DB migration은 필요하지 않다.
 
-## 5. 검증·남은 W2 작업·READY 경계
+## 5. 근거 SHA·schema·테스트 및 남은 W2 작업
+
+- W1 구현 full SHA: `a99de8d39a53444508c4ef2def427eb6ed3c1c91` (`codex/008-phase4-us2`)
+- 기존 W1 authority 기준: `14daafe22dbdfcb6aa7f3e78c6247fef1c2d2ea6`
+- W2 검토 기준: `e2491a4084ed50090d5135ba177a3772e9a44f5a` (이 회신은 W2 코드를 변경하지 않음)
+- 요청 정본: `backend/contracts/w1/v1/w2-gate-scope-lookup.request.schema.json`
+  - SHA-256: `15ab35ae09dd449b4f0a7d0a0ba707508ef4110d0f898c17c84ca6e3185cf832`
+- 응답 정본: `backend/contracts/w1/v1/w2-gate-scope-lookup.response.schema.json`
+  - SHA-256: `13615def394d4e0c48375a83fe1211574bc290bfbd6b4bbe8d8861ba13d2e3c0`
+- schema version: `w1.private.w2-gate-scope-lookup.v1`
 
 격리 PostgreSQL(운영 DB 아님)에서 다음 선택 실행은 **82 passed, 2 dependency
 deprecation warnings**였다. 여기에는 기존 W1 gate/authority 회귀, 새 scope 조회의
