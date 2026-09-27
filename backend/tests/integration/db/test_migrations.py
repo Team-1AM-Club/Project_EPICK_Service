@@ -23,27 +23,21 @@ def test_current_migration_head_merges_w2_and_w3_runtime_branches() -> None:
     """Keep the W2 retry and W3 retention boundaries in one migration chain."""
 
     config = Config(str(BACKEND_ROOT / "alembic.ini"))
-    assert (
-        ScriptDirectory.from_config(config).get_current_head()
-        == "045_w2_command_binding_retention"
-    )
+    assert ScriptDirectory.from_config(config).get_current_head() == "046_w2_deletion_outbox_rls"
 
 
 @pytest.mark.postgres
 def test_w3_core_decision_inbound_schema_contract(migrated_engine: object) -> None:
     inspector = inspect(migrated_engine)
 
-    receipt_columns = {
-        column["name"]: column for column in inspector.get_columns("inbox_receipts")
-    }
+    receipt_columns = {column["name"]: column for column in inspector.get_columns("inbox_receipts")}
     assert {"payload_digest", "producer_name", "schema_version"} <= receipt_columns.keys()
     assert receipt_columns["payload_digest"]["nullable"] is True
     assert receipt_columns["producer_name"]["nullable"] is True
     assert receipt_columns["schema_version"]["nullable"] is True
 
     binding_columns = {
-        column["name"]: column
-        for column in inspector.get_columns("job_core_decision_bindings")
+        column["name"]: column for column in inspector.get_columns("job_core_decision_bindings")
     }
     assert {
         "id",

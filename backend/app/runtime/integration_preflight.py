@@ -50,7 +50,7 @@ def _w2_v2_manifest() -> dict[str, str]:
         manifest = json.loads(_W2_V2_MANIFEST.read_text(encoding="utf-8"))
         if not isinstance(manifest, dict):
             raise ValueError
-        if manifest.get("w2_required_migration_head") != "0010_private_deletion_scope_v2":
+        if manifest.get("w2_required_migration_head") != "0012_private_ack_wire_digest":
             raise ValueError
         source_sha = manifest.get("w2_source_sha")
         if not isinstance(source_sha, str) or re.fullmatch(r"[0-9a-f]{40}", source_sha) is None:

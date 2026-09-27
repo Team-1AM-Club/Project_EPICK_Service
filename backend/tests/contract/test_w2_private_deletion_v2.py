@@ -23,8 +23,8 @@ CONTRACTS = Path(__file__).parents[2] / "contracts" / "w2" / "v2"
 
 def test_w2_v2_manifest_pins_source_and_migration() -> None:
     manifest = json.loads((CONTRACTS / "private-deletion-manifest.json").read_text())
-    assert manifest["w2_source_sha"] == "e2491a4084ed50090d5135ba177a3772e9a44f5a"
-    assert manifest["w2_required_migration_head"] == "0010_private_deletion_scope_v2"
+    assert manifest["w2_source_sha"] == "3700b8dc324b4a365b19214550bd66b74171870b"
+    assert manifest["w2_required_migration_head"] == "0012_private_ack_wire_digest"
     for prefix in ("command", "ack"):
         path = CONTRACTS / manifest[f"{prefix}_schema_path"]
         assert hashlib.sha256(path.read_bytes()).hexdigest() == manifest[f"{prefix}_schema_sha256"]

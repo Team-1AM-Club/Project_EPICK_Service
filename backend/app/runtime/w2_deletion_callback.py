@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import hmac
 import json
+import logging
 from collections.abc import Callable
+from hashlib import sha256
 from typing import Annotated, Literal
+from uuid import UUID, uuid4
 
 from fastapi import Depends, FastAPI, Header, Request
 from fastapi.responses import JSONResponse
@@ -16,6 +19,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
 from app.models.deletion import DeletionRequest, DeletionTarget
+from app.models.registry import load_all_models
 from app.runtime.w2_private_deletion_v2 import (
     W2PrivateDeletionV2Error,
     parse_w2_private_deletion_ack_v2,
@@ -40,6 +44,7 @@ class W2DeletionReadinessResponse(BaseModel):
 
 AuthorizationHeader = Annotated[str | None, Header()]
 ServicePrincipalHeader = Annotated[str | None, Header(alias="X-EPICK-Service-Principal")]
+_LOGGER = logging.getLogger(__name__)
 
 
 def _error(code: str, status_code: int) -> JSONResponse:
@@ -64,6 +69,20 @@ def create_w2_deletion_callback_app(
         redoc_url=None,
         openapi_url=None,
     )
+
+    def ack_error(code: str, status_code: int, deletion_id: UUID | None) -> JSONResponse:
+        diagnostic_id = uuid4().hex
+        deletion_ref = sha256(deletion_id.bytes).hexdigest() if deletion_id is not None else None
+        _LOGGER.warning(
+            "w2_deletion_ack_rejected diagnostic_id=%s status=%s code=%s deletion_ref_sha256=%s",
+            diagnostic_id,
+            status_code,
+            code,
+            deletion_ref,
+        )
+        response = _error(code, status_code)
+        response.headers["X-EPICK-Deletion-Diagnostic-ID"] = diagnostic_id
+        return response
 
     @app.exception_handler(_CallbackAuthorizationError)
     def authorization_error(request: Request, error: _CallbackAuthorizationError) -> JSONResponse:
@@ -98,8 +117,10 @@ def create_w2_deletion_callback_app(
     )
     def apply_ack(body: dict[str, object]) -> W2DeletionCallbackResponse | JSONResponse:
         ack_body = json.dumps(body, ensure_ascii=False, separators=(",", ":"))
+        deletion_id: UUID | None = None
         try:
             ack = parse_w2_private_deletion_ack_v2(ack_body)
+            deletion_id = ack.deletion_id
             with session_factory.begin() as session:
                 binding = session.execute(
                     select(DeletionTarget.deletion_request_id, DeletionRequest.owner_user_id)
@@ -107,7 +128,7 @@ def create_w2_deletion_callback_app(
                     .where(DeletionTarget.id == ack.deletion_id)
                 ).one_or_none()
                 if binding is None or binding.owner_user_id is None:
-                    return _error("W2_DELETION_V2_TARGET_NOT_FOUND", 409)
+                    return ack_error("W2_DELETION_V2_TARGET_NOT_FOUND", 409, deletion_id)
                 DeletionOrchestrationService(session).apply_w2_private_deletion_ack_v2(
                     owner_user_id=binding.owner_user_id,
                     deletion_request_id=binding.deletion_request_id,
@@ -116,17 +137,17 @@ def create_w2_deletion_callback_app(
                 )
             return W2DeletionCallbackResponse()
         except W2PrivateDeletionV2Error:
-            return _error("W2_DELETION_V2_ACK_INVALID", 409)
+            return ack_error("W2_DELETION_V2_ACK_INVALID", 409, deletion_id)
         except StaleDeletionAcknowledgementError:
-            return _error("W2_DELETION_V2_STALE_EPOCH", 409)
+            return ack_error("W2_DELETION_V2_STALE_EPOCH", 409, deletion_id)
         except DeletionTransitionError:
-            return _error("W2_DELETION_V2_STATE_INVALID", 409)
+            return ack_error("W2_DELETION_V2_STATE_INVALID", 409, deletion_id)
         except DeletionConflictError:
-            return _error("W2_DELETION_V2_CONFLICT", 409)
+            return ack_error("W2_DELETION_V2_CONFLICT", 409, deletion_id)
         except (W2PrivateDeletionV2BoundaryError, DeletionOrchestrationError):
-            return _error("W2_DELETION_V2_BINDING_INVALID", 409)
+            return ack_error("W2_DELETION_V2_BINDING_INVALID", 409, deletion_id)
         except SQLAlchemyError:
-            return _error("INTERNAL_RETRYABLE", 503)
+            return ack_error("INTERNAL_RETRYABLE", 503, deletion_id)
 
     return app
 
@@ -138,6 +159,7 @@ def create_configured_w2_deletion_callback_app() -> FastAPI:
         raise RuntimeError("W1_W2_DELETION_BEARER is required")
     from sqlalchemy import create_engine
 
+    load_all_models()
     engine = create_engine(settings.deletion_worker_database_url, pool_pre_ping=True)
     sessions = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     return create_w2_deletion_callback_app(

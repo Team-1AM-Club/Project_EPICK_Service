@@ -18,11 +18,12 @@ def create_worker_session_factory() -> sessionmaker:
 
 
 def create_deletion_worker_session_factory() -> sessionmaker:
-    """Create the least-privilege factory for W3 retention receipt reconciliation."""
+    """Create the least-privilege factory for W3/W2 deletion reconciliation."""
 
     if not settings.deletion_worker_database_url:
         raise RuntimeError(
             "DELETION_WORKER_DATABASE_URL must be set before starting the retention worker"
         )
+    load_all_models()
     worker_engine = create_engine(settings.deletion_worker_database_url, pool_pre_ping=True)
     return sessionmaker(bind=worker_engine, autoflush=False, expire_on_commit=False)

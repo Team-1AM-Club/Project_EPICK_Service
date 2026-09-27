@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from hashlib import sha256
 from pathlib import Path
 from uuid import uuid4
 
@@ -66,8 +67,16 @@ def test_private_callback_readiness_is_database_bound(
 
 
 def test_authenticated_w2_v2_ack_is_bound_to_current_target(
-    migrated_engine: Engine, callback_client: TestClient, monkeypatch: pytest.MonkeyPatch
+    migrated_engine: Engine,
+    callback_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    audit_lines: list[str] = []
+
+    def capture_audit(template: str, *args: object) -> None:
+        audit_lines.append(template % args)
+
+    monkeypatch.setattr("app.runtime.w2_deletion_callback._LOGGER.warning", capture_audit)
     with Session(migrated_engine, expire_on_commit=False) as session:
         owner = User(display_name="Callback owner", locale="ko-KR", timezone="Asia/Seoul")
         session.add(owner)
@@ -116,9 +125,10 @@ def test_authenticated_w2_v2_ack_is_bound_to_current_target(
         ).status_code
         == 403
     )
+    missing_target_id = uuid4()
     for rejected_body, code in (
         ({**body, "schema_version": "w2.private-deletion-ack.v1"}, "W2_DELETION_V2_ACK_INVALID"),
-        ({**body, "deletion_id": str(uuid4())}, "W2_DELETION_V2_TARGET_NOT_FOUND"),
+        ({**body, "deletion_id": str(missing_target_id)}, "W2_DELETION_V2_TARGET_NOT_FOUND"),
         ({**body, "owner_user_id": str(target_id)}, "W2_DELETION_V2_BINDING_INVALID"),
         ({**body, "deletion_epoch": 2}, "W2_DELETION_V2_STALE_EPOCH"),
         (
@@ -129,6 +139,12 @@ def test_authenticated_w2_v2_ack_is_bound_to_current_target(
         rejected = callback_client.post(url, json=rejected_body, headers=headers)
         assert rejected.status_code == 409
         assert rejected.json() == {"code": code}
+        assert len(rejected.headers["X-EPICK-Deletion-Diagnostic-ID"]) == 32
+    audit = "\n".join(audit_lines)
+    assert f"deletion_ref_sha256={sha256(missing_target_id.bytes).hexdigest()}" in audit
+    assert str(missing_target_id) not in audit
+    assert str(owner_id) not in audit
+    assert "separate-w2-deletion-token" not in audit
     with Session(migrated_engine) as session:
         assert session.get(DeletionTarget, target_id).status == "DISPATCHED"
 
@@ -155,6 +171,7 @@ def test_authenticated_w2_v2_ack_is_bound_to_current_target(
         retryable = callback_client.post(url, json=body, headers=headers)
     assert retryable.status_code == 503
     assert retryable.json() == {"code": "INTERNAL_RETRYABLE"}
+    assert len(retryable.headers["X-EPICK-Deletion-Diagnostic-ID"]) == 32
     assert "injected database outage" not in retryable.text
     with Session(migrated_engine) as session:
         assert session.get(DeletionTarget, target_id).status == "DISPATCHED"

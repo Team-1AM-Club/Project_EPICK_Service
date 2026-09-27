@@ -16,7 +16,7 @@ from sqlalchemy import Engine, text
 
 from app.runtime import integration_preflight
 
-_SOURCE_SHA = "e2491a4084ed50090d5135ba177a3772e9a44f5a"
+_SOURCE_SHA = "3700b8dc324b4a365b19214550bd66b74171870b"
 _IMAGE_DIGEST = "sha256:" + "a" * 64
 _COMMAND_HASH = "73eb3a51d15923969d483b13fdbf498e0a6cd8cfa18c019a66f5f532cfd64067"
 _ACK_HASH = "22cd9cd44061b5c14c9852634417482993a8ffb8f69dc8e98e3b6cd71b891bc9"
@@ -60,7 +60,7 @@ def test_activation_operator_writes_proof_only_after_real_w2_head_check(
         connection.execute(
             text(
                 f"INSERT INTO {schema}.alembic_version (version_num) "
-                "VALUES ('0010_private_deletion_scope_v2')"
+                "VALUES ('0012_private_ack_wire_digest')"
             )
         )
     w2_url = migrated_engine.url.update_query_dict(
@@ -91,7 +91,7 @@ def test_activation_operator_writes_proof_only_after_real_w2_head_check(
         "scope": "w2_deletion_v2",
     }
     assert json.loads(proof_path.read_text(encoding="utf-8"))["w2_migration_head"] == (
-        "0010_private_deletion_scope_v2"
+        "0012_private_ack_wire_digest"
     )
 
     with migrated_engine.begin() as connection:
@@ -118,10 +118,11 @@ def test_activation_operator_writes_proof_only_after_real_w2_head_check(
 @pytest.mark.parametrize(
     ("heads", "allowed"),
     [
-        (("0010_private_deletion_scope_v2",), True),
+        (("0012_private_ack_wire_digest",), True),
         ((), False),
         (("0009_private_deletion_receipt",), False),
-        (("0010_private_deletion_scope_v2", "0010_private_deletion_scope_v2"), False),
+        (("0010_private_deletion_scope_v2",), False),
+        (("0012_private_ack_wire_digest", "0012_private_ack_wire_digest"), False),
     ],
 )
 def test_w2_deletion_activation_requires_exact_one_actual_database_head(
@@ -158,7 +159,7 @@ def test_w2_deletion_activation_requires_exact_one_actual_database_head(
             assert proof == {
                 "schema_version": "w1.w2-deletion-activation.v1",
                 "w2_source_sha": _SOURCE_SHA,
-                "w2_migration_head": "0010_private_deletion_scope_v2",
+                "w2_migration_head": "0012_private_ack_wire_digest",
                 "w2_image_digest": _IMAGE_DIGEST,
                 "command_schema_sha256": _COMMAND_HASH,
                 "ack_schema_sha256": _ACK_HASH,
@@ -173,7 +174,7 @@ def test_w2_deletion_activation_rejects_stale_or_changed_proof(tmp_path: Path) -
     proof = {
         "schema_version": "w1.w2-deletion-activation.v1",
         "w2_source_sha": _SOURCE_SHA,
-        "w2_migration_head": "0010_private_deletion_scope_v2",
+        "w2_migration_head": "0012_private_ack_wire_digest",
         "w2_image_digest": _IMAGE_DIGEST,
         "command_schema_sha256": _COMMAND_HASH,
         "ack_schema_sha256": _ACK_HASH,
@@ -183,7 +184,8 @@ def test_w2_deletion_activation_rejects_stale_or_changed_proof(tmp_path: Path) -
     path.write_text(json.dumps(proof), encoding="utf-8")
     assert require_proof(path, expected_image_digest=_IMAGE_DIGEST, now=now) == proof
     for change in (
-        {"w2_migration_head": "0009_private_deletion_receipt"},
+        {"w2_migration_head": "0010_private_deletion_scope_v2"},
+        {"w2_source_sha": "e2491a4084ed50090d5135ba177a3772e9a44f5a"},
         {"w2_source_sha": "0" * 40},
         {"w2_image_digest": "sha256:" + "b" * 64},
         {"ack_schema_sha256": "0" * 64},

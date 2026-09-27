@@ -66,8 +66,8 @@ def test_w2_deletion_scope_uses_proven_route_and_deletion_principal(tmp_path: Pa
         json.dumps(
             {
                 "schema_version": "w1.w2-deletion-activation.v1",
-                "w2_source_sha": "e2491a4084ed50090d5135ba177a3772e9a44f5a",
-                "w2_migration_head": "0010_private_deletion_scope_v2",
+                "w2_source_sha": "3700b8dc324b4a365b19214550bd66b74171870b",
+                "w2_migration_head": "0012_private_ack_wire_digest",
                 "w2_image_digest": digest,
                 "command_schema_sha256": (
                     "73eb3a51d15923969d483b13fdbf498e0a6cd8cfa18c019a66f5f532cfd64067"
@@ -75,9 +75,9 @@ def test_w2_deletion_scope_uses_proven_route_and_deletion_principal(tmp_path: Pa
                 "ack_schema_sha256": (
                     "22cd9cd44061b5c14c9852634417482993a8ffb8f69dc8e98e3b6cd71b891bc9"
                 ),
-                "checked_at": datetime.now(UTC).isoformat(timespec="seconds").replace(
-                    "+00:00", "Z"
-                ),
+                "checked_at": datetime.now(UTC)
+                .isoformat(timespec="seconds")
+                .replace("+00:00", "Z"),
             }
         ),
         encoding="utf-8",
