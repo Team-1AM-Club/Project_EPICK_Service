@@ -1,0 +1,22 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ConsumeOnlyW2DeletionCommandMain",
+      "Effect": "Allow",
+      "Action": [
+        "sqs:GetQueueAttributes",
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:ChangeMessageVisibility"
+      ],
+      "Resource": "${W2_DELETION_COMMAND_QUEUE_ARN}"
+    },
+    {
+      "Sid": "InspectW2DeletionCommandDlqOnly",
+      "Effect": "Allow",
+      "Action": "sqs:GetQueueAttributes",
+      "Resource": "${W2_DELETION_COMMAND_DLQ_ARN}"
+    }
+  ]
+}

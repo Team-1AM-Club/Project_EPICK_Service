@@ -1,0 +1,61 @@
+{
+  "schema_version": "w1.w2-private-deletion-runtime-inputs.v1",
+  "environment": "${ENVIRONMENT}",
+  "resource_owner": "w1",
+  "queue": {
+    "main_name": "epick-${ENVIRONMENT}-w2-private-deletion-command",
+    "dlq_name": "epick-${ENVIRONMENT}-w2-private-deletion-command-dlq",
+    "main_url_parameter": "/epick/${ENVIRONMENT}/w2/deletion-command/main-url",
+    "dlq_arn_parameter": "/epick/${ENVIRONMENT}/w2/deletion-command/dlq-arn",
+    "queue_parameter_store": "aws_ssm_parameter_store",
+    "consumer_role_ref": "${W2_DELETION_CONSUMER_ROLE_ARN}",
+    "identity_policy_owner": "w1",
+    "queue_policy_owner": "w1",
+    "encryption": "sqs_managed_sse",
+    "visibility_timeout_seconds": "${APPROVED_VISIBILITY_TIMEOUT_SECONDS}",
+    "max_receive_count": "${APPROVED_MAX_RECEIVE_COUNT}"
+  },
+  "callback": {
+    "path": "/internal/v1/w2-private/deletion/ack",
+    "private_origin_parameter": "/epick/${ENVIRONMENT}/w1/w2-deletion-callback/private-origin",
+    "ca_pem_parameter": "/epick/${ENVIRONMENT}/w1/w2-deletion-callback/ca-pem",
+    "origin_ca_parameter_store": "aws_ssm_parameter_store",
+    "bearer_secret_id": "epick/${ENVIRONMENT}/w1-w2/deletion-callback-bearer",
+    "bearer_secret_store": "aws_secrets_manager",
+    "rotation_owner": "w1",
+    "rotation_mode": "pause_w2_consumer_update_secret_restart_w1_callback_restart_w2_consumer",
+    "service_principal": "w2",
+    "ingress_source": "${W2_DELETION_CONSUMER_SECURITY_GROUP}",
+    "tls_boundary": "private_https"
+  },
+  "ack_responses": {
+    "200:ACKNOWLEDGED": "DELETE_AFTER_DURABLE_SUCCESS",
+    "non_acknowledged_sqs_delete_allowed": false,
+    "409": "DLQ_MANUAL_INVESTIGATION",
+    "409_codes": {
+      "W2_DELETION_V2_ACK_INVALID": "DLQ_MANUAL_INVESTIGATION",
+      "W2_DELETION_V2_TARGET_NOT_FOUND": "DLQ_MANUAL_INVESTIGATION",
+      "W2_DELETION_V2_BINDING_INVALID": "DLQ_MANUAL_INVESTIGATION",
+      "W2_DELETION_V2_STALE_EPOCH": "DLQ_MANUAL_INVESTIGATION",
+      "W2_DELETION_V2_STATE_INVALID": "DLQ_MANUAL_INVESTIGATION",
+      "W2_DELETION_V2_CONFLICT": "DLQ_MANUAL_INVESTIGATION"
+    },
+    "401": "HALT_CONFIG_PRESERVE_MESSAGE",
+    "403": "HALT_CONFIG_PRESERVE_MESSAGE",
+    "422": "DLQ_MANUAL_INVESTIGATION",
+    "503": "RETRY_PRESERVE_MESSAGE",
+    "timeout": "RETRY_PRESERVE_MESSAGE"
+  },
+  "health_inspect": {
+    "http_endpoint_required": false,
+    "interface": "count_only_cli_and_process_queue_readiness",
+    "required_checks": [
+      "process_alive",
+      "main_queue_accessible",
+      "dlq_accessible",
+      "database_connected",
+      "pending_deletion_count",
+      "pending_ack_count"
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublishOnlyW2DeletionCommandMain",
+      "Effect": "Allow",
+      "Action": [
+        "sqs:GetQueueAttributes",
+        "sqs:SendMessage"
+      ],
+      "Resource": "${W2_DELETION_COMMAND_QUEUE_ARN}"
+    }
+  ]
+}

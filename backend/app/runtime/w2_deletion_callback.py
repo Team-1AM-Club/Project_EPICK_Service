@@ -22,8 +22,11 @@ from app.runtime.w2_private_deletion_v2 import (
 )
 from app.runtime.w2_private_deletion_v2_boundary import W2PrivateDeletionV2BoundaryError
 from app.services.deletion import (
+    DeletionConflictError,
     DeletionOrchestrationError,
     DeletionOrchestrationService,
+    DeletionTransitionError,
+    StaleDeletionAcknowledgementError,
 )
 
 
@@ -91,7 +94,7 @@ def create_w2_deletion_callback_app(
                     .where(DeletionTarget.id == ack.deletion_id)
                 ).one_or_none()
                 if binding is None or binding.owner_user_id is None:
-                    return _error("W2_DELETION_V2_BINDING_INVALID", 409)
+                    return _error("W2_DELETION_V2_TARGET_NOT_FOUND", 409)
                 DeletionOrchestrationService(session).apply_w2_private_deletion_ack_v2(
                     owner_user_id=binding.owner_user_id,
                     deletion_request_id=binding.deletion_request_id,
@@ -99,11 +102,15 @@ def create_w2_deletion_callback_app(
                     ack_body=ack_body,
                 )
             return W2DeletionCallbackResponse()
-        except (
-            W2PrivateDeletionV2Error,
-            W2PrivateDeletionV2BoundaryError,
-            DeletionOrchestrationError,
-        ):
+        except W2PrivateDeletionV2Error:
+            return _error("W2_DELETION_V2_ACK_INVALID", 409)
+        except StaleDeletionAcknowledgementError:
+            return _error("W2_DELETION_V2_STALE_EPOCH", 409)
+        except DeletionTransitionError:
+            return _error("W2_DELETION_V2_STATE_INVALID", 409)
+        except DeletionConflictError:
+            return _error("W2_DELETION_V2_CONFLICT", 409)
+        except (W2PrivateDeletionV2BoundaryError, DeletionOrchestrationError):
             return _error("W2_DELETION_V2_BINDING_INVALID", 409)
         except SQLAlchemyError:
             return _error("INTERNAL_RETRYABLE", 503)

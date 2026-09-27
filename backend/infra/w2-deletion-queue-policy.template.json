@@ -1,0 +1,28 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowW1DeletionRelaySendOnly",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "${W1_DELETION_RELAY_ROLE_ARN}"
+      },
+      "Action": "sqs:SendMessage",
+      "Resource": "${W2_DELETION_COMMAND_QUEUE_ARN}"
+    },
+    {
+      "Sid": "AllowW2DeletionConsumerOnly",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "${W2_DELETION_CONSUMER_ROLE_ARN}"
+      },
+      "Action": [
+        "sqs:GetQueueAttributes",
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:ChangeMessageVisibility"
+      ],
+      "Resource": "${W2_DELETION_COMMAND_QUEUE_ARN}"
+    }
+  ]
+}
