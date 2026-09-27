@@ -188,9 +188,10 @@ class Settings(BaseSettings):
             self.w3_retention_receipt_queue_url,
             self.w3_retention_receipt_dlq_url,
             self.w3_retention_expected_w3_sender_id,
-            self.deletion_worker_database_url,
         )
-        if any(value is not None for value in receipt_values) and not all(receipt_values):
+        if any(value is not None for value in receipt_values) and (
+            not all(receipt_values) or self.deletion_worker_database_url is None
+        ):
             raise ValueError(
                 "W3 retention receipt queue, DLQ, expected W3 Role ID, and deletion worker "
                 "database must be configured together"

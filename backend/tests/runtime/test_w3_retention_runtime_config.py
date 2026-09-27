@@ -55,10 +55,22 @@ def test_w3_receipt_worker_does_not_need_command_queue_or_w1_role_id() -> None:
     assert settings.w3_retention_command_queue_url is None
 
 
+def test_w2_deletion_callback_can_use_deletion_login_without_w3_receipt_settings() -> None:
+    settings = Settings(
+        _env_file=None,
+        deletion_worker_database_url="postgresql+psycopg://deleter:secret@db/deletions",
+        w1_w2_deletion_bearer="private-callback-bearer",
+    )
+
+    assert settings.deletion_worker_database_url is not None
+    assert settings.w3_retention_receipt_queue_url is None
+
+
 @pytest.mark.parametrize(
     ("overrides", "message"),
     [
         ({"w3_retention_receipt_queue_url": None}, "configured together"),
+        ({"deletion_worker_database_url": None}, "configured together"),
         ({"w3_retention_receipt_dlq_url": RECEIPT_QUEUE}, "must differ"),
         ({"w3_retention_w1_stable_role_id": "AROAW1:session"}, "stable IDs"),
         ({"w3_retention_expected_w3_sender_id": "AROAW3:session"}, "stable IDs"),
