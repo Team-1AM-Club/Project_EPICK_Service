@@ -10,7 +10,7 @@ from typing import Annotated, Literal
 from fastapi import Depends, FastAPI, Header, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -32,6 +32,10 @@ from app.services.deletion import (
 
 class W2DeletionCallbackResponse(BaseModel):
     status: Literal["ACKNOWLEDGED"] = "ACKNOWLEDGED"
+
+
+class W2DeletionReadinessResponse(BaseModel):
+    status: Literal["ready"] = "ready"
 
 
 AuthorizationHeader = Annotated[str | None, Header()]
@@ -77,6 +81,15 @@ def create_w2_deletion_callback_app(
             raise _CallbackAuthorizationError("UNAUTHENTICATED_SERVICE_PRINCIPAL", 401)
         if service_principal != "w2":
             raise _CallbackAuthorizationError("FORBIDDEN_SERVICE_PRINCIPAL", 403)
+
+    @app.get("/internal/health/ready", response_model=W2DeletionReadinessResponse)
+    def readiness() -> W2DeletionReadinessResponse | JSONResponse:
+        try:
+            with session_factory.begin() as session:
+                session.execute(text("SELECT 1"))
+        except SQLAlchemyError:
+            return _error("INTERNAL_RETRYABLE", 503)
+        return W2DeletionReadinessResponse()
 
     @app.post(
         "/internal/v1/w2-private/deletion/ack",

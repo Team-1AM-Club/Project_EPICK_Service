@@ -36,7 +36,9 @@ def test_v2_callback_is_private_and_uses_separate_env() -> None:
     assert 'expose:\n      - "8081"' in section
     assert 'profiles: ["w2-deletion"]' in section
     assert "W1_RUNTIME_ENV_FILE" not in section
-    assert "ports:" not in section
+    assert 'ports:\n      - "${W1_W2_DELETION_CALLBACK_BIND_IP:?' in section
+    assert '}:8081:8081"' in section
+    assert '"0.0.0.0:8081:8081"' not in section
     assert "read_only: true" in section
     assert "- ALL" in section
 
@@ -99,6 +101,7 @@ def test_v2_deletion_runtime_inputs_define_private_injection_and_inspection() ->
     assert inputs["queue"]["queue_policy_owner"] == "w1"
     assert inputs["queue"]["consumer_role_ref"] == "${W2_DELETION_CONSUMER_ROLE_ARN}"
     assert inputs["callback"]["path"] == "/internal/v1/w2-private/deletion/ack"
+    assert inputs["callback"]["alb_health_path"] == "/internal/health/ready"
     assert inputs["callback"]["private_origin_parameter"].startswith("/epick/${ENVIRONMENT}/")
     assert inputs["callback"]["ca_pem_parameter"].startswith("/epick/${ENVIRONMENT}/")
     assert inputs["callback"]["bearer_secret_id"].startswith("epick/${ENVIRONMENT}/")

@@ -46,6 +46,25 @@ def callback_client(migrated_engine: Engine) -> Iterator[TestClient]:
         callback_engine.dispose()
 
 
+def test_private_callback_readiness_is_database_bound(
+    callback_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ready = callback_client.get("/internal/health/ready")
+    assert ready.status_code == 200
+    assert ready.json() == {"status": "ready"}
+
+    with monkeypatch.context() as patch:
+
+        def fail_database(*args: object, **kwargs: object) -> None:
+            raise SQLAlchemyError("injected database outage")
+
+        patch.setattr(Session, "execute", fail_database)
+        unavailable = callback_client.get("/internal/health/ready")
+    assert unavailable.status_code == 503
+    assert unavailable.json() == {"code": "INTERNAL_RETRYABLE"}
+    assert "injected database outage" not in unavailable.text
+
+
 def test_authenticated_w2_v2_ack_is_bound_to_current_target(
     migrated_engine: Engine, callback_client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:

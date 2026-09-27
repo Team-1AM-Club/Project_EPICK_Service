@@ -157,6 +157,8 @@ services:
       - /tmp
     expose:
       - "8081"
+    ports:
+      - "${W1_W2_DELETION_CALLBACK_BIND_IP:?set W1_W2_DELETION_CALLBACK_BIND_IP to the W1 private address}:8081:8081"
     volumes:
       - type: bind
         source: ${RDS_CA_BUNDLE_PATH:?set RDS_CA_BUNDLE_PATH to the host RDS CA bundle}
