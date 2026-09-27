@@ -19,7 +19,7 @@
     "path": "/internal/v1/w2-private/deletion/ack",
     "alb_health_path": "/internal/health/ready",
     "private_origin_parameter": "/epick/${ENVIRONMENT}/w1/w2-deletion-callback/private-origin",
-    "ca_pem_parameter": "/epick/${ENVIRONMENT}/w1/w2-deletion-callback/ca-pem",
+    "ca_pem_parameter": "/epick/${ENVIRONMENT}/w1/lookup-ca-pem",
     "origin_ca_parameter_store": "aws_ssm_parameter_store",
     "bearer_secret_id": "epick/${ENVIRONMENT}/w1-w2/deletion-callback-bearer",
     "bearer_secret_store": "aws_secrets_manager",

@@ -117,6 +117,12 @@ def test_v2_deletion_runtime_config_read_is_limited_to_named_inputs() -> None:
     ]
     assert w1["Statement"] == [
         {
+            "Sid": "ReadOnlyW1DeletionCommandQueueUrl",
+            "Effect": "Allow",
+            "Action": "ssm:GetParameter",
+            "Resource": "${W2_DELETION_COMMAND_MAIN_URL_PARAMETER_ARN}",
+        },
+        {
             "Sid": "ReadOnlyW1DeletionCallbackBearer",
             "Effect": "Allow",
             "Action": "secretsmanager:GetSecretValue",
@@ -142,7 +148,7 @@ def test_v2_deletion_runtime_inputs_define_private_injection_and_inspection() ->
     assert inputs["callback"]["path"] == "/internal/v1/w2-private/deletion/ack"
     assert inputs["callback"]["alb_health_path"] == "/internal/health/ready"
     assert inputs["callback"]["private_origin_parameter"].startswith("/epick/${ENVIRONMENT}/")
-    assert inputs["callback"]["ca_pem_parameter"].startswith("/epick/${ENVIRONMENT}/")
+    assert inputs["callback"]["ca_pem_parameter"] == "/epick/${ENVIRONMENT}/w1/lookup-ca-pem"
     assert inputs["callback"]["bearer_secret_id"].startswith("epick/${ENVIRONMENT}/")
     assert inputs["callback"]["origin_ca_parameter_store"] == "aws_ssm_parameter_store"
     assert inputs["callback"]["bearer_secret_store"] == "aws_secrets_manager"
