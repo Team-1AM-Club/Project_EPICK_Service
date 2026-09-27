@@ -127,7 +127,7 @@ def test_v2_deletion_runtime_config_read_is_limited_to_named_inputs() -> None:
             "Effect": "Allow",
             "Action": "secretsmanager:GetSecretValue",
             "Resource": "${W1_W2_DELETION_CALLBACK_BEARER_SECRET_ARN}",
-        }
+        },
     ]
     assert "*" not in json.dumps((w1, w2))
 
@@ -174,5 +174,25 @@ def test_v2_deletion_runtime_inputs_define_private_injection_and_inspection() ->
     assert set(inputs["ack_responses"]["409_codes"].values()) == {"DLQ_MANUAL_INVESTIGATION"}
     assert inputs["ack_responses"]["503"] == "RETRY_PRESERVE_MESSAGE"
     assert inputs["ack_responses"]["timeout"] == "RETRY_PRESERVE_MESSAGE"
+    operations = inputs["repeated_409_operations"]
+    assert operations["queue_and_w1_authority_owner"] == "w1"
+    assert operations["w2_consumer_and_receipt_owner"] == "w2"
+    assert operations["automatic_dlq_redrive_allowed"] is False
+    assert operations["blind_sqs_republish_allowed"] is False
+    assert operations["reissue_mechanism"] == "w1_deletion_service_retry_target_not_dlq_redrive"
+    assert operations["same_deletion_id_required"] is True
+    assert operations["same_v2_payload_required"] is True
+    assert operations["terminal_or_unreconciled_action"] == "quarantine_and_escalate_no_reissue"
+    assert operations["steps"][0].startswith("pause_only_the_affected_deletion_route")
+    assert (
+        "w1_and_w2_reconcile_durable_receipt_and_ack_before_deciding_reissue" in operations["steps"]
+    )
+    assert inputs["health_inspect"]["current_w2_operator"] == "preflight_consume-once_run_only"
+    assert inputs["health_inspect"]["additional_w2_interface_required"] == "count_only_inspect"
+    assert inputs["health_inspect"]["output_fields"] == [
+        "pending_deletion_count",
+        "pending_ack_count",
+    ]
+    assert inputs["health_inspect"]["no_owner_ids_payloads_tokens_or_urls"] is True
     assert "arn:aws:" not in raw
     assert "https://" not in raw

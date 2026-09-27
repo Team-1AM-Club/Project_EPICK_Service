@@ -47,9 +47,38 @@
     "503": "RETRY_PRESERVE_MESSAGE",
     "timeout": "RETRY_PRESERVE_MESSAGE"
   },
+  "repeated_409_operations": {
+    "trigger": "same_deletion_id_reaches_dlq_after_configured_max_receive_count",
+    "queue_and_w1_authority_owner": "w1",
+    "w2_consumer_and_receipt_owner": "w2",
+    "automatic_dlq_redrive_allowed": false,
+    "blind_sqs_republish_allowed": false,
+    "steps": [
+      "pause_only_the_affected_deletion_route_and_preserve_dlq_message",
+      "w2_report_count_only_dlq_and_receipt_state_to_w1_without_private_payload_or_secret",
+      "w1_correlate_error_code_and_deletion_id_with_request_target_epoch_scope_outbox_and_current_owner_under_approved_operator_access",
+      "w1_and_w2_reconcile_durable_receipt_and_ack_before_deciding_reissue",
+      "if_binding_or_epoch_is_stale_or_target_is_acknowledged_quarantine_without_reissue",
+      "if_correctable_and_current_w1_record_target_failure_then_retry_target_once_in_authorized_transaction",
+      "w1_validate_new_outbox_with_normal_v2_relay_and_publish_only_after_activation_preflight",
+      "w1_and_w2_record_new_outbox_id_same_deletion_id_result_and_dlq_disposition"
+    ],
+    "reissue_approval": "named_w1_operator_after_w2_receipt_confirmation",
+    "reissue_mechanism": "w1_deletion_service_retry_target_not_dlq_redrive",
+    "same_deletion_id_required": true,
+    "same_v2_payload_required": true,
+    "terminal_or_unreconciled_action": "quarantine_and_escalate_no_reissue"
+  },
   "health_inspect": {
     "http_endpoint_required": false,
     "interface": "count_only_cli_and_process_queue_readiness",
+    "current_w2_operator": "preflight_consume-once_run_only",
+    "additional_w2_interface_required": "count_only_inspect",
+    "output_fields": [
+      "pending_deletion_count",
+      "pending_ack_count"
+    ],
+    "no_owner_ids_payloads_tokens_or_urls": true,
     "required_checks": [
       "process_alive",
       "main_queue_accessible",

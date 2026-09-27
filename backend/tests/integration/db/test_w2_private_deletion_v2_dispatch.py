@@ -109,3 +109,45 @@ def test_w2_v2_retry_reuses_exact_message_and_deletion_id(migrated_engine: Engin
     assert second.outbox_id == first.outbox_id
     assert second.body == first.body
     assert json.loads(second.body)["payload"]["deletion_id"] == str(message.deletion_target_id)
+
+
+def test_w2_v2_operator_retry_stages_same_payload_without_dlq_redrive(
+    migrated_engine: Engine,
+) -> None:
+    with migrated_engine.begin() as connection:
+        connection.execute(text("TRUNCATE users CASCADE"))
+    with Session(migrated_engine, expire_on_commit=False) as session:
+        original = _start_account_deletion(session)
+        original_payload = original.payload
+        owner_id = original.owner_user_id
+        request_id = original.deletion_request_id
+        target_id = original.deletion_target_id
+    assert owner_id is not None and request_id is not None and target_id is not None
+    relay = _relay(migrated_engine)
+    first = relay.claim_due(limit=1).claims[0]
+    assert relay._mark_published(claim=first)
+    with Session(migrated_engine, expire_on_commit=False) as session:
+        service = DeletionOrchestrationService(session)
+        service.record_target_failure(
+            owner_user_id=owner_id,
+            deletion_request_id=request_id,
+            deletion_target_id=target_id,
+            failure_code="W2_ACK_REQUIRES_MANUAL_RECONCILIATION",
+        )
+        service.retry_target(
+            owner_user_id=owner_id,
+            deletion_request_id=request_id,
+            deletion_target_id=target_id,
+        )
+        retry = session.scalar(
+            select(OutboxMessage).where(
+                OutboxMessage.deletion_target_id == target_id,
+                OutboxMessage.aggregate_revision == original.aggregate_revision + 1,
+            )
+        )
+        assert retry is not None
+        assert retry.id != original.id
+        assert retry.payload == original_payload
+        assert retry.payload["message_id"] == str(target_id)
+        assert retry.payload["payload"]["deletion_id"] == str(target_id)
+        session.commit()
