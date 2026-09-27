@@ -1,0 +1,22 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadOnlyW2DeletionRuntimeParameters",
+      "Effect": "Allow",
+      "Action": "ssm:GetParameter",
+      "Resource": [
+        "${W2_DELETION_COMMAND_MAIN_URL_PARAMETER_ARN}",
+        "${W2_DELETION_COMMAND_DLQ_ARN_PARAMETER_ARN}",
+        "${W1_W2_DELETION_CALLBACK_ORIGIN_PARAMETER_ARN}",
+        "${W1_W2_DELETION_CALLBACK_CA_PARAMETER_ARN}"
+      ]
+    },
+    {
+      "Sid": "ReadOnlyW2DeletionCallbackBearer",
+      "Effect": "Allow",
+      "Action": "secretsmanager:GetSecretValue",
+      "Resource": "${W1_W2_DELETION_CALLBACK_BEARER_SECRET_ARN}"
+    }
+  ]
+}

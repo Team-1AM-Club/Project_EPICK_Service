@@ -87,6 +87,45 @@ def test_v2_deletion_queue_policies_are_dedicated_and_names_only() -> None:
     ]
 
 
+def test_v2_deletion_runtime_config_read_is_limited_to_named_inputs() -> None:
+    w2 = json.loads(
+        (INFRA_PATH / "w2-deletion-runtime-config-policy.template.json").read_text(encoding="utf-8")
+    )
+    w1 = json.loads(
+        (INFRA_PATH / "w1-w2-deletion-callback-secret-policy.template.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert w2["Statement"] == [
+        {
+            "Sid": "ReadOnlyW2DeletionRuntimeParameters",
+            "Effect": "Allow",
+            "Action": "ssm:GetParameter",
+            "Resource": [
+                "${W2_DELETION_COMMAND_MAIN_URL_PARAMETER_ARN}",
+                "${W2_DELETION_COMMAND_DLQ_ARN_PARAMETER_ARN}",
+                "${W1_W2_DELETION_CALLBACK_ORIGIN_PARAMETER_ARN}",
+                "${W1_W2_DELETION_CALLBACK_CA_PARAMETER_ARN}",
+            ],
+        },
+        {
+            "Sid": "ReadOnlyW2DeletionCallbackBearer",
+            "Effect": "Allow",
+            "Action": "secretsmanager:GetSecretValue",
+            "Resource": "${W1_W2_DELETION_CALLBACK_BEARER_SECRET_ARN}",
+        },
+    ]
+    assert w1["Statement"] == [
+        {
+            "Sid": "ReadOnlyW1DeletionCallbackBearer",
+            "Effect": "Allow",
+            "Action": "secretsmanager:GetSecretValue",
+            "Resource": "${W1_W2_DELETION_CALLBACK_BEARER_SECRET_ARN}",
+        }
+    ]
+    assert "*" not in json.dumps((w1, w2))
+
+
 def test_v2_deletion_runtime_inputs_define_private_injection_and_inspection() -> None:
     raw = (INFRA_PATH / "w2-deletion-runtime-inputs.template.json").read_text(encoding="utf-8")
     inputs = json.loads(raw)
