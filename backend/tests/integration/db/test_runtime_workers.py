@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine, event, func, select, text
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.models.application_workspace import ApplicationProject
+from app.models.application_workspace import ApplicationProject, Company
 from app.models.identity import User
 from app.models.jobs import (
     Job,
@@ -638,6 +638,176 @@ def test_direct_source_registration_uses_its_own_w1_dispatch_and_lookup_contract
     assert available.status_code == 200
     assert available.json()["status"] == "AVAILABLE"
     assert available.json()["command"] == payload
+
+
+@pytest.mark.postgres
+def test_w1_direct_registration_onboards_the_same_source_into_w2_postgres(
+    migrated_engine: Engine,
+    db_session: Session,
+) -> None:
+    """Exercise both real stores and W1's protected route in one Service-copy run.
+
+    The injected transport only replaces the external TLS socket; it calls the
+    actual W1 FastAPI route and PostgreSQL-backed command lookup.
+    """
+
+    w2_url = os.environ.get("EPICK_W2_TEST_DATABASE_URL")
+    if os.environ.get("EPICK_W2_TEST_DATABASE_APPROVED") != "1" or not w2_url:
+        pytest.skip("explicit isolated W2 PostgreSQL test database is required")
+    from urllib.parse import urlsplit
+
+    if urlsplit(w2_url).hostname not in {"127.0.0.1", "localhost"}:
+        pytest.fail("W2 onboarding regression requires loopback PostgreSQL")
+
+    pytest.importorskip("epick_engine")
+    from epick_engine.source_collection.contracts import CollectionCommand, SourceType
+    from epick_engine.source_collection.persistence import (
+        Base as W2Base,
+    )
+    from epick_engine.source_collection.persistence import (
+        Company as W2Company,
+    )
+    from epick_engine.source_collection.persistence import (
+        Source as W2Source,
+    )
+    from epick_engine.source_collection.persistence import (
+        SourcePolicyDecision,
+    )
+    from epick_engine.source_collection.source_runtime_input import (
+        SourceRuntimeInputError,
+        SqlAlchemyCollectionInputProvider,
+        parse_runtime_source_config_json,
+    )
+    from epick_engine.source_collection.w1_lookup_client import (
+        LookupHTTPResponse,
+        W1LookupClient,
+    )
+
+    relay_sqs, _, command_id = _run_direct_registration_to_w2_dispatch(
+        migrated_engine, db_session, key=f"same-run-{uuid4().hex[:8]}"
+    )
+    assert _relay(migrated_engine, relay_sqs).drain_once(limit=10).published == 1
+    command_row = db_session.get(JobCommand, command_id)
+    assert command_row is not None
+    command = CollectionCommand.model_validate(command_row.payload["w2_command"])
+    source = db_session.get(Source, command.source_id)
+    assert source is not None
+    company = db_session.get(Company, source.company_id)
+    assert company is not None
+    company.identification_status = "VERIFIED"
+    company.official_domain = "example.test"
+    db_session.commit()
+
+    approved = parse_runtime_source_config_json(
+        json.dumps(
+            {
+                "schema_version": "w2.source-runtime-config.v1",
+                "claim_lease_seconds": 120,
+                "sources": {},
+                "approved_sites": [
+                    {
+                        "company_id": str(company.id),
+                        "company_legal_name": company.legal_name,
+                        "company_official_domain": "example.test",
+                        "hostname": "example.test",
+                        "path_prefix": "/direct/",
+                        "w1_source_type": "CAREERS",
+                        "w2_source_type": SourceType.COMPANY_WEBSITE.value,
+                        "company_identity_evidence": ["test:verified-company"],
+                        "policy": {
+                            "official_status": "verified",
+                            "access_class": "public",
+                            "collection_permission": "allowed",
+                            "excerpt_storage_permission": "allowed",
+                            "body_storage_permission": "denied",
+                            "redistribution_permission": "denied",
+                            "evidence_refs": ["test:explicit-w2-approval"],
+                            "checked_at": datetime.now(UTC).isoformat(),
+                            "policy_version": "test-v1",
+                        },
+                        "source_config": {
+                            "policy_revision": 1,
+                            "robots_permission": "allowed",
+                            "result_version": 1,
+                            "language": "ko",
+                            "redirect_robots_permissions": [],
+                            "limits": {
+                                "site_concurrency": 1,
+                                "global_concurrency": 2,
+                                "source_ttl_seconds": 300,
+                                "max_response_bytes": 1048576,
+                                "max_decompressed_bytes": 2097152,
+                                "connect_timeout_seconds": 3.0,
+                                "read_timeout_seconds": 5.0,
+                                "max_redirects": 2,
+                                "general_retry_limit": 0,
+                                "retention_days": 7,
+                            },
+                        },
+                    }
+                ],
+            }
+        )
+    )
+
+    lookup_app = TestClient(
+        create_lookup_app(
+            session_factory=_factory(migrated_engine), expected_bearer_token="test-token"
+        )
+    )
+
+    class LocalLookupTransport:
+        def post(self, **kwargs: object) -> LookupHTTPResponse:
+            target = kwargs["target"]
+            headers = kwargs["headers"]
+            body = kwargs["body"]
+            assert isinstance(target, str) and isinstance(headers, dict)
+            assert isinstance(body, bytes)
+            response = lookup_app.post(target, content=body, headers=headers)
+            return LookupHTTPResponse(
+                status=response.status_code,
+                content_type=response.headers.get("content-type"),
+                body=response.content,
+            )
+
+    w2_admin = create_engine(w2_url, pool_pre_ping=True)
+    schema = f"phase4_onboarding_{uuid4().hex}"
+    with w2_admin.begin() as connection:
+        connection.execute(text(f'CREATE SCHEMA "{schema}"'))
+    w2_engine = w2_admin.execution_options(schema_translate_map={None: schema})
+    W2Base.metadata.create_all(w2_engine)
+    try:
+        w2_factory = sessionmaker(bind=w2_engine, autoflush=False, expire_on_commit=False)
+        with pytest.raises(SourceRuntimeInputError, match="approved source config"):
+            SqlAlchemyCollectionInputProvider(w2_factory, approved).load(command)
+        with w2_factory() as session:
+            assert session.get(W2Source, command.source_id) is None
+
+        lookup_client = W1LookupClient(
+            endpoint="https://w1.example.test/internal/v1/job-commands/lookup",
+            bearer="test-token",
+            transport=LocalLookupTransport(),
+        )
+        provider = SqlAlchemyCollectionInputProvider(
+            w2_factory, approved, onboarding_lookup_client=lookup_client
+        )
+        loaded = provider.load(command)
+        replayed = provider.load(command)
+        assert loaded.source_id == replayed.source_id == command.source_id
+        assert loaded.company_id == replayed.company_id == command.company_id
+        with w2_factory() as session:
+            assert session.get(W2Company, command.company_id) is not None
+            assert session.get(W2Source, command.source_id) is not None
+            assert session.scalar(
+                select(func.count()).select_from(SourcePolicyDecision).where(
+                    SourcePolicyDecision.source_id == command.source_id
+                )
+            ) == 1
+    finally:
+        W2Base.metadata.drop_all(w2_engine)
+        with w2_admin.begin() as connection:
+            connection.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
+        w2_admin.dispose()
 
 
 @pytest.mark.postgres
