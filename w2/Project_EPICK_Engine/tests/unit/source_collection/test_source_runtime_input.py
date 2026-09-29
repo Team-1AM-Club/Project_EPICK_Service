@@ -69,6 +69,25 @@ def _parse(payload: dict[str, object]) -> RuntimeSourceConfigFile:
     return parse_runtime_source_config_json(json.dumps(payload))
 
 
+def test_rendered_strategy_requires_an_explicit_valid_config_value() -> None:
+    default = _parse(_config_payload())
+    assert default.sources[SOURCE_ID].collection_strategy == "static"
+
+    rendered = _config_payload()
+    sources = rendered["sources"]
+    assert isinstance(sources, dict)
+    source = sources[str(SOURCE_ID)]
+    assert isinstance(source, dict)
+    source["collection_strategy"] = "rendered"
+    assert _wire_schema_accepts(rendered)
+    assert _parse(rendered).sources[SOURCE_ID].collection_strategy == "rendered"
+
+    source["collection_strategy"] = "automatic"
+    assert not _wire_schema_accepts(rendered)
+    with pytest.raises((ValidationError, SourceRuntimeInputError, ValueError)):
+        _parse(rendered)
+
+
 def _schema_validator() -> Draft202012Validator:
     schema_path = PROJECT_ROOT / "contracts" / "w2-private" / "source-runtime-config.schema.json"
     schema = json.loads(schema_path.read_text(encoding="utf-8"))

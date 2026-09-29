@@ -103,6 +103,7 @@ class RuntimeExecutionLimits(_StrictConfigModel):
 
 
 class RuntimeSourceConfig(_StrictConfigModel):
+    collection_strategy: Literal["static", "rendered"] = "static"
     policy_revision: PositiveStrictInt
     robots_permission: Permission
     result_version: PositiveStrictInt
@@ -536,6 +537,7 @@ class SqlAlchemyCollectionInputProvider:
                 aggregate_revision=aggregate_revision,
                 language=approved.language,
                 redirect_robots_permissions=approved.redirect_robots_permissions,
+                collection_strategy=approved.collection_strategy,
             )
 
     def _onboard_approved_source(self, command: CollectionCommand) -> RuntimeSourceConfig:

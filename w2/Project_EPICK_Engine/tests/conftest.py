@@ -56,6 +56,11 @@ def block_external_network(
 
     if request.node.get_closest_marker("approved_postgres") is not None:
         return
+    if (
+        request.node.get_closest_marker("local_browser") is not None
+        and os.environ.get("EPICK_LOCAL_BROWSER_APPROVED") == "1"
+    ):
+        return
     monkeypatch.setattr(socket, "create_connection", _deny_network)
     monkeypatch.setattr(socket.socket, "connect", _deny_network)
 

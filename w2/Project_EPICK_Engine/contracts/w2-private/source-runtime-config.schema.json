@@ -145,6 +145,7 @@
         "limits"
       ],
       "properties": {
+        "collection_strategy": {"enum": ["static", "rendered"]},
         "policy_revision": {"$ref": "#/$defs/positiveInteger"},
         "robots_permission": {"$ref": "#/$defs/permission"},
         "result_version": {"$ref": "#/$defs/positiveInteger"},

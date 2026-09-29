@@ -765,6 +765,7 @@ def handle_collection_dispatch(
     lookup_client: LookupClient,
     input_provider: CollectionInputProvider,
     collector_factory: CollectorFactory,
+    rendered_collector_factory: Callable[[StaticCollectionInput], object] | None = None,
     parser: StaticParser,
     runtime_config: RuntimeSourceConfigFile,
     clock: Clock,
@@ -894,7 +895,15 @@ def handle_collection_dispatch(
         )
         heartbeat.start()
         heartbeat_started = True
-        collector = _CancellationAwareCollector(collector_factory(), heartbeat)
+        if input_value.collection_strategy == "rendered":
+            if rendered_collector_factory is None:
+                raise RuntimeAuthorizationError("approved rendered browser runtime is unavailable")
+            selected_collector = rendered_collector_factory(input_value)
+        elif input_value.collection_strategy == "static":
+            selected_collector = collector_factory()
+        else:
+            raise RuntimeAuthorizationError("collection strategy is invalid")
+        collector = _CancellationAwareCollector(selected_collector, heartbeat)
         cleanup_confirmed = False
         execution = StaticCollectionExecution(
             claimed.attempt_id,

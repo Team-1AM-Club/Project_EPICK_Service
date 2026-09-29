@@ -28,10 +28,11 @@ from cryptography import x509
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.engine import make_url
 
-from epick_engine.source_collection.collector import StaticScrapyCollector
+from epick_engine.source_collection.collector import RenderedCollector, StaticScrapyCollector
 from epick_engine.source_collection.commit_gate_runtime import relay_once
 from epick_engine.source_collection.parsing import extract_static_candidate
 from epick_engine.source_collection.persistence import create_session_factory
+from epick_engine.source_collection.rendered_browser import PlaywrightBrowserRuntime
 from epick_engine.source_collection.source_runtime import (
     PrivateAuthorityClient,
     build_collection_relay_authorizer,
@@ -715,6 +716,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             lookup_client=lookup_client,
             input_provider=input_provider,
             collector_factory=StaticScrapyCollector,
+            rendered_collector_factory=lambda approved: RenderedCollector(
+                browser_runtime=PlaywrightBrowserRuntime(limits=approved.limits),
+                approved_js_urls=frozenset({approved.source_url}),
+            ),
             parser=extract_static_candidate,
             runtime_config=runtime_config,
             clock=_utc_now,

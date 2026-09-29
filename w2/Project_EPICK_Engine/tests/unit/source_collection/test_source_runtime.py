@@ -228,6 +228,7 @@ class _SessionFactory:
 @dataclass(frozen=True)
 class _RuntimeInput:
     policy_revision: int
+    collection_strategy: str = "static"
 
 
 class _RuntimeInputProvider:
@@ -1127,6 +1128,44 @@ def test_successful_persist_stops_heartbeat_before_exact_claim_candidate_commit(
     assert events.index("heartbeat-stop-join") < events.index("execution-close")
     assert events.index("execution-close") < events.index("commit")
     assert "deliver" not in events
+
+
+def test_rendered_strategy_uses_only_its_explicit_approved_factory(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dispatch = _dispatch()
+    events: list[str] = []
+    input_value = _RuntimeInput(policy_revision=3, collection_strategy="rendered")
+    execution_type, _instances = _execution_type(events, prepared="rendered-prepared")
+    calls = _patch_runtime_happy_path(
+        monkeypatch,
+        events=events,
+        input_value=input_value,
+        heartbeat_type=_heartbeat_type(events),
+        execution_type=execution_type,
+    )
+    selected: list[object] = []
+
+    def rendered_factory(value: object) -> object:
+        selected.append(value)
+        return object()
+
+    proposal = handle_collection_dispatch(
+        dispatch,
+        session_factory=_SessionFactory(),
+        lookup_client=_SequencedLookupClient(),
+        input_provider=_RuntimeInputProvider(input_value, events),
+        collector_factory=lambda: pytest.fail("static collector must not run"),
+        rendered_collector_factory=rendered_factory,
+        parser=lambda candidate: candidate,
+        runtime_config=_runtime_config(dispatch),
+        clock=lambda: NOW,
+        uuid_factory=_uuid_factory(CLAIM_TOKEN, STAGED_MESSAGE_ID),
+        store_operations=calls["operations"],
+    )
+
+    assert proposal == "staged-proposal"
+    assert selected == [input_value]
 
 
 @pytest.mark.parametrize(

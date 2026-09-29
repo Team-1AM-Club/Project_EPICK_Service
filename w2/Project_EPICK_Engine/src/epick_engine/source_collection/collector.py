@@ -817,3 +817,161 @@ class StaticScrapyCollector:
             self._stop_active()
         self._active_process = None
         self._active_started = False
+
+
+class RenderedCollector:
+    """Fetch one explicitly approved JS page through an isolated browser runtime.
+
+    The runtime must expose connection peer addresses *before* continuing each
+    request. A browser adapter lacking that capability fails closed; URL-only
+    route checks are insufficient against DNS rebinding and private egress.
+    """
+
+    def __init__(
+        self,
+        *,
+        browser_runtime: Any,
+        approved_js_urls: frozenset[str],
+        resolver: Resolver = _system_resolver,
+    ) -> None:
+        self._runtime = browser_runtime
+        self._approved_js_urls = frozenset(approved_js_urls)
+        self._resolver = resolver
+        self._closed = False
+
+    def fetch(
+        self,
+        request: StaticFetchRequest,
+        *,
+        is_cancelled: Callable[[], bool] = lambda: False,
+    ) -> StaticFetchResult:
+        if self._closed:
+            raise RuntimeError("collector is closed")
+        try:
+            authorize_operation(request.policy, PolicyOperation.FETCH)
+            authorize_robots_access(request.robots_permission)
+        except PolicyBlocked:
+            return _failure(request, StaticFetchFailureCode.SOURCE_POLICY_BLOCKED)
+        if request.source_url not in self._approved_js_urls:
+            return _failure(request, StaticFetchFailureCode.SOURCE_POLICY_BLOCKED)
+        if is_cancelled():
+            return _failure(request, StaticFetchFailureCode.CANCELLED)
+
+        browser: Any = None
+        context: Any = None
+        page: Any = None
+        blocked: StaticFetchFailureCode | None = None
+        routed_targets: dict[str, ValidatedTarget] = {}
+
+        def route_request(route: Any) -> None:
+            nonlocal blocked
+            routed_request = getattr(route, "request", None)
+            url = getattr(routed_request, "url", None)
+            peer = getattr(routed_request, "peer_address", None)
+            fetch_failure = getattr(routed_request, "failure_code", None)
+            try:
+                if isinstance(fetch_failure, StaticFetchFailureCode):
+                    blocked = fetch_failure
+                    route.abort()
+                    return
+                if not isinstance(url, str) or not isinstance(peer, str):
+                    raise UnsafeDestination("browser peer is unavailable before request")
+                target = validate_url(url, self._resolver)
+                validate_connection_destination(target, peer)
+                routed_targets[url] = target
+                route.continue_()
+            except (TypeError, UnsafeDestination, ValueError):
+                blocked = StaticFetchFailureCode.UNSAFE_DESTINATION
+                route.abort()
+
+        try:
+            browser = self._runtime.launch(headless=True)
+            context = browser.new_context(service_workers="block", accept_downloads=False)
+            page = context.new_page()
+            page.route("**/*", route_request)
+            try:
+                response = page.goto(request.source_url)
+            except Exception as exc:
+                return _failure(request, blocked or _exception_failure_code(exc))
+            if blocked is not None:
+                return _failure(request, blocked)
+            if is_cancelled():
+                return _failure(request, StaticFetchFailureCode.CANCELLED)
+
+            url = getattr(response, "url", None)
+            status = getattr(response, "status", None)
+            headers = getattr(response, "headers", None)
+            peer = getattr(response, "peer_address", None)
+            if (
+                not isinstance(url, str)
+                or isinstance(status, bool)
+                or not isinstance(status, int)
+                or not isinstance(headers, Mapping)
+                or not isinstance(peer, str)
+            ):
+                return _failure(request, StaticFetchFailureCode.FETCH_FAILED)
+            target = routed_targets.get(url)
+            if target is None:
+                try:
+                    target = validate_url(url, self._resolver)
+                except (TypeError, UnsafeDestination, ValueError):
+                    return _failure(request, StaticFetchFailureCode.UNSAFE_DESTINATION)
+            try:
+                validate_connection_destination(target, peer)
+            except UnsafeDestination:
+                return _failure(request, StaticFetchFailureCode.UNSAFE_DESTINATION)
+            if status == 429:
+                return _failure(
+                    request,
+                    StaticFetchFailureCode.RATE_LIMITED,
+                    retry_after=_header(headers, "retry-after"),
+                )
+            if status in (401, 403):
+                return _failure(request, StaticFetchFailureCode.ACCESS_DENIED)
+            if status == 404:
+                return _failure(request, StaticFetchFailureCode.NOT_FOUND)
+            if not 200 <= status < 300:
+                return _failure(request, StaticFetchFailureCode.FETCH_FAILED)
+
+            rendered = page.content()
+            if not isinstance(rendered, str):
+                return _failure(request, StaticFetchFailureCode.EXTRACTION_FAILED)
+            encoded = rendered.encode("utf-8")
+            if len(encoded) > min(
+                request.limits.max_response_bytes, request.limits.max_decompressed_bytes
+            ):
+                return _failure(request, StaticFetchFailureCode.RESPONSE_TOO_LARGE)
+            if _is_rejected_document(rendered, Representation.HTML):
+                return _failure(request, StaticFetchFailureCode.EXTRACTION_FAILED)
+            return StaticFetchResult(
+                command_id=request.command_id,
+                candidate=StaticResponseCandidate(
+                    final_target=target,
+                    representation=Representation.HTML,
+                    document=UntrustedDocument(rendered),
+                    http_status=status,
+                    raw_size=len(encoded),
+                    decompressed_size=len(encoded),
+                ),
+                failure_code=None,
+            )
+        except Exception as exc:
+            return _failure(request, _exception_failure_code(exc))
+        finally:
+            for resource in (page, context, browser):
+                close = getattr(resource, "close", None)
+                if callable(close):
+                    try:
+                        close()
+                    except Exception:
+                        pass
+            if browser is not None:
+                reap = getattr(self._runtime, "reap", None)
+                if callable(reap):
+                    try:
+                        reap(browser)
+                    except Exception:
+                        pass
+
+    def close(self) -> None:
+        self._closed = True

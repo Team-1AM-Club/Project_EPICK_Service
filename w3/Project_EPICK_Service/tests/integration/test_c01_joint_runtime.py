@@ -1,5 +1,11 @@
 import copy
+import os
+import socket
+import subprocess
+import sys
 import threading
+import time
+from datetime import UTC, datetime, timedelta
 from http.server import HTTPServer
 from uuid import UUID, uuid4
 
@@ -128,6 +134,112 @@ def test_restart_preserves_ready_cursor_restriction_generation_and_key(tmp_path)
             "index_ack",
         ):
             assert after[field] == before[field]
+
+
+def test_http_process_restart_preserves_ready_and_duplicate_event(authority_server, tmp_path):
+    """Exercise a real W3 process boundary, not just reopening its Store object."""
+    db_path = tmp_path / "process-restart.sqlite"
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    base = f"http://127.0.0.1:{port}"
+    environment = os.environ.copy()
+    environment.update(
+        W3_W2_TOKEN=TOKENS["w2"],
+        W3_OPERATOR_TOKEN=TOKENS["operator"],
+        W3_W4_TOKEN=TOKENS["w4"],
+        W3_SOURCE_AUTHORITY_ENDPOINT=authority_server,
+        W3_SOURCE_AUTHORITY_TOKEN="synthetic-token",
+    )
+    command = [
+        sys.executable,
+        "-m",
+        "w3_knowledge.c01.http",
+        "--db",
+        str(db_path),
+        "--port",
+        str(port),
+        "--restriction-scope",
+        "version",
+        "--max-ttl-seconds",
+        "3600",
+        "--source-authority",
+        "w3_knowledge.c01.source_authority_http:create_source_authority",
+    ]
+
+    def start():
+        process = subprocess.Popen(
+            command,
+            env=environment,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if process.poll() is not None:
+                raise AssertionError(f"W3 process exited: {process.returncode}")
+            try:
+                if call(base, "/health")[0] == 200:
+                    return process
+            except OSError:
+                pass
+            time.sleep(0.05)
+        process.terminate()
+        process.wait(timeout=5)
+        raise AssertionError("W3 HTTP startup timed out")
+
+    def stop(process):
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=5)
+
+    first = start()
+    event = allowed_version()
+    try:
+        code, receipt = call(base, "/c01/v1/events", "w2", event)
+        assert code == 200, receipt
+        status = call(base, f"/c01/v1/status/{SOURCE}")[1]
+        evidence = event["payload"]["evidence_spans"][0]
+        request = {
+            "schema_version": status["schema_version"],
+            "source_id": SOURCE,
+            "event_cursor": status["event_cursor"],
+            "restriction_revision": status["restriction_revision"],
+            "index_key": status["index_key"],
+            "retention_scope": "excerpts_only",
+            "expires_at": (datetime.now(UTC) + timedelta(minutes=30))
+            .isoformat(timespec="seconds")
+            .replace("+00:00", "Z"),
+            "documents": [
+                {
+                    "document_id": "30000000-0000-4000-8000-000000000001",
+                    "evidence_id": evidence["evidence_id"],
+                    "text": evidence["text_excerpt"],
+                }
+            ],
+        }
+        code, ready = call(base, "/c01/v1/index", "operator", request)
+        assert code == 200 and ready["reason"] == "READY", ready
+    finally:
+        stop(first)
+
+    second = start()
+    try:
+        code, recovered = call(base, f"/c01/v1/status/{SOURCE}")
+        assert code == 200
+        assert recovered["reason"] == "READY"
+        assert recovered["index_ack"] is True
+        assert recovered["index_key"] == ready["index_key"]
+        assert recovered["event_cursor"] == ready["event_cursor"]
+        code, duplicate = call(base, "/c01/v1/events", "w2", event)
+        assert code == 200 and duplicate["outcome"] == "DUPLICATE", duplicate
+        assert call(base, f"/c01/v1/status/{SOURCE}")[1]["event_cursor"] == 1
+    finally:
+        stop(second)
 
 
 def test_duplicate_gap_replay_and_conflict_are_monotonic(tmp_path):

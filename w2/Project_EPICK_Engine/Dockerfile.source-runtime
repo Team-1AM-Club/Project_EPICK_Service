@@ -12,6 +12,8 @@ RUN python -c "import os,re,sys; assert sys.version_info[:2] == (3,12); assert r
 RUN python -c "import os,re; assert re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9./:_-]*@sha256:[a-f0-9]{64}', os.environ.get('PYTHON_IMAGE', ''))"
 COPY requirements.ct15.lock ./requirements.ct15.lock
 RUN python -m pip install --no-cache-dir --require-hashes --no-deps -r requirements.ct15.lock
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/epick/playwright-browsers
+RUN python -m playwright install --with-deps chromium --only-shell
 COPY src/ ./src/
 COPY migrations/ ./migrations/
 COPY alembic.ini ./alembic.ini

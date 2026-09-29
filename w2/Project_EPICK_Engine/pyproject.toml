@@ -16,6 +16,7 @@ dependencies = [
     "fastapi>=0.115,<1",
     "psycopg[binary]>=3.2,<4",
     "pydantic>=2.10,<3",
+    "playwright==1.63.0",
     "scrapy>=2.12,<3",
     "sqlalchemy>=2.0,<3",
     "uvicorn>=0.34,<1",
@@ -50,6 +51,7 @@ testpaths = ["tests"]
 markers = [
     "approved_postgres: requires an explicitly approved isolated PostgreSQL DSN",
     "external_integration: requires explicitly supplied W1, W3, queue, or site infrastructure",
+    "local_browser: requires an explicitly approved isolated offline browser executable",
 ]
 
 [tool.ruff]

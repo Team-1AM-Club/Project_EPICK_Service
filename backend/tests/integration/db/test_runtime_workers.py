@@ -28,7 +28,7 @@ from app.models.lifecycle_operations import JobCheckpoint
 from app.models.sources import AnalysisSourceDecision, JobSourceLink, Source
 from app.runtime.lookup_adapter import LookupRequest, _lookup_command, create_lookup_app
 from app.runtime.outbox_relay import OutboxRelay, QueueUrlRegistry
-from app.runtime.sqs import InMemorySqsPort
+from app.runtime.sqs import Boto3SqsPort, InMemorySqsPort
 from app.runtime.workers import CollectionResultWorker, JobWorker
 from app.services.application_workspace import ApplicationWorkspaceService
 from app.services.core_decision_inbound import CoreDecisionInboundService
@@ -268,6 +268,109 @@ def _run_direct_registration_to_w2_dispatch(
     assert w2_command.payload["w2_command"]["resume_stage"] == "policy"
     assert w2_command.payload["w2_command"]["policy_revision"] is None
     return relay_sqs, job_id, w2_command.id
+
+
+@pytest.mark.postgres
+def test_direct_registration_reaches_w2_over_local_real_sqs_with_redelivery(
+    migrated_engine: Engine,
+    db_session: Session,
+) -> None:
+    """Qualify W1's durable outbox and worker with an actual local SQS broker.
+
+    This stops at W2 ingress; collection, gate ACK and W3 READY are separate
+    full-chain gates and must not be inferred from a successful queue handoff.
+    """
+
+    endpoint = os.environ.get("EPICK_LOCAL_SQS_ENDPOINT")
+    if not endpoint:
+        pytest.skip("explicit local SQS endpoint is required")
+    if not endpoint.startswith("http://127.0.0.1:"):
+        pytest.fail("local SQS endpoint must bind loopback")
+    boto3 = pytest.importorskip("boto3")
+    pytest.importorskip("epick_engine")
+    from epick_engine.source_collection.source_runtime_operator import (
+        SourceRuntimeSettings,
+        SqsSourceRuntimeQueue,
+    )
+    client = boto3.client(
+        "sqs",
+        endpoint_url=endpoint,
+        region_name="us-west-2",
+        aws_access_key_id="local-test",
+        aws_secret_access_key="local-test",
+    )
+    suffix = uuid4().hex[:16]
+    execution_url = client.create_queue(QueueName=f"epick-phase4-w1-execution-{suffix}")[
+        "QueueUrl"
+    ]
+    command_url = client.create_queue(QueueName=f"epick-phase4-w2-command-{suffix}")[
+        "QueueUrl"
+    ]
+    try:
+        _, job_id, _, _, _ = _seed_direct_source_registration(db_session, key=suffix)
+        db_session.commit()
+        port = Boto3SqsPort(client=client)
+        queues = QueueUrlRegistry(
+            w1_execution_queue_url=execution_url,
+            w2_collection_command_queue_url=command_url,
+        )
+        factory = _factory(migrated_engine)
+        assert OutboxRelay(
+            session_factory=factory,
+            sqs=port,
+            queues=queues,
+            relay_id="phase4-local-relay",
+        ).drain_once(limit=10).published == 1
+        assert JobWorker(
+            session_factory=factory,
+            sqs=port,
+            execution_queue_url=execution_url,
+            worker_id="phase4-local-worker",
+        ).drain_once(max_messages=1).acknowledged == 1
+        assert OutboxRelay(
+            session_factory=factory,
+            sqs=Boto3SqsPort(client=client),
+            queues=queues,
+            relay_id="phase4-restarted-relay",
+        ).drain_once(limit=10).published == 1
+
+        settings = SourceRuntimeSettings(
+            database_url="postgresql+psycopg://unused@127.0.0.1/unused",
+            runtime_config_file="unused",
+            lookup_endpoint="unused",
+            lookup_bearer="unused",
+            lookup_ca_file="unused",
+            collection_command_queue_url=command_url,
+            commit_gate_command_queue_url=command_url,
+            private_inbound_queue_url=execution_url,
+            expected_system_sender_id="127.0.0.1",
+            region="us-west-2",
+        )
+        w2_queue = SqsSourceRuntimeQueue(client, settings, claim_lease_seconds=1)
+        first = w2_queue.receive()[0]
+        body = json.loads(first.body)
+        assert body["message_type"] == "w1.private.w2.direct-source-registration.v1"
+        assert body["payload"]["job_id"] == str(job_id)
+        assert first.sender_id == "127.0.0.1"
+        # Simulate a consumer crash before ACK. A new SQS client sees the same
+        # durable message rather than a newly generated command.
+        client.change_message_visibility(
+            QueueUrl=command_url, ReceiptHandle=first.receipt_handle, VisibilityTimeout=0
+        )
+        restarted = boto3.client(
+            "sqs",
+            endpoint_url=endpoint,
+            region_name="us-west-2",
+            aws_access_key_id="local-test",
+            aws_secret_access_key="local-test",
+        )
+        duplicate = SqsSourceRuntimeQueue(restarted, settings, claim_lease_seconds=1).receive()[0]
+        assert duplicate.body == first.body
+        assert duplicate.sender_id == first.sender_id
+        restarted.delete_message(QueueUrl=command_url, ReceiptHandle=duplicate.receipt_handle)
+    finally:
+        client.delete_queue(QueueUrl=command_url)
+        client.delete_queue(QueueUrl=execution_url)
 
 
 @pytest.mark.postgres
@@ -644,6 +747,8 @@ def test_direct_source_registration_uses_its_own_w1_dispatch_and_lookup_contract
 def test_w1_direct_registration_onboards_the_same_source_into_w2_postgres(
     migrated_engine: Engine,
     db_session: Session,
+    tmp_path: Path,
+    request: pytest.FixtureRequest,
 ) -> None:
     """Exercise both real stores and W1's protected route in one Service-copy run.
 
@@ -660,7 +765,9 @@ def test_w1_direct_registration_onboards_the_same_source_into_w2_postgres(
         pytest.fail("W2 onboarding regression requires loopback PostgreSQL")
 
     pytest.importorskip("epick_engine")
+    from epick_engine.source_collection.collector import StaticFetchResult, StaticResponseCandidate
     from epick_engine.source_collection.contracts import CollectionCommand, SourceType
+    from epick_engine.source_collection.parsing import extract_static_candidate
     from epick_engine.source_collection.persistence import (
         Base as W2Base,
     )
@@ -673,6 +780,12 @@ def test_w1_direct_registration_onboards_the_same_source_into_w2_postgres(
     from epick_engine.source_collection.persistence import (
         SourcePolicyDecision,
     )
+    from epick_engine.source_collection.policy import (
+        Representation,
+        UntrustedDocument,
+        ValidatedTarget,
+    )
+    from epick_engine.source_collection.source_runtime import handle_collection_dispatch
     from epick_engine.source_collection.source_runtime_input import (
         SourceRuntimeInputError,
         SqlAlchemyCollectionInputProvider,
@@ -682,11 +795,81 @@ def test_w1_direct_registration_onboards_the_same_source_into_w2_postgres(
         LookupHTTPResponse,
         W1LookupClient,
     )
-
-    relay_sqs, _, command_id = _run_direct_registration_to_w2_dispatch(
-        migrated_engine, db_session, key=f"same-run-{uuid4().hex[:8]}"
+    from epick_engine.source_collection.w1_private_authority_client import (
+        W1PrivateAuthorityClient,
     )
-    assert _relay(migrated_engine, relay_sqs).drain_once(limit=10).published == 1
+    from epick_engine.source_collection.w1_transport import parse_w1_dispatch
+
+    endpoint = os.environ.get("EPICK_LOCAL_SQS_ENDPOINT")
+    if endpoint:
+        if not endpoint.startswith("http://127.0.0.1:"):
+            pytest.fail("local SQS endpoint must bind loopback")
+        boto3 = pytest.importorskip("boto3")
+        from epick_engine.source_collection.source_runtime_operator import (
+            SourceRuntimeSettings,
+            SqsSourceRuntimeQueue,
+        )
+
+        client = boto3.client(
+            "sqs", endpoint_url=endpoint, region_name="us-west-2",
+            aws_access_key_id="local-test", aws_secret_access_key="local-test",
+        )
+        suffix = uuid4().hex[:16]
+        execution_url = client.create_queue(QueueName=f"epick-phase4-w1-execution-{suffix}")[
+            "QueueUrl"
+        ]
+        command_url = client.create_queue(QueueName=f"epick-phase4-w2-command-{suffix}")[
+            "QueueUrl"
+        ]
+        request.addfinalizer(lambda: client.delete_queue(QueueUrl=command_url))
+        request.addfinalizer(lambda: client.delete_queue(QueueUrl=execution_url))
+        _, job_id, _, _, _ = _seed_direct_source_registration(db_session, key=suffix)
+        db_session.commit()
+        port = Boto3SqsPort(client=client)
+        queues = QueueUrlRegistry(
+            w1_execution_queue_url=execution_url,
+            w2_collection_command_queue_url=command_url,
+        )
+        factory = _factory(migrated_engine)
+        assert OutboxRelay(
+            session_factory=factory, sqs=port, queues=queues, relay_id="same-run-relay"
+        ).drain_once(limit=10).published == 1
+        assert JobWorker(
+            session_factory=factory, sqs=port, execution_queue_url=execution_url,
+            worker_id="same-run-worker",
+        ).drain_once(max_messages=1).acknowledged == 1
+        assert OutboxRelay(
+            session_factory=factory, sqs=port, queues=queues,
+            relay_id="same-run-restarted-relay",
+        ).drain_once(limit=10).published == 1
+        settings = SourceRuntimeSettings(
+            database_url="postgresql+psycopg://unused@127.0.0.1/unused",
+            runtime_config_file="unused", lookup_endpoint="unused",
+            lookup_bearer="unused", lookup_ca_file="unused",
+            collection_command_queue_url=command_url,
+            commit_gate_command_queue_url=command_url,
+            private_inbound_queue_url=execution_url,
+            expected_system_sender_id="127.0.0.1", region="us-west-2",
+        )
+        w2_queue = SqsSourceRuntimeQueue(client, settings, claim_lease_seconds=30)
+        delivery = w2_queue.receive()
+        assert len(delivery) == 1
+        dispatch_wire = delivery[0].body
+        db_session.expire_all()
+        command_row = db_session.scalar(
+            select(JobCommand).where(
+                JobCommand.job_id == job_id,
+                JobCommand.command_type == "W2_DIRECT_SOURCE_REGISTRATION",
+            )
+        )
+        assert command_row is not None
+        command_id = command_row.id
+    else:
+        relay_sqs, _, command_id = _run_direct_registration_to_w2_dispatch(
+            migrated_engine, db_session, key=f"same-run-{uuid4().hex[:8]}"
+        )
+        assert _relay(migrated_engine, relay_sqs).drain_once(limit=10).published == 1
+        dispatch_wire = relay_sqs.sent_messages[-1].body
     command_row = db_session.get(JobCommand, command_id)
     assert command_row is not None
     command = CollectionCommand.model_validate(command_row.payload["w2_command"])
@@ -803,6 +986,219 @@ def test_w1_direct_registration_onboards_the_same_source_into_w2_postgres(
                     SourcePolicyDecision.source_id == command.source_id
                 )
             ) == 1
+
+        # Continue the same W1 command through W2's real PostgreSQL-backed
+        # reservation, claim, parse and durable PERSIST stages. Only the
+        # external website response is a deterministic fixture here.
+        from epick_engine.source_collection.persistence import CollectionRuntimeAttempt
+
+        dispatch = parse_w1_dispatch(json.loads(dispatch_wire))
+        document = "<html><body><main><h2>Requirements</h2><p>Python</p></main></body></html>"
+
+        class FixtureCollector:
+            def fetch(self, request: object, *, is_cancelled: object) -> StaticFetchResult:
+                assert callable(is_cancelled) and not is_cancelled()
+                return StaticFetchResult(
+                    command_id=command.command_id,
+                    candidate=StaticResponseCandidate(
+                        final_target=ValidatedTarget(
+                            url=source.canonical_url,
+                            hostname="example.test",
+                            port=443,
+                            resolved_addresses=frozenset({"198.51.100.10"}),
+                        ),
+                        representation=Representation.HTML,
+                        document=UntrustedDocument(text=document),
+                        http_status=200,
+                        raw_size=len(document.encode()),
+                        decompressed_size=len(document.encode()),
+                    ),
+                    failure_code=None,
+                )
+
+            def close(self) -> None:
+                pass
+
+        import ssl
+
+        authority_client = W1PrivateAuthorityClient(
+            endpoint="https://w1.example.test/internal/v1/job-commands/lookup",
+            bearer="test-token",
+            ssl_context=ssl.create_default_context(),
+            transport=LocalLookupTransport(),
+        )
+        proposal = handle_collection_dispatch(
+            dispatch,
+            session_factory=w2_factory,
+            lookup_client=lookup_client,
+            input_provider=provider,
+            collector_factory=FixtureCollector,
+            parser=extract_static_candidate,
+            runtime_config=approved,
+            clock=lambda: datetime.now(UTC),
+            uuid_factory=uuid4,
+            private_authority_client=authority_client,
+        )
+        assert proposal.command.command_id == command.command_id
+        if endpoint:
+            # Crash before SQS ACK: a fresh client receives the same dispatch;
+            # W2 must replay its durable stage without fetching again.
+            client.change_message_visibility(
+                QueueUrl=command_url,
+                ReceiptHandle=delivery[0].receipt_handle,
+                VisibilityTimeout=0,
+            )
+            restarted_client = boto3.client(
+                "sqs", endpoint_url=endpoint, region_name="us-west-2",
+                aws_access_key_id="local-test", aws_secret_access_key="local-test",
+            )
+            restarted_queue = SqsSourceRuntimeQueue(
+                restarted_client, settings, claim_lease_seconds=30
+            )
+            repeated = restarted_queue.receive()
+            assert len(repeated) == 1 and repeated[0].body == dispatch_wire
+            replayed = handle_collection_dispatch(
+                parse_w1_dispatch(json.loads(repeated[0].body)),
+                session_factory=w2_factory,
+                lookup_client=lookup_client,
+                input_provider=provider,
+                collector_factory=lambda: pytest.fail("persisted stage must not fetch again"),
+                parser=extract_static_candidate,
+                runtime_config=approved,
+                clock=lambda: datetime.now(UTC),
+                uuid_factory=uuid4,
+                private_authority_client=authority_client,
+            )
+            assert replayed.message_id == proposal.message_id
+            restarted_queue.delete(repeated[0].receipt_handle)
+        with w2_factory() as session:
+            attempt = session.get(CollectionRuntimeAttempt, command.command_id)
+            assert attempt is not None and attempt.state == "PERSISTED"
+
+        # The public event created by that same PERSIST transition must reach
+        # W3 over HTTP. This is separate from W1's later private gate ACK.
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+        from socket import socket
+        from threading import Thread
+        from time import monotonic, sleep
+        from urllib.request import Request, urlopen
+
+        from epick_engine.source_collection.persistence import OutboxEvent as W2OutboxEvent
+        from epick_engine.source_collection.w3_public_transport import W3PublicEventPublisher
+        from epick_engine.source_collection.worker import (
+            OutboxDeliveryError,
+            SourceOutboxDeliveryWorker,
+            SqlAlchemyOutboxDeliveryStore,
+        )
+
+        with w2_factory() as session:
+            public_events = session.scalars(select(W2OutboxEvent)).all()
+            assert len(public_events) == 1
+            public_event_id = public_events[0].event_id
+
+        class SourceAuthorityHandler(BaseHTTPRequestHandler):
+            def log_message(self, *_args: object) -> None:
+                pass
+
+            def do_GET(self) -> None:
+                if self.path != f"/internal/v1/sources/{command.source_id}/authority":
+                    self.send_error(404)
+                    return
+                with w2_factory() as source_session:
+                    registered = source_session.get(W2Source, command.source_id) is not None
+                body = json.dumps(
+                    {"source_id": str(command.source_id), "registered": registered}
+                ).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+        authority = HTTPServer(("127.0.0.1", 0), SourceAuthorityHandler)
+        authority_thread = Thread(target=authority.serve_forever, daemon=True)
+        authority_thread.start()
+        with socket() as probe:
+            probe.bind(("127.0.0.1", 0))
+            w3_port = probe.getsockname()[1]
+        w3_base = f"http://127.0.0.1:{w3_port}"
+        w3_root = BACKEND_ROOT.parent / "w3" / "Project_EPICK_Service"
+        w3_python = w3_root / ".venv" / "Scripts" / "python.exe"
+        assert w3_python.is_file()
+        w3_environment = os.environ.copy()
+        w3_environment["PYTHONPATH"] = str(w3_root / "src")
+        w3_environment.update(
+            W3_W2_TOKEN="local-w2-token",
+            W3_OPERATOR_TOKEN="local-operator-token",
+            W3_W4_TOKEN="local-w4-token",
+            W3_SOURCE_AUTHORITY_ENDPOINT=f"http://127.0.0.1:{authority.server_port}",
+            W3_SOURCE_AUTHORITY_TOKEN="local-authority-token",
+        )
+        w3_command = [
+            str(w3_python), "-m", "w3_knowledge.c01.http", "--db",
+            str(tmp_path / "w3-c01.sqlite"),
+            "--port", str(w3_port), "--restriction-scope", "version",
+            "--max-ttl-seconds", "3600", "--source-authority",
+            "w3_knowledge.c01.source_authority_http:create_source_authority",
+        ]
+
+        def w3_status() -> dict[str, object]:
+            request = Request(
+                f"{w3_base}/c01/v1/status/{command.source_id}",
+                headers={"Authorization": "Bearer local-w4-token"},
+            )
+            with urlopen(request, timeout=3) as response:
+                return json.load(response)
+
+        def start_w3() -> subprocess.Popen[bytes]:
+            process = subprocess.Popen(
+                w3_command, env=w3_environment, stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+            deadline = monotonic() + 10
+            while monotonic() < deadline:
+                assert process.poll() is None, f"W3 exited: {process.returncode}"
+                try:
+                    w3_status()
+                    return process
+                except OSError:
+                    sleep(0.05)
+            process.terminate()
+            process.wait(timeout=5)
+            raise AssertionError("W3 startup timed out")
+
+        try:
+            publisher = W3PublicEventPublisher(
+                endpoint=f"{w3_base}/c01/v1/events", bearer_token="local-w2-token"
+            )
+            delivery_worker = SourceOutboxDeliveryWorker(
+                publisher=publisher,
+                store=SqlAlchemyOutboxDeliveryStore(session_factory=w2_factory),
+            )
+            with pytest.raises(OutboxDeliveryError):
+                delivery_worker.deliver_pending(limit=10)
+            with w2_factory() as session:
+                assert session.get(W2OutboxEvent, public_event_id).delivery_state == "pending"
+            process = start_w3()
+            try:
+                assert delivery_worker.deliver_pending(limit=10) == 1
+                assert w3_status()["event_cursor"] == 1
+                delivery_worker.replay(event_id=public_event_id)
+                assert w3_status()["event_cursor"] == 1
+            finally:
+                process.terminate()
+                process.wait(timeout=5)
+            process = start_w3()
+            try:
+                assert w3_status()["event_cursor"] == 1
+            finally:
+                process.terminate()
+                process.wait(timeout=5)
+        finally:
+            authority.shutdown()
+            authority_thread.join(timeout=3)
+            authority.server_close()
     finally:
         W2Base.metadata.drop_all(w2_engine)
         with w2_admin.begin() as connection:

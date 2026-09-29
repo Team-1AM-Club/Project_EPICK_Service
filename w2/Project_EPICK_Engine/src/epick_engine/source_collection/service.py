@@ -691,6 +691,7 @@ class StaticCollectionInput:
     aggregate_revision: int
     language: str | None
     redirect_robots_permissions: tuple[tuple[str, Permission], ...] = ()
+    collection_strategy: Literal["static", "rendered"] = "static"
 
 
 class CollectionInputProvider(Protocol):
