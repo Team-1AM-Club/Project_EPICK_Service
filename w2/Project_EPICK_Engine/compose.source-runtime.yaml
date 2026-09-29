@@ -1,0 +1,40 @@
+services:
+  w2-source-runtime:
+    profiles: [source-runtime]
+    image: ${W2_SOURCE_RUNTIME_IMAGE_REPOSITORY:?Set the W1 approved repository}@sha256:${W2_SOURCE_RUNTIME_IMAGE_SHA256:?Set the published manifest digest hex}
+    command: [run]
+    restart: unless-stopped
+    stop_signal: SIGTERM
+    stop_grace_period: 12h5m
+    healthcheck:
+      test: [CMD-SHELL, "kill -0 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    environment:
+      EPICK_DATABASE_URL: ${EPICK_DATABASE_URL:?Supply through the approved secret channel}
+      W2_SOURCE_RUNTIME_CONFIG_FILE: /run/epick/source-runtime/config.json
+      W1_LOOKUP_ENDPOINT: ${W1_LOOKUP_ENDPOINT:?W1 supplies the authenticated lookup endpoint}
+      W1_LOOKUP_BEARER: ${W1_LOOKUP_BEARER:?Supply through the approved secret channel}
+      W1_LOOKUP_CA_FILE: /run/epick/source-runtime/w1-ca.pem
+      W1_COLLECTION_COMMAND_QUEUE_URL: ${W1_COLLECTION_COMMAND_QUEUE_URL:?W1 supplies the collection command queue}
+      W1_COMMIT_GATE_COMMAND_QUEUE_URL: ${W1_COMMIT_GATE_COMMAND_QUEUE_URL:?W1 supplies the commit-gate command queue}
+      W1_PRIVATE_INBOUND_QUEUE_URL: ${W1_PRIVATE_INBOUND_QUEUE_URL:?W1 supplies the private inbound queue}
+      W1_EXPECTED_SYSTEM_SENDER_ID: ${W1_EXPECTED_SYSTEM_SENDER_ID:?W1 supplies its stable sender role ID}
+    volumes:
+      - type: bind
+        source: ${W2_SOURCE_RUNTIME_CONFIG_HOST_FILE:?Supply a read-only approved config file}
+        target: /run/epick/source-runtime/config.json
+        read_only: true
+      - type: bind
+        source: ${W1_LOOKUP_CA_HOST_FILE:?Supply the W1 CA certificate file}
+        target: /run/epick/source-runtime/w1-ca.pem
+        read_only: true
+    # W1 supplies workload-role credential delivery and private network connectivity.
+    # No static AWS credentials, host credential mounts, or production defaults.

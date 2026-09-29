@@ -1,0 +1,75 @@
+{
+  "provenance": "Synthetic fixed input; independently computed with Node crypto and recursively sorted JSON keys before codec implementation.",
+  "command": {
+    "schema_version": "w2.collection.v1",
+    "command_id": "10000000-0000-4000-8000-000000000001",
+    "job_id": "10000000-0000-4000-8000-000000000002",
+    "authenticated_owner_ref": "10000000-0000-4000-8000-000000000003",
+    "project_ref": null,
+    "company_id": "10000000-0000-4000-8000-000000000004",
+    "source_id": "10000000-0000-4000-8000-000000000005",
+    "input_version": 1,
+    "execution_fence": "1",
+    "purpose_ref": "10000000-0000-4000-8000-000000000006",
+    "core_source_decision": {
+      "is_core": true,
+      "decided_by": "W3",
+      "rationale": "REQUESTED_ANALYSIS_REQUIRED",
+      "decision_revision": 1,
+      "analysis_input_version": 1
+    },
+    "resume_stage": "policy",
+    "policy_revision": null,
+    "owner_deletion_epoch": 0
+  },
+  "result": {
+    "schema_version": "w2.collection.v1",
+    "command_id": "10000000-0000-4000-8000-000000000001",
+    "job_id": "10000000-0000-4000-8000-000000000002",
+    "input_version": 1,
+    "result_version": 2,
+    "successful_source_refs": [
+      {
+        "source_id": "10000000-0000-4000-8000-000000000005",
+        "source_version_id": "10000000-0000-4000-8000-000000000009",
+        "extraction_revision_id": "10000000-0000-4000-8000-000000000010"
+      }
+    ],
+    "failures": [
+      {
+        "source_id": "10000000-0000-4000-8000-000000000005",
+        "stage": "parse",
+        "code": "PARTIAL_REQUIRED_SECTION",
+        "missing_sections": [
+          "합성 é",
+          "합성 é"
+        ],
+        "impact": "Preferred qualifications could not be fully extracted.",
+        "core_decision_revision": 1
+      }
+    ],
+    "completion_kind": "partial",
+    "resume_stage": null,
+    "checkpoint_ref": null,
+    "retry_not_before": null,
+    "message_ko": "합성 fixture: 한글 é é 😀",
+    "source_id": "10000000-0000-4000-8000-000000000005",
+    "policy_revision": 1,
+    "required_actions": [
+      {
+        "code": "core_failure_decision",
+        "label_ko": "결정 필요",
+        "context": {
+          "source_id": "10000000-0000-4000-8000-000000000005",
+          "core_decision_revision": 1,
+          "choices": [
+            "continue_limited",
+            "stop",
+            "retry"
+          ]
+        }
+      }
+    ]
+  },
+  "expected_digest": "sha256:430a2e14098d3dd309f6bfb0a23f75e0e6fb5f6e80cc00ea8ff0dd81ecab0360"
+}

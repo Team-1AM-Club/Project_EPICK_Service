@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w1/v1/private-command-lookup-response.schema.json",
+  "title": "EPICK W1 protected command lookup response v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "command_id",
+    "status",
+    "reason_code",
+    "command"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "w1.private.command-lookup.v1"
+    },
+    "command_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "status": {
+      "enum": [
+        "AVAILABLE",
+        "NOT_FOUND",
+        "STALE_FENCE",
+        "STALE_DELETION_EPOCH",
+        "DELETED",
+        "INVALIDATED",
+        "EXPIRED"
+      ]
+    },
+    "reason_code": {
+      "type": ["string", "null"],
+      "maxLength": 64
+    },
+    "command": {
+      "type": ["object", "null"]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "AVAILABLE" } }
+      },
+      "then": {
+        "properties": {
+          "reason_code": { "type": "null" },
+          "command": { "type": "object" }
+        }
+      },
+      "else": {
+        "properties": {
+          "reason_code": { "type": "string", "minLength": 1 },
+          "command": { "type": "null" }
+        }
+      }
+    }
+  ]
+}

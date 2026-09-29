@@ -1,0 +1,83 @@
+{
+  "additionalProperties": false,
+  "description": "The W4-independent, persisted Candidate summary surface only.",
+  "properties": {
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "candidate_no": {
+      "title": "Candidate No",
+      "type": "integer"
+    },
+    "episode_version_id": {
+      "format": "uuid",
+      "title": "Episode Version Id",
+      "type": "string"
+    },
+    "match_status": {
+      "enum": [
+        "DIRECT_MATCH",
+        "PARTIAL_RELEVANCE",
+        "NEEDS_VERIFICATION",
+        "NO_RELEVANT_EVIDENCE"
+      ],
+      "title": "Match Status",
+      "type": "string"
+    },
+    "short_reason": {
+      "title": "Short Reason",
+      "type": "string"
+    },
+    "strength_summary": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Strength Summary"
+    },
+    "limitation_summary": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Limitation Summary"
+    },
+    "validation_status": {
+      "enum": [
+        "PENDING",
+        "PASSED",
+        "LIMITED",
+        "FAILED"
+      ],
+      "title": "Validation Status",
+      "type": "string"
+    },
+    "result_version": {
+      "title": "Result Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "candidate_no",
+    "episode_version_id",
+    "match_status",
+    "short_reason",
+    "strength_summary",
+    "limitation_summary",
+    "validation_status",
+    "result_version"
+  ],
+  "title": "RecommendationCandidateResponse",
+  "type": "object"
+}

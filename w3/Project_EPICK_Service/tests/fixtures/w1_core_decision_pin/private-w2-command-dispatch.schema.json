@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w1/v1/private-w2-command-dispatch.schema.json",
+  "title": "EPICK W1 to W2 private Source Collection dispatch v1",
+  "description": "The protected delivery record for one W1-issued W2 command. W2 must use command_id as its dispatch deduplication key and must call lookup with the embedded lookup_request before work starts or resumes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "message_id",
+    "message_type",
+    "producer",
+    "occurred_at",
+    "visibility_scope",
+    "payload_schema_version",
+    "payload",
+    "lookup_request",
+    "core_decision_pin"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "w1.private.w2-command-dispatch.v1"
+    },
+    "message_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "message_type": {
+      "const": "w1.private.w2.collection-command.v1"
+    },
+    "producer": {
+      "const": "w1"
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "visibility_scope": {
+      "const": "PRIVATE"
+    },
+    "payload_schema_version": {
+      "const": "w2.collection.v1"
+    },
+    "payload": {
+      "type": "object"
+    },
+    "lookup_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "command_id",
+        "execution_fence",
+        "owner_deletion_epoch"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "w1.private.command-lookup.v1"
+        },
+        "command_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "execution_fence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "owner_deletion_epoch": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "core_decision_pin": {
+      "description": "The W1-validated, immutable decision that authorizes this command. W2 must not replace it with its convenience view in payload.core_source_decision.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "origin_message_id",
+        "decision_id",
+        "decision_scope",
+        "company_id",
+        "question_version_id",
+        "source_id",
+        "analysis_input_version",
+        "decision_version",
+        "is_core",
+        "decision_code",
+        "reason_code"
+      ],
+      "properties": {
+        "origin_message_id": { "type": "string", "format": "uuid" },
+        "decision_id": { "type": "string", "format": "uuid" },
+        "decision_scope": { "enum": ["COMPANY_KNOWLEDGE", "QUESTION_MATCHING"] },
+        "company_id": { "type": ["string", "null"], "format": "uuid" },
+        "question_version_id": { "type": ["string", "null"], "format": "uuid" },
+        "source_id": { "type": "string", "format": "uuid" },
+        "analysis_input_version": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "decision_version": { "type": "integer", "minimum": 1 },
+        "is_core": { "type": "boolean" },
+        "decision_code": { "enum": ["CORE_REQUIRED", "NON_CORE_OPTIONAL"] },
+        "reason_code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,63}$" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "decision_scope": { "const": "COMPANY_KNOWLEDGE" } } },
+          "then": {
+            "properties": {
+              "company_id": { "type": "string", "format": "uuid" },
+              "question_version_id": { "type": "null" }
+            }
+          },
+          "else": {
+            "properties": {
+              "company_id": { "type": "null" },
+              "question_version_id": { "type": "string", "format": "uuid" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "decision_code": { "const": "CORE_REQUIRED" } } },
+          "then": { "properties": { "is_core": { "const": true } } },
+          "else": { "properties": { "is_core": { "const": false } } }
+        }
+      ]
+    }
+  }
+}

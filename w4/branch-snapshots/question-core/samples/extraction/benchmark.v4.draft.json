@@ -1,0 +1,318 @@
+{
+  "schema_version": "w4-extraction-benchmark/0.1",
+  "data_kind": "SYNTHETIC",
+  "review": {
+    "status": "DRAFT"
+  },
+  "reference_origin": "New assistant-authored fictional cases frozen before v4 responses; not human-reviewed.",
+  "case_splits": {
+    "v4-raw-cooperation": "holdout_v4",
+    "v4-raw-study": "holdout_v4",
+    "v4-raw-challenge": "holdout_v4",
+    "v4-raw-future": "holdout_v4",
+    "v4-raw-boundary": "holdout_v4",
+    "v4-raw-instruction": "holdout_v4"
+  },
+  "answers": {
+    "v4-raw-cooperation": {
+      "units": [
+        {
+          "unit_id": "u1",
+          "kinds": [
+            "ROLE"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u2",
+          "kinds": [
+            "GOAL"
+          ],
+          "subject": "TEAM",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u3",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u4",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "OTHER",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u5",
+          "kinds": [
+            "RESULT"
+          ],
+          "subject": "UNSPECIFIED",
+          "assertion": "AFFIRMED",
+          "issue": null
+        }
+      ]
+    },
+    "v4-raw-study": {
+      "units": [
+        {
+          "unit_id": "u1",
+          "kinds": [
+            "ROLE"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u2",
+          "kinds": [
+            "ACTION",
+            "PERIOD"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u3",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u4",
+          "kinds": [
+            "RESULT"
+          ],
+          "subject": "UNSPECIFIED",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u5",
+          "kinds": [
+            "REFLECTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        }
+      ]
+    },
+    "v4-raw-challenge": {
+      "units": [
+        {
+          "unit_id": "u1",
+          "kinds": [
+            "ROLE"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u2",
+          "kinds": [
+            "GOAL"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u3",
+          "kinds": [
+            "OBSTACLE",
+            "RESULT"
+          ],
+          "subject": "UNSPECIFIED",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u4",
+          "kinds": [
+            "ACTION",
+            "PERIOD"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u5",
+          "kinds": [
+            "RESULT"
+          ],
+          "subject": "UNSPECIFIED",
+          "assertion": "AFFIRMED",
+          "issue": null
+        }
+      ]
+    },
+    "v4-raw-future": {
+      "units": [
+        {
+          "unit_id": "u1",
+          "kinds": [
+            "ROLE"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u2",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "NEGATED",
+          "issue": null
+        },
+        {
+          "unit_id": "u3",
+          "kinds": [
+            "ACTION",
+            "PERIOD"
+          ],
+          "subject": "SELF",
+          "assertion": "PLANNED",
+          "issue": null
+        },
+        {
+          "unit_id": "u4",
+          "kinds": [
+            "ACTION",
+            "PERIOD"
+          ],
+          "subject": "SELF",
+          "assertion": "MIXED",
+          "issue": "INSUFFICIENT_CONTEXT"
+        },
+        {
+          "unit_id": "u5",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "HYPOTHETICAL",
+          "issue": null
+        }
+      ]
+    },
+    "v4-raw-boundary": {
+      "units": [
+        {
+          "unit_id": "u1",
+          "kinds": [
+            "ROLE"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u2",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "TEAM",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u3",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "MIXED",
+          "assertion": "AFFIRMED",
+          "issue": "INSUFFICIENT_CONTEXT"
+        },
+        {
+          "unit_id": "u4",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u5",
+          "kinds": [
+            "RESULT"
+          ],
+          "subject": "TEAM",
+          "assertion": "AFFIRMED",
+          "issue": null
+        }
+      ]
+    },
+    "v4-raw-instruction": {
+      "units": [
+        {
+          "unit_id": "u1",
+          "kinds": [
+            "ROLE"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u2",
+          "kinds": [],
+          "subject": "UNSPECIFIED",
+          "assertion": "AFFIRMED",
+          "issue": "INSTRUCTION_IN_SOURCE"
+        },
+        {
+          "unit_id": "u3",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u4",
+          "kinds": [
+            "RESULT"
+          ],
+          "subject": "UNSPECIFIED",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u5",
+          "kinds": [
+            "ACTION",
+            "PERIOD"
+          ],
+          "subject": "UNSPECIFIED",
+          "assertion": "PLANNED",
+          "issue": null
+        }
+      ]
+    }
+  },
+  "input_sha256": "fd93c8a809183c59dcdef0f092a0a124ca02e572cd2d6e967e03813db951a573",
+  "protocol_sha256": "4e88ca53d9c003518c4288fcc073d6e03df9e9c6ae8cba09f366993b63a3423b"
+}

@@ -1,0 +1,395 @@
+{
+  "schema_version": "1.0",
+  "synthetic": true,
+  "description": "Synthetic official HTML page fixtures. Transport inputs are separate from public expected source outcomes and do not represent real organizations or URLs.",
+  "cases": [
+    {
+      "case_id": "official_page_homepage_static",
+      "description": "Static synthetic company homepage with no declared publication date.",
+      "transport": {
+        "request_url": "https://synthetic-meridian.example.test/",
+        "status": 200,
+        "content_type": "text/html; charset=utf-8",
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "raw_body": "<!doctype html>\n<html lang=\"en\" data-synthetic=\"true\">\n  <head><title>Meridian Synthetic Industries</title></head>\n  <body>\n    <main>\n      <article>\n        <h1>Meridian Synthetic Industries</h1>\n        <p>We build synthetic examples for deterministic source-collection tests.</p>\n        <section>\n          <h2>Company overview</h2>\n          <p>Our public homepage describes the synthetic company overview.</p>\n        </section>\n      </article>\n    </main>\n  </body>\n</html>"
+      },
+      "expected": {
+        "source_type": "company_website",
+        "representation": "static_html",
+        "acquisition": "AVAILABLE",
+        "extraction": "complete",
+        "sections": [
+          {
+            "section_id": "company_overview",
+            "heading": "Company overview",
+            "evidence_refs": [
+              "homepage_overview_heading",
+              "homepage_overview_text"
+            ]
+          }
+        ],
+        "evidence": [
+          {
+            "ref": "homepage_title",
+            "text_excerpt": "Meridian Synthetic Industries",
+            "locator": {
+              "kind": "xpath",
+              "value": "/html/body/main/article/h1"
+            },
+            "chunk_order": 0
+          },
+          {
+            "ref": "homepage_intro",
+            "text_excerpt": "We build synthetic examples for deterministic source-collection tests.",
+            "locator": {
+              "kind": "xpath",
+              "value": "/html/body/main/article/p"
+            },
+            "chunk_order": 1
+          },
+          {
+            "ref": "homepage_overview_heading",
+            "text_excerpt": "Company overview",
+            "locator": {
+              "kind": "xpath",
+              "value": "/html/body/main/article/section/h2"
+            },
+            "chunk_order": 2
+          },
+          {
+            "ref": "homepage_overview_text",
+            "text_excerpt": "Our public homepage describes the synthetic company overview.",
+            "locator": {
+              "kind": "xpath",
+              "value": "/html/body/main/article/section/p"
+            },
+            "chunk_order": 3
+          }
+        ],
+        "published_at": {
+          "status": "unknown",
+          "value": null
+        },
+        "limitations": [
+          "The synthetic homepage does not declare a publication date."
+        ]
+      }
+    },
+    {
+      "case_id": "official_page_press_release_static",
+      "description": "Static synthetic press release with an explicit calendar publication date.",
+      "transport": {
+        "request_url": "https://synthetic-meridian.example.test/news/2031-05-14-update",
+        "status": 200,
+        "content_type": "text/html; charset=utf-8",
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "raw_body": "<!doctype html>\n<html lang=\"en\" data-synthetic=\"true\">\n  <head><title>Synthetic Q2 update</title></head>\n  <body>\n    <main>\n      <article>\n        <h1>Synthetic Q2 update</h1>\n        <time datetime=\"2031-05-14\">May 14, 2031</time>\n        <p>Meridian Synthetic Industries published a deterministic Q2 update.</p>\n        <section>\n          <h2>Release details</h2>\n          <p>The release is an official synthetic press-release fixture.</p>\n        </section>\n      </article>\n    </main>\n  </body>\n</html>"
+      },
+      "expected": {
+        "source_type": "press_release",
+        "representation": "static_html",
+        "acquisition": "AVAILABLE",
+        "extraction": "complete",
+        "sections": [
+          {
+            "section_id": "release_details",
+            "heading": "Release details",
+            "evidence_refs": [
+              "press_release_details_heading",
+              "press_release_details_text"
+            ]
+          }
+        ],
+        "evidence": [
+          {
+            "ref": "press_release_title",
+            "text_excerpt": "Synthetic Q2 update",
+            "locator": {
+              "kind": "xpath",
+              "value": "/html/body/main/article/h1"
+            },
+            "chunk_order": 0
+          },
+          {
+            "ref": "press_release_date",
+            "text_excerpt": "May 14, 2031",
+            "locator": {
+              "kind": "xpath",
+              "value": "/html/body/main/article/time"
+            },
+            "chunk_order": 1
+          },
+          {
+            "ref": "press_release_summary",
+            "text_excerpt": "Meridian Synthetic Industries published a deterministic Q2 update.",
+            "locator": {
+              "kind": "xpath",
+              "value": "/html/body/main/article/p"
+            },
+            "chunk_order": 2
+          },
+          {
+            "ref": "press_release_details_heading",
+            "text_excerpt": "Release details",
+            "locator": {
+              "kind": "xpath",
+              "value": "/html/body/main/article/section/h2"
+            },
+            "chunk_order": 3
+          },
+          {
+            "ref": "press_release_details_text",
+            "text_excerpt": "The release is an official synthetic press-release fixture.",
+            "locator": {
+              "kind": "xpath",
+              "value": "/html/body/main/article/section/p"
+            },
+            "chunk_order": 4
+          }
+        ],
+        "published_at": {
+          "status": "known",
+          "value": "2031-05-14",
+          "precision": "date",
+          "raw_text": "May 14, 2031"
+        },
+        "limitations": []
+      }
+    },
+    {
+      "case_id": "official_page_executive_message_static",
+      "description": "Static synthetic executive message with month-level publication precision.",
+      "transport": {
+        "request_url": "https://synthetic-meridian.example.test/leadership/message-2031-03",
+        "status": 200,
+        "content_type": "text/html; charset=utf-8",
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "raw_body": "<!doctype html>\n<html lang=\"en\" data-synthetic=\"true\">\n  <head><title>Message from the synthetic CEO</title></head>\n  <body>\n    <main>\n      <article>\n        <h1>Message from the synthetic CEO</h1>\n        <p>Our deterministic examples make collection behavior easier to verify.</p>\n        <section>\n          <h2>Looking ahead</h2>\n          <p>We will keep the synthetic source corpus concise and reproducible.</p>\n        </section>\n        <time datetime=\"2031-03\">March 2031</time>\n      </article>\n    </main>\n  </body>\n</html>"
+      },
+      "expected": {
+        "source_type": "executive_message",
+        "representation": "static_html",
+        "acquisition": "AVAILABLE",
+        "extraction": "complete",
+        "sections": [
+          {
+            "section_id": "looking_ahead",
+            "heading": "Looking ahead",
+            "evidence_refs": [
+              "executive_looking_ahead_heading",
+              "executive_looking_ahead_text"
+            ]
+          }
+        ],
+        "evidence": [
+          {
+            "ref": "executive_message_title",
+            "text_excerpt": "Message from the synthetic CEO",
+            "locator": {
+              "kind": "xpath",
+              "value": "/html/body/main/article/h1"
+            },
+            "chunk_order": 0
+          },
+          {
+            "ref": "executive_message_intro",
+            "text_excerpt": "Our deterministic examples make collection behavior easier to verify.",
+            "locator": {
+              "kind": "xpath",
+              "value": "/html/body/main/article/p"
+            },
+            "chunk_order": 1
+          },
+          {
+            "ref": "executive_looking_ahead_heading",
+            "text_excerpt": "Looking ahead",
+            "locator": {
+              "kind": "xpath",
+              "value": "/html/body/main/article/section/h2"
+            },
+            "chunk_order": 2
+          },
+          {
+            "ref": "executive_looking_ahead_text",
+            "text_excerpt": "We will keep the synthetic source corpus concise and reproducible.",
+            "locator": {
+              "kind": "xpath",
+              "value": "/html/body/main/article/section/p"
+            },
+            "chunk_order": 3
+          },
+          {
+            "ref": "executive_message_date",
+            "text_excerpt": "March 2031",
+            "locator": {
+              "kind": "xpath",
+              "value": "/html/body/main/article/time"
+            },
+            "chunk_order": 4
+          }
+        ],
+        "published_at": {
+          "status": "known",
+          "value": "2031-03",
+          "precision": "month",
+          "raw_text": "March 2031"
+        },
+        "limitations": [
+          "Only month-level publication precision is available."
+        ]
+      }
+    },
+    {
+      "case_id": "official_page_ir_disclosure_static",
+      "description": "Static synthetic IR disclosure with an explicit timezone-aware publication timestamp.",
+      "transport": {
+        "request_url": "https://synthetic-meridian.example.test/ir/disclosures/q1-2031",
+        "status": 200,
+        "content_type": "text/html; charset=utf-8",
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "raw_body": "<!doctype html>\n<html lang=\"en\" data-synthetic=\"true\">\n  <head><title>Synthetic Q1 disclosure</title></head>\n  <body>\n    <main>\n      <article>\n        <h1>Synthetic Q1 disclosure</h1>\n        <time datetime=\"2031-04-30T08:00:00+09:00\">April 30, 2031 08:00 KST</time>\n        <p>This disclosure provides deterministic investor-relations sample text.</p>\n        <section>\n          <h2>Disclosure summary</h2>\n          <p>The source is a synthetic IR disclosure, not a real filing.</p>\n        </section>\n      </article>\n    </main>\n  </body>\n</html>"
+      },
+      "expected": {
+        "source_type": "ir_disclosure",
+        "representation": "static_html",
+        "acquisition": "AVAILABLE",
+        "extraction": "complete",
+        "sections": [
+          {
+            "section_id": "disclosure_summary",
+            "heading": "Disclosure summary",
+            "evidence_refs": [
+              "ir_disclosure_summary_heading",
+              "ir_disclosure_summary_text"
+            ]
+          }
+        ],
+        "evidence": [
+          {
+            "ref": "ir_disclosure_title",
+            "text_excerpt": "Synthetic Q1 disclosure",
+            "locator": {
+              "kind": "xpath",
+              "value": "/html/body/main/article/h1"
+            },
+            "chunk_order": 0
+          },
+          {
+            "ref": "ir_disclosure_date",
+            "text_excerpt": "April 30, 2031 08:00 KST",
+            "locator": {
+              "kind": "xpath",
+              "value": "/html/body/main/article/time"
+            },
+            "chunk_order": 1
+          },
+          {
+            "ref": "ir_disclosure_intro",
+            "text_excerpt": "This disclosure provides deterministic investor-relations sample text.",
+            "locator": {
+              "kind": "xpath",
+              "value": "/html/body/main/article/p"
+            },
+            "chunk_order": 2
+          },
+          {
+            "ref": "ir_disclosure_summary_heading",
+            "text_excerpt": "Disclosure summary",
+            "locator": {
+              "kind": "xpath",
+              "value": "/html/body/main/article/section/h2"
+            },
+            "chunk_order": 3
+          },
+          {
+            "ref": "ir_disclosure_summary_text",
+            "text_excerpt": "The source is a synthetic IR disclosure, not a real filing.",
+            "locator": {
+              "kind": "xpath",
+              "value": "/html/body/main/article/section/p"
+            },
+            "chunk_order": 4
+          }
+        ],
+        "published_at": {
+          "status": "known",
+          "value": "2031-04-30T08:00:00+09:00",
+          "precision": "datetime",
+          "raw_text": "April 30, 2031 08:00 KST",
+          "timezone": "Asia/Seoul"
+        },
+        "limitations": []
+      }
+    },
+    {
+      "case_id": "official_page_pdf_only_alternative",
+      "description": "Synthetic PDF-only IR input. Neither direct nor redirect metadata includes a PDF body.",
+      "transport": {
+        "direct_pdf": {
+          "request_url": "https://synthetic-meridian.example.test/ir/reports/annual-2030.pdf",
+          "status": 200,
+          "content_type": "application/pdf",
+          "headers": {
+            "content-type": "application/pdf"
+          },
+          "raw_body": null,
+          "body_available": false
+        },
+        "redirected_pdf": {
+          "request_url": "https://synthetic-meridian.example.test/ir/annual-report",
+          "redirect_chain": [
+            {
+              "status": 302,
+              "location": "https://synthetic-meridian.example.test/ir/reports/annual-2030.pdf"
+            },
+            {
+              "status": 200,
+              "content_type": "application/pdf"
+            }
+          ],
+          "headers": {
+            "content-type": "application/pdf"
+          },
+          "raw_body": null,
+          "body_available": false
+        }
+      },
+      "expected": {
+        "source_type": "ir_disclosure",
+        "representation": null,
+        "acquisition": null,
+        "extraction": "not_attempted",
+        "failure": {
+          "stage": "fetch",
+          "code": "UNSUPPORTED_FORMAT"
+        },
+        "restriction": {
+          "code": "UNSUPPORTED_FORMAT",
+          "impact_ko": "PDF 응답은 현재 수집할 수 없습니다."
+        },
+        "actions": [
+          {
+            "code": "find_alternative_source",
+            "label_ko": "대체 가능한 공식 출처를 찾아 주세요."
+          }
+        ],
+        "alternative_guidance_ko": "대체 가능한 공식 HTML 페이지 또는 공개 API를 찾아 주세요.",
+        "envelope": null,
+        "sections": [],
+        "evidence": [],
+        "limitations": [
+          "PDF body is intentionally absent from this synthetic fixture.",
+          "No successful SourceEnvelope or Evidence may be created."
+        ]
+      }
+    }
+  ]
+}

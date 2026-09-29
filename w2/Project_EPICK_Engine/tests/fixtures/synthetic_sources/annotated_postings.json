@@ -1,0 +1,404 @@
+{
+  "schema_version": "1.0",
+  "fixture_ref": "fixture:synthetic_static_posting_v1",
+  "fixture_path": "static_posting.html",
+  "synthetic": true,
+  "description": "Machine-readable expected annotations for a synthetic static job-posting fixture. It does not describe a real company or job posting.",
+  "source_url": "https://synthetic-meridian-careers.test/jobs/static-posting",
+  "language": "en",
+  "expected": {
+    "source_url_evidence_ref": "source_url_link",
+    "posting_sections": [
+      {
+        "section_id": "document_notice",
+        "kind": "general",
+        "order": 0,
+        "text_raw": "This is a synthetic test fixture, not a real company or job posting.",
+        "evidence_refs": [
+          "synthetic_notice"
+        ],
+        "annotation_reason": "The source explicitly identifies this document as synthetic rather than a real posting."
+      },
+      {
+        "section_id": "posting_title",
+        "kind": "title",
+        "order": 1,
+        "heading_raw": "Synthetic Opportunity Notice",
+        "text_raw": "Synthetic Opportunity Notice",
+        "evidence_refs": [
+          "document_title"
+        ],
+        "annotation_reason": "This is a document H1 title only; it is not confirmed as a job role title."
+      },
+      {
+        "section_id": "role_and_organization_unconfirmed",
+        "kind": "general",
+        "order": 2,
+        "heading_raw": "Role and organization",
+        "text_raw": "The job role and hiring organization are not confirmed by this posting.",
+        "evidence_refs": [
+          "role_and_organization_heading",
+          "role_and_organization_status"
+        ],
+        "annotation_reason": "The source explicitly leaves both fields unconfirmed, so neither role nor organization is generated."
+      },
+      {
+        "section_id": "aws_required",
+        "kind": "required",
+        "order": 3,
+        "heading_raw": "Requirements",
+        "text_raw": "AWS experience is required.",
+        "evidence_refs": [
+          "requirements_heading",
+          "aws_requirement"
+        ]
+      },
+      {
+        "section_id": "gcp_general_context",
+        "kind": "general",
+        "order": 4,
+        "heading_raw": "Requirements",
+        "text_raw": "GCP is mentioned only as a general cloud-platform example and is not a mandatory requirement.",
+        "evidence_refs": [
+          "gcp_general_context"
+        ],
+        "annotation_reason": "The source explicitly calls GCP a general example and says it is not mandatory; it must not be promoted to required."
+      },
+      {
+        "section_id": "python_and_sql_required",
+        "kind": "required",
+        "order": 5,
+        "heading_raw": "Requirements",
+        "text_raw": "You must demonstrate Python and SQL experience.",
+        "evidence_refs": [
+          "python_and_sql_requirement"
+        ],
+        "relation_text": "You must demonstrate Python and SQL experience."
+      },
+      {
+        "section_id": "kubernetes_or_docker_required",
+        "kind": "required",
+        "order": 6,
+        "heading_raw": "Requirements",
+        "text_raw": "You must demonstrate Kubernetes or Docker experience.",
+        "evidence_refs": [
+          "kubernetes_or_docker_requirement"
+        ],
+        "relation_text": "You must demonstrate Kubernetes or Docker experience."
+      },
+      {
+        "section_id": "same_experience_relation",
+        "kind": "general",
+        "order": 7,
+        "heading_raw": "Requirements",
+        "text_raw": "The same experience may satisfy the AWS requirement and the Python and SQL requirement.",
+        "evidence_refs": [
+          "same_experience_relation"
+        ],
+        "relation_text": "The same experience may satisfy the AWS requirement and the Python and SQL requirement.",
+        "annotation_reason": "This is a relationship statement, not a new required skill."
+      },
+      {
+        "section_id": "published_unknown",
+        "kind": "published",
+        "order": 8,
+        "heading_raw": "Dates",
+        "text_raw": "The posting date is unknown.",
+        "evidence_refs": [
+          "dates_heading",
+          "published_date_unknown"
+        ],
+        "annotation_reason": "The source explicitly marks the posting date as unknown."
+      },
+      {
+        "section_id": "deadline_primary",
+        "kind": "deadline",
+        "order": 9,
+        "heading_raw": "Dates",
+        "text_raw": "Applications close on 2030-02-01.",
+        "evidence_refs": [
+          "deadline_primary"
+        ]
+      },
+      {
+        "section_id": "deadline_secondary",
+        "kind": "deadline",
+        "order": 10,
+        "heading_raw": "Dates",
+        "text_raw": "A secondary synthetic notice says applications close on 2030-02-02.",
+        "evidence_refs": [
+          "deadline_secondary"
+        ]
+      }
+    ],
+    "evidence": [
+      {
+        "ref": "synthetic_notice",
+        "text_excerpt": "This is a synthetic test fixture, not a real company or job posting.",
+        "section_heading": null,
+        "xpath": "/html/body/main/header/p[1]",
+        "chunk_order": 8,
+        "section_id": "document_notice"
+      },
+      {
+        "ref": "document_title",
+        "text_excerpt": "Synthetic Opportunity Notice",
+        "section_heading": "Synthetic Opportunity Notice",
+        "xpath": "/html/body/main/header/h1",
+        "chunk_order": 9,
+        "section_id": "posting_title"
+      },
+      {
+        "ref": "source_url_link",
+        "text_excerpt": "Synthetic posting URL",
+        "section_heading": "Synthetic Opportunity Notice",
+        "xpath": "/html/body/main/header/p[2]",
+        "chunk_order": 10,
+        "section_id": null
+      },
+      {
+        "ref": "role_and_organization_heading",
+        "text_excerpt": "Role and organization",
+        "section_heading": "Role and organization",
+        "xpath": "/html/body/main/section[1]/h2",
+        "chunk_order": 13,
+        "section_id": "role_and_organization_unconfirmed"
+      },
+      {
+        "ref": "role_and_organization_status",
+        "text_excerpt": "The job role and hiring organization are not confirmed by this posting.",
+        "section_heading": "Role and organization",
+        "xpath": "/html/body/main/section[1]/p",
+        "chunk_order": 14,
+        "section_id": "role_and_organization_unconfirmed"
+      },
+      {
+        "ref": "requirements_heading",
+        "text_excerpt": "Requirements",
+        "section_heading": "Requirements",
+        "xpath": "/html/body/main/section[2]/h2",
+        "chunk_order": 16,
+        "section_id": "aws_required"
+      },
+      {
+        "ref": "aws_requirement",
+        "text_excerpt": "AWS experience is required.",
+        "section_heading": "Requirements",
+        "xpath": "/html/body/main/section[2]/p[1]",
+        "chunk_order": 17,
+        "section_id": "aws_required"
+      },
+      {
+        "ref": "gcp_general_context",
+        "text_excerpt": "GCP is mentioned only as a general cloud-platform example and is not a mandatory requirement.",
+        "section_heading": "Requirements",
+        "xpath": "/html/body/main/section[2]/p[2]",
+        "chunk_order": 18,
+        "section_id": "gcp_general_context"
+      },
+      {
+        "ref": "python_and_sql_requirement",
+        "text_excerpt": "You must demonstrate Python and SQL experience.",
+        "section_heading": "Requirements",
+        "xpath": "/html/body/main/section[2]/p[3]",
+        "chunk_order": 19,
+        "section_id": "python_and_sql_required"
+      },
+      {
+        "ref": "kubernetes_or_docker_requirement",
+        "text_excerpt": "You must demonstrate Kubernetes or Docker experience.",
+        "section_heading": "Requirements",
+        "xpath": "/html/body/main/section[2]/p[4]",
+        "chunk_order": 20,
+        "section_id": "kubernetes_or_docker_required"
+      },
+      {
+        "ref": "same_experience_relation",
+        "text_excerpt": "The same experience may satisfy the AWS requirement and the Python and SQL requirement.",
+        "section_heading": "Requirements",
+        "xpath": "/html/body/main/section[2]/p[5]",
+        "chunk_order": 21,
+        "section_id": "same_experience_relation"
+      },
+      {
+        "ref": "dates_heading",
+        "text_excerpt": "Dates",
+        "section_heading": "Dates",
+        "xpath": "/html/body/main/section[3]/h2",
+        "chunk_order": 23,
+        "section_id": "published_unknown"
+      },
+      {
+        "ref": "published_date_unknown",
+        "text_excerpt": "The posting date is unknown.",
+        "section_heading": "Dates",
+        "xpath": "/html/body/main/section[3]/p[1]",
+        "chunk_order": 24,
+        "section_id": "published_unknown"
+      },
+      {
+        "ref": "deadline_primary",
+        "text_excerpt": "Applications close on 2030-02-01.",
+        "section_heading": "Dates",
+        "xpath": "/html/body/main/section[3]/p[2]",
+        "chunk_order": 25,
+        "section_id": "deadline_primary"
+      },
+      {
+        "ref": "deadline_secondary",
+        "text_excerpt": "A secondary synthetic notice says applications close on 2030-02-02.",
+        "section_heading": "Dates",
+        "xpath": "/html/body/main/section[3]/p[3]",
+        "chunk_order": 26,
+        "section_id": "deadline_secondary"
+      }
+    ],
+    "requirements": {
+      "items": [
+        {
+          "requirement_id": "aws_experience",
+          "classification": "required",
+          "text_raw": "AWS experience is required.",
+          "evidence_refs": [
+            "aws_requirement"
+          ],
+          "section_id": "aws_required"
+        },
+        {
+          "requirement_id": "gcp_cloud_platform_example",
+          "classification": "general",
+          "text_raw": "GCP is mentioned only as a general cloud-platform example and is not a mandatory requirement.",
+          "evidence_refs": [
+            "gcp_general_context"
+          ],
+          "section_id": "gcp_general_context",
+          "annotation_reason": "The source explicitly marks GCP as general context and non-mandatory, so it is not a required requirement."
+        },
+        {
+          "requirement_id": "python_experience",
+          "classification": "required",
+          "text_raw": "You must demonstrate Python and SQL experience.",
+          "evidence_refs": [
+            "python_and_sql_requirement"
+          ],
+          "section_id": "python_and_sql_required"
+        },
+        {
+          "requirement_id": "sql_experience",
+          "classification": "required",
+          "text_raw": "You must demonstrate Python and SQL experience.",
+          "evidence_refs": [
+            "python_and_sql_requirement"
+          ],
+          "section_id": "python_and_sql_required"
+        },
+        {
+          "requirement_id": "kubernetes_experience",
+          "classification": "required",
+          "text_raw": "You must demonstrate Kubernetes or Docker experience.",
+          "evidence_refs": [
+            "kubernetes_or_docker_requirement"
+          ],
+          "section_id": "kubernetes_or_docker_required"
+        },
+        {
+          "requirement_id": "docker_experience",
+          "classification": "required",
+          "text_raw": "You must demonstrate Kubernetes or Docker experience.",
+          "evidence_refs": [
+            "kubernetes_or_docker_requirement"
+          ],
+          "section_id": "kubernetes_or_docker_required"
+        }
+      ],
+      "relations": [
+        {
+          "relation_id": "python_and_sql",
+          "relation_type": "AND",
+          "requirement_refs": [
+            "python_experience",
+            "sql_experience"
+          ],
+          "relation_text": "You must demonstrate Python and SQL experience.",
+          "evidence_refs": [
+            "python_and_sql_requirement"
+          ],
+          "section_id": "python_and_sql_required"
+        },
+        {
+          "relation_id": "kubernetes_or_docker",
+          "relation_type": "OR",
+          "requirement_refs": [
+            "kubernetes_experience",
+            "docker_experience"
+          ],
+          "relation_text": "You must demonstrate Kubernetes or Docker experience.",
+          "evidence_refs": [
+            "kubernetes_or_docker_requirement"
+          ],
+          "section_id": "kubernetes_or_docker_required"
+        },
+        {
+          "relation_id": "same_experience_may_satisfy_aws_and_python_sql",
+          "relation_type": "same_experience_may_satisfy",
+          "left_requirement_ref": "aws_experience",
+          "right_relation_ref": "python_and_sql",
+          "relation_text": "The same experience may satisfy the AWS requirement and the Python and SQL requirement.",
+          "evidence_refs": [
+            "same_experience_relation"
+          ],
+          "section_id": "same_experience_relation"
+        }
+      ]
+    },
+    "dates": {
+      "published": {
+        "status": "unknown",
+        "raw_text": "The posting date is unknown.",
+        "value": null,
+        "evidence_refs": [
+          "published_date_unknown"
+        ]
+      },
+      "deadline": {
+        "status": "conflicting",
+        "value": null,
+        "candidates": [
+          {
+            "value": "2030-02-01",
+            "raw_text": "Applications close on 2030-02-01.",
+            "evidence_refs": [
+              "deadline_primary"
+            ]
+          },
+          {
+            "value": "2030-02-02",
+            "raw_text": "A secondary synthetic notice says applications close on 2030-02-02.",
+            "evidence_refs": [
+              "deadline_secondary"
+            ]
+          }
+        ]
+      }
+    },
+    "identity": {
+      "job_title": {
+        "status": "unknown",
+        "value": null,
+        "evidence_refs": [
+          "document_title",
+          "role_and_organization_status"
+        ],
+        "annotation_reason": "Synthetic Opportunity Notice is a document title, while the source explicitly says the job role is not confirmed."
+      },
+      "organization": {
+        "status": "unknown",
+        "value": null,
+        "evidence_refs": [
+          "role_and_organization_status"
+        ],
+        "annotation_reason": "The source explicitly says the hiring organization is not confirmed; the source URL must not be used to infer one."
+      }
+    }
+  }
+}

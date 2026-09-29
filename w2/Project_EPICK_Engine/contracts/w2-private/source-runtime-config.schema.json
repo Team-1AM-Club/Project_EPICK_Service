@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://epick.example/contracts/w2-private/source-runtime-config.schema.json",
+  "title": "W2 Source Runtime Config",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "claim_lease_seconds", "sources"],
+  "anyOf": [
+    {"properties": {"sources": {"minProperties": 1}}},
+    {"required": ["approved_sites"], "properties": {"approved_sites": {"minItems": 1}}}
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "w2.source-runtime-config.v1"
+    },
+    "claim_lease_seconds": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "sources": {
+      "type": "object",
+      "minProperties": 0,
+      "propertyNames": {
+        "format": "uuid"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/source"
+      }
+    },
+    "approved_sites": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/approvedSite"}
+    }
+  },
+  "$defs": {
+    "approvedSite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "company_id", "company_legal_name", "company_official_domain", "hostname", "path_prefix",
+        "w1_source_type", "w2_source_type", "company_identity_evidence",
+        "policy", "source_config"
+      ],
+      "properties": {
+        "company_id": {"type": "string", "format": "uuid"},
+        "company_legal_name": {"type": "string", "minLength": 1},
+        "company_official_domain": {"type": "string", "minLength": 1},
+        "hostname": {"type": "string", "minLength": 1},
+        "path_prefix": {"type": "string", "minLength": 1},
+        "w1_source_type": {"type": "string", "minLength": 1},
+        "w2_source_type": {
+          "enum": ["company_website", "job_posting", "press_release", "executive_message", "ir_disclosure", "official_api"]
+        },
+        "company_identity_evidence": {
+          "type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}
+        },
+        "policy": {"$ref": "#/$defs/onboardingPolicy"},
+        "source_config": {"$ref": "#/$defs/source"}
+      }
+    },
+    "onboardingPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "official_status", "access_class", "collection_permission",
+        "excerpt_storage_permission", "body_storage_permission",
+        "redistribution_permission", "evidence_refs", "checked_at", "policy_version"
+      ],
+      "properties": {
+        "official_status": {"const": "verified"},
+        "access_class": {"enum": ["public", "restricted"]},
+        "collection_permission": {"const": "allowed"},
+        "excerpt_storage_permission": {"$ref": "#/$defs/permission"},
+        "body_storage_permission": {"$ref": "#/$defs/permission"},
+        "redistribution_permission": {"$ref": "#/$defs/permission"},
+        "evidence_refs": {
+          "type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}
+        },
+        "checked_at": {"type": "string", "format": "date-time"},
+        "policy_version": {"type": "string", "minLength": 1}
+      }
+    },
+    "permission": {
+      "type": "string",
+      "enum": ["allowed", "denied", "unknown"]
+    },
+    "positiveInteger": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "positiveNumber": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "site_concurrency",
+        "global_concurrency",
+        "source_ttl_seconds",
+        "max_response_bytes",
+        "max_decompressed_bytes",
+        "connect_timeout_seconds",
+        "read_timeout_seconds",
+        "max_redirects",
+        "general_retry_limit",
+        "retention_days"
+      ],
+      "properties": {
+        "site_concurrency": {"$ref": "#/$defs/positiveInteger"},
+        "global_concurrency": {"$ref": "#/$defs/positiveInteger"},
+        "source_ttl_seconds": {"$ref": "#/$defs/positiveInteger"},
+        "max_response_bytes": {"$ref": "#/$defs/positiveInteger"},
+        "max_decompressed_bytes": {"$ref": "#/$defs/positiveInteger"},
+        "connect_timeout_seconds": {"$ref": "#/$defs/positiveNumber"},
+        "read_timeout_seconds": {"$ref": "#/$defs/positiveNumber"},
+        "max_redirects": {"$ref": "#/$defs/positiveInteger"},
+        "general_retry_limit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "retention_days": {"$ref": "#/$defs/positiveInteger"}
+      }
+    },
+    "redirectRobotsPermission": {
+      "type": "array",
+      "prefixItems": [
+        {"type": "string", "minLength": 1},
+        {"$ref": "#/$defs/permission"}
+      ],
+      "items": false,
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_revision",
+        "robots_permission",
+        "result_version",
+        "language",
+        "redirect_robots_permissions",
+        "limits"
+      ],
+      "properties": {
+        "policy_revision": {"$ref": "#/$defs/positiveInteger"},
+        "robots_permission": {"$ref": "#/$defs/permission"},
+        "result_version": {"$ref": "#/$defs/positiveInteger"},
+        "language": {
+          "oneOf": [
+            {"type": "string", "minLength": 1},
+            {"type": "null"}
+          ]
+        },
+        "redirect_robots_permissions": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/redirectRobotsPermission"}
+        },
+        "limits": {"$ref": "#/$defs/limits"}
+      }
+    }
+  }
+}

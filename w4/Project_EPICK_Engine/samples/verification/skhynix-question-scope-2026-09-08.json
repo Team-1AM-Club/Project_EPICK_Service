@@ -1,0 +1,260 @@
+{
+  "schema_version": "research-note.v1",
+  "reviewed_on": "2026-09-08",
+  "record_type": "RECRUITING_SCOPE_AND_QUESTION_REVIEW",
+  "status": "TARGET_SELECTED_QUESTIONS_PENDING_PRIMARY_FORM",
+  "is_w4_request": false,
+  "is_model_evaluation_ground_truth": false,
+  "target": {
+    "scope_id": "skhynix-2026-march-R260521-IT",
+    "company": "SK하이닉스",
+    "posting_id": "R260521",
+    "recruiting_year": 2026,
+    "recruiting_round": "MARCH_FIRST_HALF_NEW_GRADUATE",
+    "job": "IT",
+    "job_location_from_korean_jd": "이천",
+    "application_start_date": "2026-03-10",
+    "application_end_date": "2026-03-23",
+    "closing_time_as_displayed": "17:00",
+    "closing_timezone_explicitly_stated": null,
+    "posting_state_at_review": "APPLICATION_CLOSED",
+    "selection": {
+      "status": "WORKING_TARGET_SELECTED",
+      "selected_by": "ASSISTANT_DEFAULT_FOR_CURRENT_TASK",
+      "reason": "기존 전달 샘플 및 검증된 IT 직무기술서와 채용 차수를 일치시킨다.",
+      "explicit_user_round_selection_recorded": false
+    },
+    "source_ids": ["official_march_posting", "prior_it_source_review"]
+  },
+  "questions": [
+    {
+      "id": "expertise",
+      "summary_ko": "직무 전문성을 꾸준히 키운 경험",
+      "summary_is_verbatim": false,
+      "official_question_number": null,
+      "official_text": null,
+      "primary_form_verified": false,
+      "evidence_status": "CONTEMPORARY_REPOSTS_CROSS_CHECKED",
+      "source_ids": ["catch_march_listing", "jobplanet_march_article", "jobkorea_march_question_listing"],
+      "reported_number_in_catch": 1,
+      "reported_max_characters": 600,
+      "max_characters_source_id": "catch_march_listing",
+      "official_max_characters": null,
+      "official_required": null,
+      "reported_optional": null,
+      "reported_guidance_summary": [
+        "전문 지식의 분야",
+        "배우고 익힌 과정",
+        "배운 내용의 실제 활용",
+        "사실을 뒷받침할 자료나 근거"
+      ],
+      "guidance_source_id": "catch_march_listing"
+    },
+    {
+      "id": "teamwork",
+      "summary_ko": "사람들의 협력을 이끌어 공동 목표에 기여한 경험",
+      "summary_is_verbatim": false,
+      "official_question_number": null,
+      "official_text": null,
+      "primary_form_verified": false,
+      "evidence_status": "REPOSTS_CROSS_CHECKED",
+      "source_ids": ["jobplanet_march_article", "jobkorea_march_question_listing"],
+      "reported_max_characters": null,
+      "official_max_characters": null,
+      "official_required": null,
+      "reported_optional": null,
+      "reported_guidance_summary": [
+        "당시 상황과 참여자 사이의 관계",
+        "협조를 얻기 위해 본인이 한 일",
+        "이후 결과와 소회"
+      ],
+      "guidance_source_id": "jobplanet_march_article"
+    },
+    {
+      "id": "challenge",
+      "summary_ko": "높은 목표를 정하고 지속적으로 노력한 경험",
+      "summary_is_verbatim": false,
+      "official_question_number": null,
+      "official_text": null,
+      "primary_form_verified": false,
+      "evidence_status": "REPOSTS_CROSS_CHECKED",
+      "source_ids": ["jobplanet_march_article", "jobkorea_march_question_listing"],
+      "reported_max_characters": null,
+      "official_max_characters": null,
+      "official_required": null,
+      "reported_optional": null,
+      "reported_guidance_summary": [
+        "목표를 정한 과정",
+        "수행 중 겪은 난관",
+        "목표를 이루기 위한 행동",
+        "이후 결과와 소회"
+      ],
+      "guidance_source_id": "jobkorea_march_question_listing"
+    },
+    {
+      "id": "self_description",
+      "summary_ko": "해시태그로 자신의 가치관·개성·강점을 설명",
+      "summary_is_verbatim": false,
+      "official_question_number": null,
+      "official_text": null,
+      "primary_form_verified": false,
+      "evidence_status": "REPOSTS_CROSS_CHECKED",
+      "source_ids": ["jobplanet_march_article", "jobkorea_march_question_listing"],
+      "reported_max_characters": null,
+      "official_max_characters": null,
+      "official_required": null,
+      "reported_optional": true,
+      "optional_source_id": "jobplanet_march_article",
+      "reported_max_hashtags": 2,
+      "max_hashtags_source_id": "jobkorea_march_question_listing",
+      "official_max_hashtags": null
+    },
+    {
+      "id": "job_experience",
+      "summary_ko": "지원 업무와 관련된 활동·경험을 기술",
+      "summary_is_verbatim": false,
+      "official_question_number": null,
+      "official_text": null,
+      "primary_form_verified": false,
+      "evidence_status": "REPOSTS_CROSS_CHECKED",
+      "source_ids": ["jobplanet_march_article", "jobkorea_march_question_listing"],
+      "reported_item_kind": "JOB_EXPERIENCE_DESCRIPTION",
+      "official_form_section": null,
+      "reported_max_characters": null,
+      "official_max_characters": null,
+      "official_required": null,
+      "reported_optional": null
+    }
+  ],
+  "other_round_evidence": [
+    {
+      "source_id": "official_june_guide",
+      "posting_id": "R261349",
+      "reviewed_page": 7,
+      "field_label": "AI 활용 경험 기술",
+      "observed_counter": "0/3,000",
+      "observation_kind": "OFFICIAL_GUIDE_SCREENSHOT",
+      "applicable_to_selected_target": false,
+      "reason": "6월 공고 첨부이며 3월 지원서와 동일하다고 확인되지 않았다."
+    },
+    {
+      "source_id": "official_august_guide",
+      "posting_id": "R261762",
+      "reviewed_page": 7,
+      "field_label": "AI 기반 문제 해결 경험",
+      "observed_counter": "0/2,000",
+      "observation_kind": "OFFICIAL_GUIDE_SCREENSHOT",
+      "applicable_to_selected_target": false,
+      "reason": "8월의 별도 채용 차수다."
+    }
+  ],
+  "sources": [
+    {
+      "id": "official_march_posting",
+      "type": "PRIMARY_OFFICIAL_POSTING",
+      "url": "https://www.skcareers.com/Recruit/Detail/R260521",
+      "locator": "공고 제목, 접수 기간, 모집 직무 및 첨부 목록",
+      "limitation": "공개 본문에서 문항 전문을 확보하지 못했다."
+    },
+    {
+      "id": "prior_it_source_review",
+      "type": "LOCAL_REVIEW_OF_PRIMARY_SOURCES",
+      "path": "samples/verification/skhynix-source-review-2026-09-08.json",
+      "report_path": "docs/skhynix-source-verification-2026-09-08.md",
+      "locator": "R260521 국문·영문 JD 10쪽 IT 검토"
+    },
+    {
+      "id": "catch_march_listing",
+      "type": "SECONDARY_RECRUITMENT_LISTING",
+      "url": "https://www.catch.co.kr/NCS/RecruitInfoDetails/541607/",
+      "locator": "2026 상반기 채용, 자소서 문항의 공개 첫 항목",
+      "limitation": "직무별 공식 입력 화면이 아니며 이후 문항은 로그인 필요."
+    },
+    {
+      "id": "jobplanet_march_article",
+      "type": "SECONDARY_CONTEMPORARY_ARTICLE",
+      "url": "https://www.jobplanet.co.kr/contents/news-8065",
+      "published_on": "2026-03-18",
+      "locator": "자소서 작성 안내의 문항 제목과 협업 문항의 부연 안내",
+      "limitation": "편집자 작성 예시와 조언은 문항 원문이나 기업 평가 기준으로 채택하지 않았다."
+    },
+    {
+      "id": "jobkorea_march_question_listing",
+      "type": "SECONDARY_QUESTION_REPOST",
+      "url": "https://www.jobkorea.co.kr/company/1496894/keyword",
+      "observed_on": "2026-09-08",
+      "locator": "2026년 상반기 > Talent hy-way 신입 (이천/분당/서울) > 전체 모집분야 공통",
+      "reported_scope": "ALL_RECRUITING_FIELDS_COMMON",
+      "limitation": "글자 수 표기가 없으며 공식 IT 입력 화면과 직접 대조하지 않았다."
+    },
+    {
+      "id": "official_june_guide",
+      "type": "PRIMARY_OFFICIAL_ATTACHMENT",
+      "posting_url": "https://www.skcareers.com/Recruit/Detail/R261349",
+      "attachment_title": "[SK하이닉스] 지원서 입력 가이드.pdf",
+      "path": "output/question-verification/2026-09-08/june-application-guide.pdf",
+      "capture_metadata_path": "output/question-verification/2026-09-08/june-application-guide.capture.json",
+      "captured_at_utc": "2026-09-08T10:04:09.722204+00:00",
+      "sha256": "352bf32f379c643156457ebf8c5c7837978fbe63f4cdc388badc0062c9169156",
+      "bytes": 2243262,
+      "page_count": 8,
+      "rendered_page_count": 8,
+      "detailed_visual_review_pages": [7],
+      "text_extraction": "NO_TEXT_LAYER",
+      "limitation": "가이드 예시이며 실제 입력창 동작과 첨부의 최초 게시·변경 시점은 확인하지 않았다."
+    },
+    {
+      "id": "official_august_guide",
+      "type": "PRIMARY_OFFICIAL_ATTACHMENT",
+      "posting_url": "https://www.skcareers.com/Recruit/Detail/R261762",
+      "attachment_title": "[SK하이닉스] 지원서 입력 가이드.pdf",
+      "path": "output/question-verification/2026-09-08/august-application-guide.pdf",
+      "capture_metadata_path": "output/question-verification/2026-09-08/august-application-guide.capture.json",
+      "captured_at_utc": "2026-09-08T10:04:07.659844+00:00",
+      "sha256": "84b8076a672cad52681bb685a60e3dc77a13eeba54ef7274533ecb414df74f20",
+      "bytes": 3007188,
+      "page_count": 10,
+      "rendered_page_count": 10,
+      "detailed_visual_review_pages": [7, 9, 10],
+      "text_extraction": "NO_TEXT_LAYER",
+      "limitation": "가이드 예시이며 실제 입력창 동작과 첨부의 최초 게시·변경 시점은 확인하지 않았다."
+    },
+    {
+      "id": "official_july_reform_announcement",
+      "type": "PRIMARY_OFFICIAL_NEWSROOM",
+      "url": "https://news.skhynix.co.kr/ai-talent-recruit-2026-02/",
+      "published_on": "2026-07-30",
+      "applies_to_selected_target": false,
+      "limitation": "이후 채용의 개편 방향이며 3월 문항을 확정하는 근거가 아니다."
+    }
+  ],
+  "open_items": [
+    "R260521 IT 지원 화면에 표시된 전체 문항과 부연 안내",
+    "공식 문항 순서 및 직무 경험 기술 항목의 위치",
+    "항목별 필수·선택 여부와 글자 수 제한",
+    "공백·줄바꿈을 포함하는 입력 길이 계산 방식"
+  ],
+  "completion_evidence_needed": "R260521의 IT 지원 화면임을 확인할 수 있는 당시 지원서 사본·캡처 또는 공식 문항 안내",
+  "follow_up_review": {
+    "reviewed_on": "2026-09-08",
+    "result": "ADDITIONAL_REPOST_FOUND_PRIMARY_FORM_STILL_MISSING",
+    "new_source_id": "jobkorea_march_question_listing",
+    "official_field_values_promoted": false,
+    "excluded_as_final_confirmation": [
+      {
+        "url": "https://community.linkareer.com/employment_data/5372996",
+        "reason": "필수 3개·선택 1개라는 설명은 있으나 2026-01-23 게시물이며 3월 IT 지원 화면을 제시하지 않는다."
+      },
+      {
+        "url": "https://news.skhynix.co.kr/2026-hire-yb/",
+        "reason": "2026-03-16 공식 채용 소개의 공개 본문은 문항·글자 수·필수 여부를 제공하지 않는다."
+      }
+    ]
+  },
+  "use_constraints": {
+    "question_criteria_draft_possible": true,
+    "official_question_set_confirmed": false,
+    "registered_for_external_model_calls": false,
+    "synthetic_fixtures_modified": false
+  }
+}

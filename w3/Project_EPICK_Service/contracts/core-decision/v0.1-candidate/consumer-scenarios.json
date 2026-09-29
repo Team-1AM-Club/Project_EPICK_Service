@@ -1,0 +1,222 @@
+{
+  "status": "W1_CT12_ACCEPTANCE_PROPOSAL_NOT_EXECUTED",
+  "current": {
+    "job_id": "10000000-0000-4000-8000-000000000001",
+    "company_id": "20000000-0000-4000-8000-000000000001",
+    "source_id": "30000000-0000-4000-8000-000000000001",
+    "analysis_input_version": "knowledge-input:alpha"
+  },
+  "cases": [
+    {
+      "name": "first",
+      "event": {
+        "schema_version": "w3.private.core-decision/0.1-candidate",
+        "message_type": "w3.private.w1.core-decision",
+        "message_id": "50000000-0000-4000-8000-000000000001",
+        "occurred_at": "2026-09-18T00:00:00Z",
+        "visibility_scope": "PRIVATE",
+        "producer": "w3",
+        "job_id": "10000000-0000-4000-8000-000000000001",
+        "company_id": "20000000-0000-4000-8000-000000000001",
+        "source_id": "30000000-0000-4000-8000-000000000001",
+        "analysis_input_version": "knowledge-input:alpha",
+        "decision_scope": "COMPANY_KNOWLEDGE",
+        "decision_owner": "W3",
+        "question_version_id": null,
+        "decision_version": 1,
+        "is_core": true,
+        "decision_code": "CORE_REQUIRED",
+        "reason_code": "REQUIRED_COMPANY_EVIDENCE"
+      },
+      "expected": "APPLY_ATOMIC_DECISION_AND_PIN"
+    },
+    {
+      "name": "duplicate",
+      "event": {
+        "schema_version": "w3.private.core-decision/0.1-candidate",
+        "message_type": "w3.private.w1.core-decision",
+        "message_id": "50000000-0000-4000-8000-000000000001",
+        "occurred_at": "2026-09-18T00:00:00Z",
+        "visibility_scope": "PRIVATE",
+        "producer": "w3",
+        "job_id": "10000000-0000-4000-8000-000000000001",
+        "company_id": "20000000-0000-4000-8000-000000000001",
+        "source_id": "30000000-0000-4000-8000-000000000001",
+        "analysis_input_version": "knowledge-input:alpha",
+        "decision_scope": "COMPANY_KNOWLEDGE",
+        "decision_owner": "W3",
+        "question_version_id": null,
+        "decision_version": 1,
+        "is_core": true,
+        "decision_code": "CORE_REQUIRED",
+        "reason_code": "REQUIRED_COMPANY_EVIDENCE"
+      },
+      "expected": "SAME_RECEIPT_NO_WRITE"
+    },
+    {
+      "name": "id-conflict",
+      "event": {
+        "schema_version": "w3.private.core-decision/0.1-candidate",
+        "message_type": "w3.private.w1.core-decision",
+        "message_id": "50000000-0000-4000-8000-000000000001",
+        "occurred_at": "2026-09-18T00:00:00Z",
+        "visibility_scope": "PRIVATE",
+        "producer": "w3",
+        "job_id": "10000000-0000-4000-8000-000000000001",
+        "company_id": "20000000-0000-4000-8000-000000000001",
+        "source_id": "30000000-0000-4000-8000-000000000001",
+        "analysis_input_version": "knowledge-input:alpha",
+        "decision_scope": "COMPANY_KNOWLEDGE",
+        "decision_owner": "W3",
+        "question_version_id": null,
+        "decision_version": 1,
+        "is_core": true,
+        "decision_code": "CORE_REQUIRED",
+        "reason_code": "DIFFERENT_REASON"
+      },
+      "expected": "CONFLICT_NO_WRITE"
+    },
+    {
+      "name": "stale-input",
+      "event": {
+        "schema_version": "w3.private.core-decision/0.1-candidate",
+        "message_type": "w3.private.w1.core-decision",
+        "message_id": "50000000-0000-4000-8000-000000000001",
+        "occurred_at": "2026-09-18T00:00:00Z",
+        "visibility_scope": "PRIVATE",
+        "producer": "w3",
+        "job_id": "10000000-0000-4000-8000-000000000001",
+        "company_id": "20000000-0000-4000-8000-000000000001",
+        "source_id": "30000000-0000-4000-8000-000000000001",
+        "analysis_input_version": "older",
+        "decision_scope": "COMPANY_KNOWLEDGE",
+        "decision_owner": "W3",
+        "question_version_id": null,
+        "decision_version": 1,
+        "is_core": true,
+        "decision_code": "CORE_REQUIRED",
+        "reason_code": "REQUIRED_COMPANY_EVIDENCE"
+      },
+      "expected": "STALE_NO_WRITE"
+    },
+    {
+      "name": "wrong-source",
+      "event": {
+        "schema_version": "w3.private.core-decision/0.1-candidate",
+        "message_type": "w3.private.w1.core-decision",
+        "message_id": "50000000-0000-4000-8000-000000000001",
+        "occurred_at": "2026-09-18T00:00:00Z",
+        "visibility_scope": "PRIVATE",
+        "producer": "w3",
+        "job_id": "10000000-0000-4000-8000-000000000001",
+        "company_id": "20000000-0000-4000-8000-000000000001",
+        "source_id": "30000000-0000-4000-8000-000000000002",
+        "analysis_input_version": "knowledge-input:alpha",
+        "decision_scope": "COMPANY_KNOWLEDGE",
+        "decision_owner": "W3",
+        "question_version_id": null,
+        "decision_version": 1,
+        "is_core": true,
+        "decision_code": "CORE_REQUIRED",
+        "reason_code": "REQUIRED_COMPANY_EVIDENCE"
+      },
+      "expected": "BINDING_MISMATCH_NO_WRITE"
+    },
+    {
+      "name": "wrong-company",
+      "event": {
+        "schema_version": "w3.private.core-decision/0.1-candidate",
+        "message_type": "w3.private.w1.core-decision",
+        "message_id": "50000000-0000-4000-8000-000000000001",
+        "occurred_at": "2026-09-18T00:00:00Z",
+        "visibility_scope": "PRIVATE",
+        "producer": "w3",
+        "job_id": "10000000-0000-4000-8000-000000000001",
+        "company_id": "20000000-0000-4000-8000-000000000002",
+        "source_id": "30000000-0000-4000-8000-000000000001",
+        "analysis_input_version": "knowledge-input:alpha",
+        "decision_scope": "COMPANY_KNOWLEDGE",
+        "decision_owner": "W3",
+        "question_version_id": null,
+        "decision_version": 1,
+        "is_core": true,
+        "decision_code": "CORE_REQUIRED",
+        "reason_code": "REQUIRED_COMPANY_EVIDENCE"
+      },
+      "expected": "BINDING_MISMATCH_NO_WRITE"
+    },
+    {
+      "name": "stale-revision",
+      "event": {
+        "schema_version": "w3.private.core-decision/0.1-candidate",
+        "message_type": "w3.private.w1.core-decision",
+        "message_id": "50000000-0000-4000-8000-000000000001",
+        "occurred_at": "2026-09-18T00:00:00Z",
+        "visibility_scope": "PRIVATE",
+        "producer": "w3",
+        "job_id": "10000000-0000-4000-8000-000000000001",
+        "company_id": "20000000-0000-4000-8000-000000000001",
+        "source_id": "30000000-0000-4000-8000-000000000001",
+        "analysis_input_version": "knowledge-input:alpha",
+        "decision_scope": "COMPANY_KNOWLEDGE",
+        "decision_owner": "W3",
+        "question_version_id": null,
+        "decision_version": 1,
+        "is_core": true,
+        "decision_code": "CORE_REQUIRED",
+        "reason_code": "REQUIRED_COMPANY_EVIDENCE"
+      },
+      "stored_revision": 2,
+      "expected": "STALE_NO_WRITE"
+    },
+    {
+      "name": "same-revision-new-id",
+      "event": {
+        "schema_version": "w3.private.core-decision/0.1-candidate",
+        "message_type": "w3.private.w1.core-decision",
+        "message_id": "50000000-0000-4000-8000-000000000003",
+        "occurred_at": "2026-09-18T00:00:00Z",
+        "visibility_scope": "PRIVATE",
+        "producer": "w3",
+        "job_id": "10000000-0000-4000-8000-000000000001",
+        "company_id": "20000000-0000-4000-8000-000000000001",
+        "source_id": "30000000-0000-4000-8000-000000000001",
+        "analysis_input_version": "knowledge-input:alpha",
+        "decision_scope": "COMPANY_KNOWLEDGE",
+        "decision_owner": "W3",
+        "question_version_id": null,
+        "decision_version": 1,
+        "is_core": true,
+        "decision_code": "CORE_REQUIRED",
+        "reason_code": "REQUIRED_COMPANY_EVIDENCE"
+      },
+      "stored_revision": 1,
+      "expected": "CONFLICT_NO_WRITE"
+    },
+    {
+      "name": "forged-principal",
+      "event": {
+        "schema_version": "w3.private.core-decision/0.1-candidate",
+        "message_type": "w3.private.w1.core-decision",
+        "message_id": "50000000-0000-4000-8000-000000000001",
+        "occurred_at": "2026-09-18T00:00:00Z",
+        "visibility_scope": "PRIVATE",
+        "producer": "w3",
+        "job_id": "10000000-0000-4000-8000-000000000001",
+        "company_id": "20000000-0000-4000-8000-000000000001",
+        "source_id": "30000000-0000-4000-8000-000000000001",
+        "analysis_input_version": "knowledge-input:alpha",
+        "decision_scope": "COMPANY_KNOWLEDGE",
+        "decision_owner": "W3",
+        "question_version_id": null,
+        "decision_version": 1,
+        "is_core": true,
+        "decision_code": "CORE_REQUIRED",
+        "reason_code": "REQUIRED_COMPANY_EVIDENCE"
+      },
+      "authenticated_principal": "w4",
+      "expected": "UNAUTHENTICATED_NO_WRITE"
+    }
+  ],
+  "execution_note": "Cases are independent; duplicate/id-conflict have the first event stored. Stale revision assumes a different ID at stored revision 2 and no stored incoming ID. They require W1 transaction/authentication integration."
+}

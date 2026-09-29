@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:epick:w3-c01:0.2-candidate:t058-count-evidence",
+  "title": "T058 Count-only Joint Evidence",
+  "description": "Anonymous W1/W2/W3 joint-run evidence. Identifiers are represented only by SHA-256 digests and payload bodies are excluded.",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "state": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "event_cursor": { "$ref": "#/$defs/count" },
+        "required_event_cursor": { "$ref": "#/$defs/count" },
+        "restriction_revision": { "$ref": "#/$defs/count" },
+        "required_restriction_revision": { "$ref": "#/$defs/count" },
+        "generation": { "$ref": "#/$defs/count" },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "UNKNOWN_SOURCE",
+            "CONFLICT",
+            "EVENT_GAP",
+            "RESTRICTION_GAP",
+            "RESTRICTED",
+            "OBSERVATION_BLOCKED",
+            "POLICY_BLOCKED",
+            "VERSION_UNAVAILABLE",
+            "INDEX_PENDING",
+            "INDEX_MISMATCH",
+            "INDEX_FAILED",
+            "BODY_EXPIRED",
+            "READY"
+          ]
+        },
+        "index_ack": { "type": "boolean" },
+        "history_complete": { "type": "boolean" },
+        "index_key_sha256": {
+          "anyOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        }
+      },
+      "required": [
+        "event_cursor",
+        "required_event_cursor",
+        "restriction_revision",
+        "required_restriction_revision",
+        "generation",
+        "reason",
+        "index_ack",
+        "history_complete",
+        "index_key_sha256"
+      ]
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "const": "w3.t058.count-evidence.v1"
+    },
+    "evidence_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "joint_job_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "joint_run_id": { "type": "string", "minLength": 1, "maxLength": 128 }
+      },
+      "required": ["joint_job_id", "joint_run_id"]
+    },
+    "pins": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "w1_commit": { "$ref": "#/$defs/commit" },
+        "w2_commit": { "$ref": "#/$defs/commit" },
+        "w3_commit": { "$ref": "#/$defs/commit" },
+        "event_schema_sha256": { "$ref": "#/$defs/sha256" },
+        "receipt_schema_sha256": { "$ref": "#/$defs/sha256" },
+        "status_schema_sha256": { "$ref": "#/$defs/sha256" },
+        "source_authority_sha256": { "$ref": "#/$defs/sha256" }
+      },
+      "required": [
+        "w1_commit",
+        "w2_commit",
+        "w3_commit",
+        "event_schema_sha256",
+        "receipt_schema_sha256",
+        "status_schema_sha256",
+        "source_authority_sha256"
+      ]
+    },
+    "ref_hashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source_ref_sha256": { "$ref": "#/$defs/sha256" },
+        "version_ref_sha256": { "$ref": "#/$defs/sha256" }
+      },
+      "required": ["source_ref_sha256", "version_ref_sha256"]
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "events_received": { "$ref": "#/$defs/count" },
+        "receipts_committed": { "$ref": "#/$defs/count" },
+        "indexes_accepted": { "$ref": "#/$defs/count" },
+        "ready_sources": { "$ref": "#/$defs/count" },
+        "errors": { "$ref": "#/$defs/count" }
+      },
+      "required": [
+        "events_received",
+        "receipts_committed",
+        "indexes_accepted",
+        "ready_sources",
+        "errors"
+      ]
+    },
+    "error_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source_not_registered": { "$ref": "#/$defs/count" },
+        "authority_unavailable": { "$ref": "#/$defs/count" },
+        "event_gap": { "$ref": "#/$defs/count" },
+        "conflict": { "$ref": "#/$defs/count" },
+        "index_failed": { "$ref": "#/$defs/count" }
+      },
+      "required": [
+        "source_not_registered",
+        "authority_unavailable",
+        "event_gap",
+        "conflict",
+        "index_failed"
+      ]
+    },
+    "state_before": { "$ref": "#/$defs/state" },
+    "state_after": { "$ref": "#/$defs/state" },
+    "state_after_restart": { "$ref": "#/$defs/state" }
+  },
+  "required": [
+    "schema_version",
+    "evidence_id",
+    "observed_at",
+    "execution",
+    "pins",
+    "ref_hashes",
+    "counts",
+    "error_counts",
+    "state_before",
+    "state_after",
+    "state_after_restart"
+  ]
+}

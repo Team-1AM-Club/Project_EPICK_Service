@@ -1,0 +1,308 @@
+{
+  "schema_version": "w4-recommendation-input/0.1",
+  "request_id": "demo-learning",
+  "data_kind": "SYNTHETIC",
+  "fixture_note": "모든 문항·경험·기업 진술은 개발용 가상 데이터다. VERIFIED는 W3 완료를 가정한 테스트 상태이며 SK하이닉스의 실제 정책이나 실제 검증 결과가 아니다.",
+  "project": {
+    "project_id": "project-demo-sk-hynix",
+    "owner_id": "user-demo",
+    "company_id": "sk_hynix",
+    "job_role": "IT",
+    "job_posting_version_id": "synthetic-posting-v1"
+  },
+  "snapshot": {
+    "snapshot_id": "snapshot-demo-learning-v1",
+    "as_of": "2026-09-08",
+    "question_version": 1,
+    "question_id": "question-learning",
+    "episode_versions": {
+      "episode-team-api": 1,
+      "episode-solo-debug": 1,
+      "episode-learning": 1,
+      "episode-team-unclear": 1,
+      "episode-foreign-private": 1
+    },
+    "source_version_ids": [
+      "synthetic-company-source-v1"
+    ]
+  },
+  "question": {
+    "question_id": "question-learning",
+    "version": 1,
+    "text": "새로운 기술을 학습한 경험에서 본인의 역할과 행동 및 결과를 설명해 주세요. 600자 이내"
+  },
+  "episodes": [
+    {
+      "episode_id": "episode-team-api",
+      "version": 1,
+      "owner_id": "user-demo",
+      "activity_id": "activity-episode-team-api",
+      "title": "팀 프로젝트의 API 협업과 오류 개선",
+      "raw_text": "저는 4인 팀의 백엔드 개발을 맡았습니다.\n저는 회의를 진행해 서로 다른 API 요구사항을 조율하고 담당 역할을 나눴습니다.\n저는 오류 로그를 분석해 중복 요청의 원인을 찾아 수정했습니다.\n재시도 오류가 12건에서 2건으로 줄었습니다.",
+      "facts": [
+        {
+          "fact_id": "episode-team-api-fact-1",
+          "kind": "ROLE",
+          "text": "저는 4인 팀의 백엔드 개발을 맡았습니다.",
+          "evidence": {
+            "episode_id": "episode-team-api",
+            "episode_version": 1,
+            "start": 0,
+            "end": 23
+          }
+        },
+        {
+          "fact_id": "episode-team-api-fact-2",
+          "kind": "ACTION",
+          "text": "저는 회의를 진행해 서로 다른 API 요구사항을 조율하고 담당 역할을 나눴습니다.",
+          "evidence": {
+            "episode_id": "episode-team-api",
+            "episode_version": 1,
+            "start": 24,
+            "end": 69
+          }
+        },
+        {
+          "fact_id": "episode-team-api-fact-3",
+          "kind": "ACTION",
+          "text": "저는 오류 로그를 분석해 중복 요청의 원인을 찾아 수정했습니다.",
+          "evidence": {
+            "episode_id": "episode-team-api",
+            "episode_version": 1,
+            "start": 70,
+            "end": 105
+          }
+        },
+        {
+          "fact_id": "episode-team-api-fact-4",
+          "kind": "RESULT",
+          "text": "재시도 오류가 12건에서 2건으로 줄었습니다.",
+          "evidence": {
+            "episode_id": "episode-team-api",
+            "episode_version": 1,
+            "start": 106,
+            "end": 131
+          }
+        }
+      ]
+    },
+    {
+      "episode_id": "episode-solo-debug",
+      "version": 1,
+      "owner_id": "user-demo",
+      "activity_id": "activity-episode-solo-debug",
+      "title": "개인 프로젝트의 오류 원인 분석",
+      "raw_text": "저는 개인 프로젝트의 서버 개발을 맡았습니다.\n저는 GCP 로그에서 오류 원인을 분석하고 중복 처리 코드를 수정했습니다.\n테스트에서 같은 요청의 중복 처리가 8건에서 1건으로 줄었습니다.",
+      "facts": [
+        {
+          "fact_id": "episode-solo-debug-fact-1",
+          "kind": "ROLE",
+          "text": "저는 개인 프로젝트의 서버 개발을 맡았습니다.",
+          "evidence": {
+            "episode_id": "episode-solo-debug",
+            "episode_version": 1,
+            "start": 0,
+            "end": 25
+          }
+        },
+        {
+          "fact_id": "episode-solo-debug-fact-2",
+          "kind": "ACTION",
+          "text": "저는 GCP 로그에서 오류 원인을 분석하고 중복 처리 코드를 수정했습니다.",
+          "evidence": {
+            "episode_id": "episode-solo-debug",
+            "episode_version": 1,
+            "start": 26,
+            "end": 67
+          }
+        },
+        {
+          "fact_id": "episode-solo-debug-fact-3",
+          "kind": "RESULT",
+          "text": "테스트에서 같은 요청의 중복 처리가 8건에서 1건으로 줄었습니다.",
+          "evidence": {
+            "episode_id": "episode-solo-debug",
+            "episode_version": 1,
+            "start": 68,
+            "end": 104
+          }
+        }
+      ]
+    },
+    {
+      "episode_id": "episode-learning",
+      "version": 1,
+      "owner_id": "user-demo",
+      "activity_id": "activity-episode-learning",
+      "title": "새 기술을 학습해 반복 작업 자동화",
+      "raw_text": "저는 개인 학습 프로젝트의 데이터 정리를 맡았습니다.\n저는 처음 사용하는 Python을 학습하고 공식 문서를 읽어 데이터 정리 코드에 적용했습니다.\n3개 데이터 파일의 정리 작업을 자동화했습니다.",
+      "facts": [
+        {
+          "fact_id": "episode-learning-fact-1",
+          "kind": "ROLE",
+          "text": "저는 개인 학습 프로젝트의 데이터 정리를 맡았습니다.",
+          "evidence": {
+            "episode_id": "episode-learning",
+            "episode_version": 1,
+            "start": 0,
+            "end": 29
+          }
+        },
+        {
+          "fact_id": "episode-learning-fact-2",
+          "kind": "ACTION",
+          "text": "저는 처음 사용하는 Python을 학습하고 공식 문서를 읽어 데이터 정리 코드에 적용했습니다.",
+          "evidence": {
+            "episode_id": "episode-learning",
+            "episode_version": 1,
+            "start": 30,
+            "end": 82
+          }
+        },
+        {
+          "fact_id": "episode-learning-fact-3",
+          "kind": "RESULT",
+          "text": "3개 데이터 파일의 정리 작업을 자동화했습니다.",
+          "evidence": {
+            "episode_id": "episode-learning",
+            "episode_version": 1,
+            "start": 83,
+            "end": 109
+          }
+        }
+      ]
+    },
+    {
+      "episode_id": "episode-team-unclear",
+      "version": 1,
+      "owner_id": "user-demo",
+      "activity_id": "activity-episode-team-unclear",
+      "title": "팀의 성과만 기록한 협업 경험",
+      "raw_text": "팀은 서비스 개발을 맡았습니다.\n팀은 요구사항을 조율하고 오류 원인을 분석해 수정했습니다.\n팀의 기능 테스트가 통과했습니다.",
+      "facts": [
+        {
+          "fact_id": "episode-team-unclear-fact-1",
+          "kind": "ROLE",
+          "text": "팀은 서비스 개발을 맡았습니다.",
+          "evidence": {
+            "episode_id": "episode-team-unclear",
+            "episode_version": 1,
+            "start": 0,
+            "end": 17
+          }
+        },
+        {
+          "fact_id": "episode-team-unclear-fact-2",
+          "kind": "ACTION",
+          "text": "팀은 요구사항을 조율하고 오류 원인을 분석해 수정했습니다.",
+          "evidence": {
+            "episode_id": "episode-team-unclear",
+            "episode_version": 1,
+            "start": 18,
+            "end": 50
+          }
+        },
+        {
+          "fact_id": "episode-team-unclear-fact-3",
+          "kind": "RESULT",
+          "text": "팀의 기능 테스트가 통과했습니다.",
+          "evidence": {
+            "episode_id": "episode-team-unclear",
+            "episode_version": 1,
+            "start": 51,
+            "end": 69
+          }
+        }
+      ]
+    },
+    {
+      "episode_id": "episode-foreign-private",
+      "version": 1,
+      "owner_id": "user-other",
+      "activity_id": "activity-episode-foreign-private",
+      "title": "다른 사용자의 비공개 경험",
+      "raw_text": "저는 다른 사용자의 프로젝트에서 개발을 맡았습니다.\n저는 역할을 분담하고 오류 원인을 분석해 문제를 해결했습니다.\n비공개 성과 기록입니다.",
+      "facts": [
+        {
+          "fact_id": "episode-foreign-private-fact-1",
+          "kind": "ROLE",
+          "text": "저는 다른 사용자의 프로젝트에서 개발을 맡았습니다.",
+          "evidence": {
+            "episode_id": "episode-foreign-private",
+            "episode_version": 1,
+            "start": 0,
+            "end": 28
+          }
+        },
+        {
+          "fact_id": "episode-foreign-private-fact-2",
+          "kind": "ACTION",
+          "text": "저는 역할을 분담하고 오류 원인을 분석해 문제를 해결했습니다.",
+          "evidence": {
+            "episode_id": "episode-foreign-private",
+            "episode_version": 1,
+            "start": 29,
+            "end": 63
+          }
+        },
+        {
+          "fact_id": "episode-foreign-private-fact-3",
+          "kind": "RESULT",
+          "text": "비공개 성과 기록입니다.",
+          "evidence": {
+            "episode_id": "episode-foreign-private",
+            "episode_version": 1,
+            "start": 64,
+            "end": 77
+          }
+        }
+      ]
+    }
+  ],
+  "excluded_episode_ids": [],
+  "company_context_policy": "OPTIONAL",
+  "top_k": 3,
+  "company_knowledge": {
+    "schema_version": "w4-company-context/0.1",
+    "company_id": "sk_hynix",
+    "data_kind": "SYNTHETIC",
+    "verification_basis": "SIMULATED_UPSTREAM_VERIFICATION",
+    "source_versions": [
+      {
+        "source_id": "synthetic-company-source",
+        "source_version_id": "synthetic-company-source-v1",
+        "company_id": "sk_hynix"
+      }
+    ],
+    "evidence": [
+      {
+        "evidence_id": "synthetic-company-evidence-1",
+        "source_version_id": "synthetic-company-source-v1",
+        "exact_quote": "개발용 가정: 이 채용 맥락에서는 협업과 문제 해결 경험을 평가의 참고로 활용한다.",
+        "locator": "synthetic fixture / company statement 1"
+      }
+    ],
+    "claims": [
+      {
+        "claim_id": "synthetic-company-claim-1",
+        "statement": "개발용 가정: 이 채용 맥락에서는 협업과 문제 해결 경험을 평가의 참고로 활용한다.",
+        "verification_status": "VERIFIED",
+        "usage_status": "ALLOWED",
+        "usable_for_matching": true,
+        "source_version_id": "synthetic-company-source-v1",
+        "evidence_ids": [
+          "synthetic-company-evidence-1"
+        ],
+        "scope": {
+          "company_id": "sk_hynix",
+          "job_role": "IT",
+          "job_posting_version_id": "synthetic-posting-v1"
+        },
+        "published_at": "2026-09-01",
+        "valid_from": "2026-09-01",
+        "valid_to": "2026-09-30"
+      }
+    ],
+    "explicit_requirements": []
+  }
+}

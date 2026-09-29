@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:epick:w3-c01:0.2-candidate:receipt",
+  "$defs": {
+    "IndexKey": {
+      "additionalProperties": false,
+      "properties": {
+        "source_version_id": {
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          "title": "Source Version Id",
+          "type": "string"
+        },
+        "extraction_revision_id": {
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          "title": "Extraction Revision Id",
+          "type": "string"
+        },
+        "representation": {
+          "minLength": 1,
+          "title": "Representation",
+          "type": "string"
+        },
+        "normalization_version": {
+          "minLength": 1,
+          "title": "Normalization Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_version_id",
+        "extraction_revision_id",
+        "representation",
+        "normalization_version"
+      ],
+      "title": "IndexKey",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "w3-c01/0.2-candidate",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_id": {
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "title": "Source Id",
+      "type": "string"
+    },
+    "event_cursor": {
+      "maximum": 9223372036854775807,
+      "minimum": 0,
+      "title": "Event Cursor",
+      "type": "integer"
+    },
+    "required_event_cursor": {
+      "maximum": 9223372036854775807,
+      "minimum": 0,
+      "title": "Required Event Cursor",
+      "type": "integer"
+    },
+    "restriction_revision": {
+      "maximum": 9223372036854775807,
+      "minimum": 0,
+      "title": "Restriction Revision",
+      "type": "integer"
+    },
+    "required_restriction_revision": {
+      "maximum": 9223372036854775807,
+      "minimum": 0,
+      "title": "Required Restriction Revision",
+      "type": "integer"
+    },
+    "generation": {
+      "maximum": 9223372036854775807,
+      "minimum": 0,
+      "title": "Generation",
+      "type": "integer"
+    },
+    "restriction_scope": {
+      "enum": [
+        "source",
+        "version"
+      ],
+      "title": "Restriction Scope",
+      "type": "string"
+    },
+    "reason": {
+      "enum": [
+        "UNKNOWN_SOURCE",
+        "CONFLICT",
+        "EVENT_GAP",
+        "RESTRICTION_GAP",
+        "RESTRICTED",
+        "OBSERVATION_BLOCKED",
+        "POLICY_BLOCKED",
+        "VERSION_UNAVAILABLE",
+        "INDEX_PENDING",
+        "INDEX_MISMATCH",
+        "INDEX_FAILED",
+        "BODY_EXPIRED",
+        "READY"
+      ],
+      "title": "Reason",
+      "type": "string"
+    },
+    "index_ack": {
+      "title": "Index Ack",
+      "type": "boolean"
+    },
+    "index_key": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/IndexKey"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "history_complete": {
+      "title": "History Complete",
+      "type": "boolean"
+    },
+    "receipt": {
+      "const": "COMMITTED",
+      "title": "Receipt",
+      "type": "string"
+    },
+    "event_id": {
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "title": "Event Id",
+      "type": "string"
+    },
+    "outcome": {
+      "enum": [
+        "APPLIED",
+        "DUPLICATE",
+        "STALE",
+        "GAP",
+        "CONFLICT"
+      ],
+      "title": "Outcome",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "source_id",
+    "event_cursor",
+    "required_event_cursor",
+    "restriction_revision",
+    "required_restriction_revision",
+    "generation",
+    "restriction_scope",
+    "reason",
+    "index_ack",
+    "index_key",
+    "history_complete",
+    "receipt",
+    "event_id",
+    "outcome"
+  ],
+  "title": "Receipt",
+  "type": "object"
+}

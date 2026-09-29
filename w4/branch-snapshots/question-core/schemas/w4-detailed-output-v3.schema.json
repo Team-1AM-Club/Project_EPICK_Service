@@ -1,0 +1,972 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "C01Candidate": {
+      "additionalProperties": false,
+      "properties": {
+        "episode_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "episode_version": {
+          "minimum": 1,
+          "title": "Episode Version",
+          "type": "integer"
+        },
+        "title": {
+          "maxLength": 6000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Title",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "DIRECT_MATCH",
+            "PARTIAL_MATCH",
+            "NEEDS_CONFIRMATION"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "content_checks": {
+          "items": {
+            "$ref": "#/$defs/ContentCheck"
+          },
+          "title": "Content Checks",
+          "type": "array"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        },
+        "confirmation_items": {
+          "items": {
+            "$ref": "#/$defs/Confirmation"
+          },
+          "title": "Confirmation Items",
+          "type": "array"
+        },
+        "ranking_evidence_kind_count": {
+          "title": "Ranking Evidence Kind Count",
+          "type": "integer"
+        },
+        "rank": {
+          "title": "Rank",
+          "type": "integer"
+        },
+        "tied_on_quality_keys": {
+          "title": "Tied On Quality Keys",
+          "type": "boolean"
+        },
+        "company_support": {
+          "items": {
+            "$ref": "#/$defs/C01Support"
+          },
+          "title": "Company Support",
+          "type": "array"
+        },
+        "used_company_refs": {
+          "$ref": "#/$defs/CompanyRefs"
+        }
+      },
+      "required": [
+        "episode_id",
+        "episode_version",
+        "title",
+        "status",
+        "content_checks",
+        "reasons",
+        "confirmation_items",
+        "ranking_evidence_kind_count",
+        "rank",
+        "tied_on_quality_keys",
+        "company_support",
+        "used_company_refs"
+      ],
+      "title": "C01Candidate",
+      "type": "object"
+    },
+    "C01Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "source_version_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Source Version Id",
+          "type": "string"
+        },
+        "exact_quote": {
+          "maxLength": 6000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Exact Quote",
+          "type": "string"
+        },
+        "locator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Locator"
+        },
+        "provenance": {
+          "additionalProperties": true,
+          "title": "Provenance",
+          "type": "object"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "source_version_id",
+        "exact_quote",
+        "locator",
+        "provenance"
+      ],
+      "title": "C01Evidence",
+      "type": "object"
+    },
+    "C01Summary": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "AVAILABLE",
+            "LIMITED",
+            "UNAVAILABLE"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "knowledge_bundle_id": {
+          "anyOf": [
+            {
+              "pattern": "^[^\\s{}]{1,200}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Knowledge Bundle Id"
+        },
+        "contract_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Contract Version"
+        },
+        "input_version_refs": {
+          "$ref": "#/$defs/CompanyVersions"
+        },
+        "accepted_refs": {
+          "$ref": "#/$defs/CompanyRefs"
+        },
+        "diagnostics": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Diagnostics",
+          "type": "array"
+        },
+        "source_reviews": {
+          "items": {
+            "$ref": "#/$defs/SourceReview"
+          },
+          "title": "Source Reviews",
+          "type": "array"
+        },
+        "dependencies": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Dependencies",
+          "type": "array"
+        },
+        "upstream_details": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Upstream Details",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "knowledge_bundle_id",
+        "contract_version",
+        "input_version_refs",
+        "accepted_refs",
+        "diagnostics",
+        "source_reviews",
+        "dependencies",
+        "upstream_details"
+      ],
+      "title": "C01Summary",
+      "type": "object"
+    },
+    "C01Support": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "CLAIM",
+            "REQUIREMENT"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "statement": {
+          "maxLength": 6000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Statement",
+          "type": "string"
+        },
+        "requirement_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "REQUIRED",
+                "PREFERRED",
+                "GENERAL"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Requirement Type"
+        },
+        "status": {
+          "enum": [
+            "SUPPORTED",
+            "NOT_SHOWN",
+            "AMBIGUOUS",
+            "CONTRADICTED"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "validation_issue": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Validation Issue"
+        },
+        "source_version_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Source Version Id",
+          "type": "string"
+        },
+        "company_evidence": {
+          "items": {
+            "$ref": "#/$defs/C01Evidence"
+          },
+          "title": "Company Evidence",
+          "type": "array"
+        },
+        "episode_evidence": {
+          "items": {
+            "$ref": "#/$defs/EpisodeEvidence"
+          },
+          "title": "Episode Evidence",
+          "type": "array"
+        },
+        "source_id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "upstream_id": {
+          "title": "Upstream Id",
+          "type": "string"
+        },
+        "upstream_record": {
+          "additionalProperties": true,
+          "title": "Upstream Record",
+          "type": "object"
+        },
+        "condition_assessment": {
+          "items": {
+            "$ref": "#/$defs/ConditionAssessment"
+          },
+          "title": "Condition Assessment",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "id",
+        "statement",
+        "requirement_type",
+        "status",
+        "validation_issue",
+        "source_version_id",
+        "company_evidence",
+        "episode_evidence",
+        "source_id",
+        "upstream_id",
+        "upstream_record",
+        "condition_assessment"
+      ],
+      "title": "C01Support",
+      "type": "object"
+    },
+    "CompanyRefs": {
+      "additionalProperties": false,
+      "properties": {
+        "claim_ids": {
+          "items": {
+            "pattern": "^[^\\s{}]{1,200}$",
+            "type": "string"
+          },
+          "title": "Claim Ids",
+          "type": "array"
+        },
+        "requirement_ids": {
+          "items": {
+            "pattern": "^[^\\s{}]{1,200}$",
+            "type": "string"
+          },
+          "title": "Requirement Ids",
+          "type": "array"
+        },
+        "source_version_ids": {
+          "items": {
+            "pattern": "^[^\\s{}]{1,200}$",
+            "type": "string"
+          },
+          "title": "Source Version Ids",
+          "type": "array"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[^\\s{}]{1,200}$",
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "claim_ids",
+        "requirement_ids",
+        "source_version_ids",
+        "evidence_ids"
+      ],
+      "title": "CompanyRefs",
+      "type": "object"
+    },
+    "CompanyVersions": {
+      "additionalProperties": false,
+      "properties": {
+        "source_version_ids": {
+          "items": {
+            "pattern": "^[^\\s{}]{1,200}$",
+            "type": "string"
+          },
+          "maxItems": 50,
+          "title": "Source Version Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "source_version_ids"
+      ],
+      "title": "CompanyVersions",
+      "type": "object"
+    },
+    "ConditionAssessment": {
+      "additionalProperties": false,
+      "properties": {
+        "node_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Node Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "SUPPORTED",
+            "NOT_SHOWN",
+            "AMBIGUOUS",
+            "CONTRADICTED"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[^\\s{}]{1,200}$",
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "node_id",
+        "status",
+        "evidence_ids"
+      ],
+      "title": "ConditionAssessment",
+      "type": "object"
+    },
+    "Confirmation": {
+      "additionalProperties": false,
+      "properties": {
+        "check_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Check Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "NOT_SHOWN",
+            "AMBIGUOUS",
+            "CONTRADICTED"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "question": {
+          "maxLength": 6000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Question",
+          "type": "string"
+        }
+      },
+      "required": [
+        "check_id",
+        "status",
+        "question"
+      ],
+      "title": "Confirmation",
+      "type": "object"
+    },
+    "ContentCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "check_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Check Id",
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 6000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Description",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "SUPPORTED",
+            "NOT_SHOWN",
+            "AMBIGUOUS",
+            "CONTRADICTED"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "model_status": {
+          "enum": [
+            "SUPPORTED",
+            "NOT_SHOWN",
+            "AMBIGUOUS",
+            "CONTRADICTED"
+          ],
+          "title": "Model Status",
+          "type": "string"
+        },
+        "validation_issue": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Validation Issue"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/EpisodeEvidence"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "follow_up_question": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Follow Up Question"
+        }
+      },
+      "required": [
+        "check_id",
+        "description",
+        "status",
+        "model_status",
+        "validation_issue",
+        "evidence",
+        "follow_up_question"
+      ],
+      "title": "ContentCheck",
+      "type": "object"
+    },
+    "Diagnostic": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Code",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "title": "Diagnostic",
+      "type": "object"
+    },
+    "Eligibility": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "const": "NOT_ASSESSED",
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "Eligibility",
+      "type": "object"
+    },
+    "EpisodeEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "episode_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "episode_version": {
+          "minimum": 1,
+          "title": "Episode Version",
+          "type": "integer"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "integer"
+        },
+        "end": {
+          "minimum": 0,
+          "title": "End",
+          "type": "integer"
+        },
+        "exact_quote": {
+          "maxLength": 6000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Exact Quote",
+          "type": "string"
+        },
+        "kinds": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Kinds",
+          "type": "array"
+        },
+        "subject": {
+          "title": "Subject",
+          "type": "string"
+        },
+        "assertion": {
+          "title": "Assertion",
+          "type": "string"
+        },
+        "issue": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Issue"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "episode_id",
+        "episode_version",
+        "start",
+        "end",
+        "exact_quote",
+        "kinds",
+        "subject",
+        "assertion",
+        "issue"
+      ],
+      "title": "EpisodeEvidence",
+      "type": "object"
+    },
+    "ExtractedSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "snapshot_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Snapshot Id",
+          "type": "string"
+        },
+        "extracted_episode_versions": {
+          "patternProperties": {
+            "^[^\\s{}]{1,200}$": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "title": "Extracted Episode Versions",
+          "type": "object"
+        }
+      },
+      "required": [
+        "snapshot_id",
+        "extracted_episode_versions"
+      ],
+      "title": "ExtractedSnapshot",
+      "type": "object"
+    },
+    "FormConstraints": {
+      "additionalProperties": false,
+      "properties": {
+        "max_characters": {
+          "title": "Max Characters",
+          "type": "null"
+        },
+        "required": {
+          "title": "Required",
+          "type": "null"
+        },
+        "max_hashtags": {
+          "title": "Max Hashtags",
+          "type": "null"
+        }
+      },
+      "required": [
+        "max_characters",
+        "required",
+        "max_hashtags"
+      ],
+      "title": "FormConstraints",
+      "type": "object"
+    },
+    "QuestionScope": {
+      "additionalProperties": false,
+      "properties": {
+        "scope_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Scope Id",
+          "type": "string"
+        },
+        "question_id": {
+          "title": "Question Id",
+          "type": "string"
+        },
+        "user_theme": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "User Theme"
+        },
+        "catalog_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Catalog Sha256",
+          "type": "string"
+        },
+        "status": {
+          "const": "DRAFT_FOR_LOCAL_REVIEW",
+          "title": "Status",
+          "type": "string"
+        },
+        "official_text": {
+          "title": "Official Text",
+          "type": "null"
+        },
+        "is_official_rubric": {
+          "const": false,
+          "title": "Is Official Rubric",
+          "type": "boolean"
+        },
+        "form_constraints": {
+          "$ref": "#/$defs/FormConstraints"
+        },
+        "enforced_form_constraints": {
+          "items": {},
+          "maxItems": 0,
+          "title": "Enforced Form Constraints",
+          "type": "array"
+        }
+      },
+      "required": [
+        "scope_id",
+        "question_id",
+        "user_theme",
+        "catalog_sha256",
+        "status",
+        "official_text",
+        "is_official_rubric",
+        "form_constraints",
+        "enforced_form_constraints"
+      ],
+      "title": "QuestionScope",
+      "type": "object"
+    },
+    "SourceReview": {
+      "additionalProperties": false,
+      "properties": {
+        "review_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Review Id",
+          "type": "string"
+        },
+        "source_version_id": {
+          "anyOf": [
+            {
+              "pattern": "^[^\\s{}]{1,200}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source Version Id"
+        },
+        "required": {
+          "title": "Required",
+          "type": "boolean"
+        },
+        "status": {
+          "enum": [
+            "USABLE",
+            "LIMITED",
+            "UNAVAILABLE"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "codes": {
+          "items": {
+            "pattern": "^[^\\s{}]{1,200}$",
+            "type": "string"
+          },
+          "maxItems": 30,
+          "title": "Codes",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "maxLength": 6000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          "maxItems": 30,
+          "title": "Limitations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "review_id",
+        "source_version_id",
+        "required",
+        "status",
+        "codes",
+        "limitations"
+      ],
+      "title": "SourceReview",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "w4-detailed-output/0.3",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "request_id": {
+      "pattern": "^[^\\s{}]{1,200}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "project_id": {
+      "pattern": "^[^\\s{}]{1,200}$",
+      "title": "Project Id",
+      "type": "string"
+    },
+    "data_kind": {
+      "const": "SYNTHETIC",
+      "title": "Data Kind",
+      "type": "string"
+    },
+    "processing_status": {
+      "enum": [
+        "NEEDS_INPUT",
+        "NO_CANDIDATES",
+        "COMPLETED_WITH_LIMITATIONS",
+        "COMPLETED"
+      ],
+      "title": "Processing Status",
+      "type": "string"
+    },
+    "question_scope": {
+      "$ref": "#/$defs/QuestionScope"
+    },
+    "candidates": {
+      "items": {
+        "$ref": "#/$defs/C01Candidate"
+      },
+      "title": "Candidates",
+      "type": "array"
+    },
+    "snapshot": {
+      "$ref": "#/$defs/ExtractedSnapshot"
+    },
+    "diagnostics": {
+      "items": {
+        "$ref": "#/$defs/Diagnostic"
+      },
+      "title": "Diagnostics",
+      "type": "array"
+    },
+    "follow_up_questions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Follow Up Questions",
+      "type": "array"
+    },
+    "ranking_policy": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Ranking Policy",
+      "type": "array"
+    },
+    "subcheck_counts_used_as_ranking_points": {
+      "const": false,
+      "title": "Subcheck Counts Used As Ranking Points",
+      "type": "boolean"
+    },
+    "inference": {
+      "additionalProperties": true,
+      "title": "Inference",
+      "type": "object"
+    },
+    "eligibility_assessment": {
+      "$ref": "#/$defs/Eligibility"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    },
+    "company_context": {
+      "$ref": "#/$defs/C01Summary"
+    },
+    "server_context_version": {
+      "pattern": "^[^\\s{}]{1,200}$",
+      "title": "Server Context Version",
+      "type": "string"
+    },
+    "ranking_policy_approval": {
+      "const": "PENDING_PRODUCT_REVIEW",
+      "title": "Ranking Policy Approval",
+      "type": "string"
+    },
+    "job_state_mapping": {
+      "const": "OWNED_BY_W1_PENDING_AGREEMENT",
+      "title": "Job State Mapping",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "request_id",
+    "project_id",
+    "data_kind",
+    "processing_status",
+    "question_scope",
+    "candidates",
+    "snapshot",
+    "diagnostics",
+    "follow_up_questions",
+    "ranking_policy",
+    "subcheck_counts_used_as_ranking_points",
+    "inference",
+    "eligibility_assessment",
+    "limitations",
+    "company_context",
+    "server_context_version",
+    "ranking_policy_approval",
+    "job_state_mapping"
+  ],
+  "title": "C01ServiceOutput",
+  "type": "object"
+}

@@ -1,0 +1,19 @@
+{
+  "schema_version": "w3.private.core-decision/0.1-candidate",
+  "message_type": "w3.private.w1.core-decision",
+  "message_id": "50000000-0000-4000-8000-000000000001",
+  "occurred_at": "2026-09-18T00:00:00Z",
+  "visibility_scope": "PRIVATE",
+  "producer": "w3",
+  "job_id": "10000000-0000-4000-8000-000000000001",
+  "company_id": null,
+  "source_id": "30000000-0000-4000-8000-000000000001",
+  "analysis_input_version": "knowledge-input:alpha",
+  "decision_scope": "COMPANY_KNOWLEDGE",
+  "decision_owner": "W3",
+  "question_version_id": null,
+  "decision_version": 1,
+  "is_core": true,
+  "decision_code": "CORE_REQUIRED",
+  "reason_code": "REQUIRED_COMPANY_EVIDENCE"
+}

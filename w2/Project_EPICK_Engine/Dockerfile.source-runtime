@@ -1,0 +1,21 @@
+# W1 supplies an approved immutable Python 3.12 Debian-slim image reference.
+ARG PYTHON_IMAGE
+FROM ${PYTHON_IMAGE}
+ARG PYTHON_IMAGE
+ARG SOURCE_SHA
+LABEL org.opencontainers.image.revision=${SOURCE_SHA}
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/src
+WORKDIR /app
+RUN python -c "import os,re,sys; assert sys.version_info[:2] == (3,12); assert re.fullmatch('[a-f0-9]{40}', os.environ.get('SOURCE_SHA', ''))"
+RUN python -c "import os,re; assert re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9./:_-]*@sha256:[a-f0-9]{64}', os.environ.get('PYTHON_IMAGE', ''))"
+COPY requirements.ct15.lock ./requirements.ct15.lock
+RUN python -m pip install --no-cache-dir --require-hashes --no-deps -r requirements.ct15.lock
+COPY src/ ./src/
+COPY migrations/ ./migrations/
+COPY alembic.ini ./alembic.ini
+RUN groupadd --gid 10001 epick && useradd --uid 10001 --gid 10001 --no-create-home epick
+USER 10001:10001
+ENTRYPOINT ["python", "-m", "epick_engine.source_collection.source_runtime_operator"]
+CMD ["preflight"]

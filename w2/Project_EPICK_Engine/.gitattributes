@@ -1,0 +1,3 @@
+/contracts/w2-private/*.schema.json text eol=lf
+/tests/fixtures/w1_private_contract/*.json text eol=lf
+/tests/fixtures/w2_commit_gate_proposal/*.json text eol=lf

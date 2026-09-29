@@ -1,0 +1,186 @@
+{
+  "schema_version": "1.0",
+  "synthetic": true,
+  "description": "Synthetic company-identity fixtures. They do not describe real companies or real job postings.",
+  "companies": [
+    {
+      "company_id": "00000000-0000-4000-8000-000000000101",
+      "legal_name": "Synthetic Meridian Labs Ltd.",
+      "aliases": [
+        "Synthetic Meridian Labs"
+      ],
+      "official_domains": [
+        "synthetic-meridian-a.test",
+        "synthetic-meridian-careers.test"
+      ],
+      "legal_identifiers": {
+        "registry": "synthetic-registry",
+        "value": "SML-A-001",
+        "jurisdiction": "synthetic-jurisdiction-a"
+      },
+      "identity_status": "verified",
+      "identity_evidence": [
+        "https://synthetic-meridian-a.test/legal/entity"
+      ]
+    },
+    {
+      "company_id": "00000000-0000-4000-8000-000000000102",
+      "legal_name": "Synthetic Meridian Labs Ltd.",
+      "aliases": [
+        "Synthetic Meridian Labs"
+      ],
+      "official_domains": [
+        "synthetic-meridian-b.test"
+      ],
+      "legal_identifiers": {
+        "registry": "synthetic-registry",
+        "value": "SML-B-002",
+        "jurisdiction": "synthetic-jurisdiction-b"
+      },
+      "identity_status": "verified",
+      "identity_evidence": [
+        "https://synthetic-meridian-b.test/legal/entity"
+      ]
+    },
+    {
+      "company_id": "00000000-0000-4000-8000-000000000103",
+      "legal_name": "Synthetic Meridian Research Ltd.",
+      "aliases": [
+        "Synthetic Meridian Research"
+      ],
+      "official_domains": [
+        "synthetic-meridian-research.test",
+        "synthetic-meridian-careers.test"
+      ],
+      "legal_identifiers": {
+        "registry": "synthetic-registry",
+        "value": "SMR-A-003",
+        "jurisdiction": "synthetic-jurisdiction-a"
+      },
+      "identity_status": "verified",
+      "identity_evidence": [
+        "https://synthetic-meridian-research.test/legal/entity"
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "relationship_id": "00000000-0000-4000-8000-000000000201",
+      "company_id": "00000000-0000-4000-8000-000000000103",
+      "related_company_id": "00000000-0000-4000-8000-000000000101",
+      "kind": "subsidiary_of",
+      "evidence_ref": "https://synthetic-meridian-research.test/legal/group-relationship",
+      "valid_from": null,
+      "valid_to": null
+    }
+  ],
+  "source_attributions": [
+    {
+      "source_id": "00000000-0000-4000-8000-000000000401",
+      "source_ref": "source:synthetic-meridian-a-careers",
+      "company_id": "00000000-0000-4000-8000-000000000101",
+      "url": "https://synthetic-meridian-careers.test/jobs/platform-engineer-a",
+      "attribution_evidence_refs": [
+        "https://synthetic-meridian-a.test/careers/attribution"
+      ],
+      "shared_careers_host": "synthetic-meridian-careers.test",
+      "automatic_transfer_permitted": false
+    },
+    {
+      "source_id": "00000000-0000-4000-8000-000000000402",
+      "source_ref": "source:synthetic-meridian-research-careers",
+      "company_id": "00000000-0000-4000-8000-000000000103",
+      "url": "https://synthetic-meridian-careers.test/jobs/research-engineer",
+      "attribution_evidence_refs": [
+        "https://synthetic-meridian-research.test/careers/attribution"
+      ],
+      "shared_careers_host": "synthetic-meridian-careers.test",
+      "automatic_transfer_permitted": false
+    },
+    {
+      "source_id": "00000000-0000-4000-8000-000000000403",
+      "source_ref": "source:synthetic-static-posting",
+      "company_id": null,
+      "url": "https://synthetic-meridian-careers.test/jobs/static-posting",
+      "attribution_evidence_refs": [
+        "https://synthetic-meridian-careers.test/jobs/static-posting"
+      ],
+      "shared_careers_host": "synthetic-meridian-careers.test",
+      "attribution_status": "unverified",
+      "automatic_transfer_permitted": false
+    }
+  ],
+  "resolution_cases": [
+    {
+      "case_id": "same-legal-name-name-only",
+      "description": "A legal name alone matches two separate legal entities.",
+      "input": {
+        "legal_name": "Synthetic Meridian Labs Ltd.",
+        "identity_evidence_refs": []
+      },
+      "candidate_company_ids": [
+        "00000000-0000-4000-8000-000000000101",
+        "00000000-0000-4000-8000-000000000102"
+      ],
+      "expected": {
+        "resolution_status": "selection_required",
+        "selected_company_id": null,
+        "create_company": false
+      }
+    },
+    {
+      "case_id": "shared-careers-host-does-not-transfer",
+      "description": "A shared careers host is not proof that a source belongs to the parent or its subsidiary.",
+      "input": {
+        "source_url": "https://synthetic-meridian-careers.test/jobs/static-posting",
+        "identity_evidence_refs": [
+          "https://synthetic-meridian-careers.test/jobs/static-posting"
+        ]
+      },
+      "candidate_company_ids": [
+        "00000000-0000-4000-8000-000000000101",
+        "00000000-0000-4000-8000-000000000103"
+      ],
+      "expected": {
+        "resolution_status": "selection_required",
+        "selected_company_id": null,
+        "create_company": false,
+        "source_transfer": "none"
+      }
+    },
+    {
+      "case_id": "insufficient-evidence-does-not-create-company",
+      "description": "An unverified organization label and a shared-domain URL are insufficient to create a company.",
+      "input": {
+        "legal_name": "Synthetic Meridian Product Unit",
+        "source_url": "https://synthetic-meridian-careers.test/jobs/unverified-unit",
+        "identity_evidence_refs": []
+      },
+      "candidate_company_ids": [],
+      "expected": {
+        "resolution_status": "unverified",
+        "selected_company_id": null,
+        "create_company": false
+      }
+    },
+    {
+      "case_id": "explicit-identity-evidence-selects-one-entity",
+      "description": "A candidate may be selected only when its own identity evidence is supplied.",
+      "input": {
+        "legal_name": "Synthetic Meridian Labs Ltd.",
+        "identity_evidence_refs": [
+          "https://synthetic-meridian-b.test/legal/entity"
+        ]
+      },
+      "candidate_company_ids": [
+        "00000000-0000-4000-8000-000000000101",
+        "00000000-0000-4000-8000-000000000102"
+      ],
+      "expected": {
+        "resolution_status": "resolved",
+        "selected_company_id": "00000000-0000-4000-8000-000000000102",
+        "create_company": false
+      }
+    }
+  ]
+}

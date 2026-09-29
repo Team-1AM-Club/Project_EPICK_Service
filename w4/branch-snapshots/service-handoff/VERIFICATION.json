@@ -1,0 +1,21 @@
+{
+  "status": "PASSED",
+  "tests": {
+    "development_python": "3.12.14",
+    "development_passed": 249,
+    "fresh_python": "3.13.12",
+    "fresh_passed": 249,
+    "skipped": 0
+  },
+  "fresh_install": "uv sync --locked --extra api --extra test",
+  "command": "python -m unittest discover -s tests -q",
+  "http_demo_scenarios": 2,
+  "simulated_calls_per_demo_execution": 12,
+  "real_model_calls": 0,
+  "company_prompt_real_model_quality": "NOT_MEASURED",
+  "production_model_selection": "WITHHELD",
+  "live_team_backend_integration": "NOT_RUN",
+  "w3_contract_status": "LOCAL_PROJECTION_DRAFT_PENDING_TEAM_REVIEW",
+  "job_state_mapping": "OWNED_BY_W1_PENDING_AGREEMENT",
+  "ranking_policy_approval": "PENDING_PRODUCT_REVIEW"
+}

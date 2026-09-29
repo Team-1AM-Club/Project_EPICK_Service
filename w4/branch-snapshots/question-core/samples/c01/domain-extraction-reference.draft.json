@@ -1,0 +1,290 @@
+{
+  "schema_version": "w4-extraction-benchmark/0.1",
+  "data_kind": "SYNTHETIC",
+  "review": {
+    "status": "DRAFT",
+    "author": "assistant",
+    "human_reviewed": false
+  },
+  "answers": {
+    "c01-semantic-01": {
+      "units": [
+        {
+          "unit_id": "u1",
+          "kinds": [
+            "ROLE"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u2",
+          "kinds": [
+            "ACTION",
+            "PERIOD"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u3",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u4",
+          "kinds": [
+            "RESULT"
+          ],
+          "subject": "UNSPECIFIED",
+          "assertion": "AFFIRMED",
+          "issue": null
+        }
+      ]
+    },
+    "c01-semantic-02": {
+      "units": [
+        {
+          "unit_id": "u1",
+          "kinds": [
+            "ROLE"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u2",
+          "kinds": [
+            "ACTION",
+            "PERIOD"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u3",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u4",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        }
+      ]
+    },
+    "c01-semantic-03": {
+      "units": [
+        {
+          "unit_id": "u1",
+          "kinds": [
+            "ROLE"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u2",
+          "kinds": [
+            "ACTION",
+            "PERIOD"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u3",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u4",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        }
+      ]
+    },
+    "c01-semantic-04": {
+      "units": [
+        {
+          "unit_id": "u1",
+          "kinds": [
+            "ROLE"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u2",
+          "kinds": [
+            "ACTION",
+            "PERIOD"
+          ],
+          "subject": "OTHER",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u3",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "OTHER",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u4",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        }
+      ]
+    },
+    "c01-semantic-05": {
+      "units": [
+        {
+          "unit_id": "u1",
+          "kinds": [
+            "ROLE"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u2",
+          "kinds": [
+            "ACTION",
+            "PERIOD"
+          ],
+          "subject": "SELF",
+          "assertion": "PLANNED",
+          "issue": null
+        },
+        {
+          "unit_id": "u3",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "PLANNED",
+          "issue": null
+        }
+      ]
+    },
+    "c01-semantic-06": {
+      "units": [
+        {
+          "unit_id": "u1",
+          "kinds": [
+            "ROLE"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u2",
+          "kinds": [
+            "ACTION",
+            "PERIOD"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u3",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u4",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        }
+      ]
+    },
+    "c01-semantic-07": {
+      "units": [
+        {
+          "unit_id": "u1",
+          "kinds": [
+            "ROLE"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u2",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u3",
+          "kinds": [
+            "RESULT"
+          ],
+          "subject": "UNSPECIFIED",
+          "assertion": "AFFIRMED",
+          "issue": null
+        }
+      ]
+    }
+  },
+  "input_sha256": "92f09db287033e3c3c29b24cfa1af10d4c84f45e0cd8693d33af870186c5138f",
+  "protocol_sha256": "dce9aa13baf4bce8b5ef3e3e49a18f06a4fa4e8e8184e5c363f4922e8770897d",
+  "case_splits": {
+    "c01-semantic-01": "new_frozen_domain_cases_v1",
+    "c01-semantic-02": "new_frozen_domain_cases_v1",
+    "c01-semantic-03": "new_frozen_domain_cases_v1",
+    "c01-semantic-04": "new_frozen_domain_cases_v1",
+    "c01-semantic-05": "new_frozen_domain_cases_v1",
+    "c01-semantic-06": "new_frozen_domain_cases_v1",
+    "c01-semantic-07": "new_frozen_domain_cases_v1"
+  }
+}

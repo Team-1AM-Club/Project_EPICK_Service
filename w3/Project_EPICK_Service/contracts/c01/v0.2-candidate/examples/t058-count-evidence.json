@@ -1,0 +1,69 @@
+{
+  "schema_version": "w3.t058.count-evidence.v1",
+  "evidence_id": "00000000-0000-4000-8000-000000000058",
+  "observed_at": "2026-09-25T00:00:00Z",
+  "execution": {
+    "joint_job_id": "synthetic-w1-job",
+    "joint_run_id": "synthetic-joint-run"
+  },
+  "pins": {
+    "w1_commit": "1111111111111111111111111111111111111111",
+    "w2_commit": "2222222222222222222222222222222222222222",
+    "w3_commit": "3333333333333333333333333333333333333333",
+    "event_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "receipt_schema_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "status_schema_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "source_authority_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  },
+  "ref_hashes": {
+    "source_ref_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "version_ref_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  },
+  "counts": {
+    "events_received": 4,
+    "receipts_committed": 4,
+    "indexes_accepted": 2,
+    "ready_sources": 1,
+    "errors": 0
+  },
+  "error_counts": {
+    "source_not_registered": 0,
+    "authority_unavailable": 0,
+    "event_gap": 0,
+    "conflict": 0,
+    "index_failed": 0
+  },
+  "state_before": {
+    "event_cursor": 0,
+    "required_event_cursor": 1,
+    "restriction_revision": 0,
+    "required_restriction_revision": 0,
+    "generation": 0,
+    "reason": "INDEX_PENDING",
+    "index_ack": false,
+    "history_complete": true,
+    "index_key_sha256": null
+  },
+  "state_after": {
+    "event_cursor": 4,
+    "required_event_cursor": 4,
+    "restriction_revision": 2,
+    "required_restriction_revision": 2,
+    "generation": 2,
+    "reason": "READY",
+    "index_ack": true,
+    "history_complete": true,
+    "index_key_sha256": "9999999999999999999999999999999999999999999999999999999999999999"
+  },
+  "state_after_restart": {
+    "event_cursor": 4,
+    "required_event_cursor": 4,
+    "restriction_revision": 2,
+    "required_restriction_revision": 2,
+    "generation": 2,
+    "reason": "READY",
+    "index_ack": true,
+    "history_complete": true,
+    "index_key_sha256": "9999999999999999999999999999999999999999999999999999999999999999"
+  }
+}

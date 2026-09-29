@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w1/v1/w2-current-write-scope-lookup.request.schema.json",
+  "title": "W1 W2 current-write scope lookup request",
+  "description": "The original W1 command, Job, owner, fence and deletion epoch binding only. The caller must not supply or probe candidate scopes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "owner_user_id", "owner_deletion_epoch", "command_id", "job_id", "execution_fence"],
+  "properties": {
+    "schema_version": { "const": "w1.private.w2-current-write-scope-lookup.v1" },
+    "owner_user_id": { "type": "string", "format": "uuid" },
+    "owner_deletion_epoch": { "type": "integer", "minimum": 0, "maximum": 9223372036854775807 },
+    "command_id": { "type": "string", "format": "uuid" },
+    "job_id": { "type": "string", "format": "uuid" },
+    "execution_fence": { "type": "integer", "minimum": 1, "maximum": 9223372036854775807 }
+  }
+}

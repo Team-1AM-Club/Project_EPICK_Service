@@ -1,0 +1,263 @@
+{
+  "schema_version": "collection-sample/0.1-draft",
+  "purpose": "SK하이닉스 pilot 기업의 Collection -> Analysis 계약 정렬용 샘플",
+  "scope_note": "수집 레이어까지만 표현한다. Claim/AI Interpretation/Matching 결과는 포함하지 않는다. normalized_summary는 원문 장문 재배포를 피하기 위한 요약이다.",
+  "company": {
+    "company_id": "sk_hynix",
+    "canonical_name": "SK하이닉스",
+    "group": "SK",
+    "pilot_status": "PILOT_REFERENCE"
+  },
+  "collected_at": "2026-09-07T21:27:00+09:00",
+  "sources": [
+    {
+      "source_id": "skhynix_recruit_R260521",
+      "source_type": "OFFICIAL_RECRUITMENT_POSTING",
+      "publisher": "SK Careers / SK hynix",
+      "title": "['26년 상반기] Talent hy-way 신입 (이천/분당/서울)",
+      "source_url": "https://www.skcareers.com/Recruit/Detail/R260521",
+      "dates": {
+        "published_at": null,
+        "published_at_status": "NOT_EXPOSED_ON_PAGE",
+        "application_start": "2026-03-10",
+        "application_end": "2026-03-23",
+        "application_deadline_local_time": "17:00"
+      },
+      "collection": {
+        "fetch_status": "SUCCESS",
+        "main_document_content_type": "text/html",
+        "parse_status": "PARTIAL",
+        "completeness": "PARTIAL_REQUIRES_ATTACHMENTS",
+        "parse_reason": "공고 본문/지원자격/전형/직무목록은 HTML에서 파싱 가능하나 상세 Job Description은 첨부 PDF 파싱이 필요",
+        "content_hash": null,
+        "hash_status": "NOT_COMPUTED_IN_THIS_SAMPLE"
+      },
+      "structured_metadata": {
+        "company": "SK hynix",
+        "employment_type": "Permanent",
+        "region": "이천/분당/서울",
+        "status_at_collection": "APPLICATION_CLOSED",
+        "jobs": [
+          "Tech R&D - 설계",
+          "Tech R&D - 소자",
+          "Tech R&D - R&D 공정",
+          "Tech R&D - Product Engineering",
+          "Tech R&D - Application Engineering",
+          "Tech R&D - PKG 개발",
+          "제조 - 양산기술",
+          "제조 - 양산기술(P&T)",
+          "제조 - 기반기술",
+          "제조 - 양산관리",
+          "건설/플랜트 - Utility기술(공조/배기, 배관)",
+          "건설/플랜트 - Utility기술(Gas, Chemical, 수처리)",
+          "건설/플랜트 - Utility기술(전기, 제어)",
+          "건설/플랜트 - Utility기술(건축, BIM/5D)",
+          "안전보건 - SHE(안전)",
+          "안전보건 - SHE(보건)",
+          "안전보건 - SHE(환경/화학물질관리)",
+          "안전보건 - SHE(P&S기술)",
+          "전략기획 - 경영전략",
+          "구매 - 구매",
+          "기업문화 - 기업문화",
+          "Tech R&D - System Arch./SW Solution",
+          "영업 - 영업/마케팅/상품기획/신제품사업화",
+          "Tech R&D - 개발Test&Infra",
+          "재무 - 재무",
+          "IT - IT"
+        ]
+      },
+      "evidence_segments": [
+        {
+          "segment_id": "R260521_job_description_pointer",
+          "section": "About the job / 주요 수행 업무",
+          "sample_extraction_locator": {
+            "web_line_range": "L51-L59"
+          },
+          "normalized_summary": "상세 Job Description은 본문이 아니라 첨부 Reference File에서 확인하도록 안내한다.",
+          "raw_text_in_sample": null,
+          "importance_for_downstream": "HIGH"
+        },
+        {
+          "segment_id": "R260521_eligibility",
+          "section": "Who We're Looking For / 지원자격",
+          "sample_extraction_locator": {
+            "web_line_range": "L60-L70"
+          },
+          "normalized_summary": "학사 이상 졸업(예정), 2026년 7~8월 입사 가능, 병역·해외여행 관련 조건 등이 명시된다.",
+          "raw_text_in_sample": null
+        },
+        {
+          "segment_id": "R260521_screening_process",
+          "section": "Recruiting Process",
+          "sample_extraction_locator": {
+            "web_line_range": "L73-L100"
+          },
+          "normalized_summary": "서류, SKCT/A!SK, 면접 단계와 각 단계의 평가 대상이 설명된다.",
+          "raw_text_in_sample": null
+        },
+        {
+          "segment_id": "R260521_recruitment_notes",
+          "section": "Please Read Before Applying / FAQ",
+          "sample_extraction_locator": {
+            "web_line_range": "L103-L151"
+          },
+          "normalized_summary": "법정 우대, 중복지원 제한, 전공·어학 관련 FAQ 등 지원 판단에 필요한 보조 조건이 포함된다.",
+          "raw_text_in_sample": null
+        },
+        {
+          "segment_id": "R260521_posting_metadata",
+          "section": "Posting metadata",
+          "sample_extraction_locator": {
+            "web_line_range": "L153-L231"
+          },
+          "normalized_summary": "지원기간, 마감시각, 회사, 직무목록, 지역, 고용형태 및 마감 상태를 확인할 수 있다.",
+          "raw_text_in_sample": null
+        }
+      ],
+      "attachments": [
+        {
+          "attachment_id": "R260521_jd_ko_icheon",
+          "relationship_type": "ATTACHED_REFERENCE_FILE",
+          "parent_source_id": "skhynix_recruit_R260521",
+          "display_name": "2026(상) SK하이닉스 Talent hy-way(신입) Job Description(이천).pdf",
+          "document_role": "JOB_DESCRIPTION",
+          "language": "ko",
+          "discovery_status": "DISCOVERED",
+          "download_status": "FETCHER_UNSUPPORTED_CONTENT_TYPE",
+          "observed_content_type": "application/octet-stream",
+          "expected_file_type": "application/pdf",
+          "parse_status": "UNPARSED",
+          "required_for_full_analysis": true
+        },
+        {
+          "attachment_id": "R260521_jd_en_icheon",
+          "relationship_type": "ATTACHED_REFERENCE_FILE",
+          "parent_source_id": "skhynix_recruit_R260521",
+          "display_name": "2026 SK hynix Talent hy-way Job Description(Icheon).pdf",
+          "document_role": "JOB_DESCRIPTION",
+          "language": "en",
+          "discovery_status": "DISCOVERED",
+          "download_status": "FETCHER_UNSUPPORTED_CONTENT_TYPE",
+          "observed_content_type": "application/octet-stream",
+          "expected_file_type": "application/pdf",
+          "parse_status": "UNPARSED",
+          "required_for_full_analysis": false
+        },
+        {
+          "attachment_id": "R260521_faq_ko",
+          "relationship_type": "ATTACHED_REFERENCE_FILE",
+          "parent_source_id": "skhynix_recruit_R260521",
+          "display_name": "2026(상) SK하이닉스 Talent hy-way(신입) FAQ.pdf",
+          "document_role": "FAQ",
+          "language": "ko",
+          "discovery_status": "DISCOVERED",
+          "download_status": "FETCHER_UNSUPPORTED_CONTENT_TYPE",
+          "observed_content_type": "application/octet-stream",
+          "expected_file_type": "application/pdf",
+          "parse_status": "UNPARSED",
+          "required_for_full_analysis": false
+        }
+      ]
+    },
+    {
+      "source_id": "skhynix_news_20260730_ai_talent_recruit",
+      "source_type": "OFFICIAL_NEWSROOM_PRESS",
+      "publisher": "SK hynix Newsroom",
+      "title": "“스펙 보다 ‘생각 근육’ 본다”… AI 시대 맞춤형 인재 선발 SK하이닉스, ‘반나절 심층면접’ 도입",
+      "source_url": "https://news.skhynix.co.kr/ai-talent-recruit-2026-02/",
+      "dates": {
+        "published_at": "2026-07-30",
+        "published_at_status": "EXPLICIT_ON_PAGE"
+      },
+      "collection": {
+        "fetch_status": "SUCCESS",
+        "main_document_content_type": "text/html",
+        "parse_status": "SUCCESS",
+        "completeness": "MAIN_ARTICLE_PARSED",
+        "content_hash": null,
+        "hash_status": "NOT_COMPUTED_IN_THIS_SAMPLE"
+      },
+      "structured_metadata": {
+        "category": "PRESS",
+        "tags": [
+          "HR",
+          "신입사원",
+          "인재",
+          "채용",
+          "취업"
+        ],
+        "author_or_entity": "SK하이닉스"
+      },
+      "evidence_segments": [
+        {
+          "segment_id": "NEWS20260730_header",
+          "section": "Article header",
+          "sample_extraction_locator": {
+            "web_line_range": "L30-L40"
+          },
+          "normalized_summary": "공식 뉴스룸 PRESS 기사이며 게시일은 2026-07-30로 명시된다.",
+          "raw_text_in_sample": null
+        },
+        {
+          "segment_id": "NEWS20260730_key_changes",
+          "section": "Lead / key changes",
+          "sample_extraction_locator": {
+            "web_line_range": "L48-L53"
+          },
+          "normalized_summary": "신입채용 일정, 반나절 심층면접, AI·직무역량 중심 서식, AI 해커톤 연계 등이 핵심 변화로 제시된다.",
+          "raw_text_in_sample": null
+        },
+        {
+          "segment_id": "NEWS20260730_evaluation_direction",
+          "section": "Recruitment evaluation direction",
+          "sample_extraction_locator": {
+            "web_line_range": "L53-L64"
+          },
+          "normalized_summary": "학력 제한 폐지, 실전 역량 중심 평가, AI 응용 능력·논리적 사고력·직무 전문성 검증, 기존 자기소개서 형식 개편 등의 방향이 설명된다.",
+          "raw_text_in_sample": null,
+          "importance_for_downstream": "HIGH"
+        },
+        {
+          "segment_id": "NEWS20260730_related_official_recruit_link",
+          "section": "Related official recruitment link",
+          "sample_extraction_locator": {
+            "web_line_range": "L64-L66"
+          },
+          "normalized_summary": "기사에서 해당 신입 수시채용 모집요강과 설명회 상세 일정을 공식 채용 홈페이지에서 확인하도록 연결한다.",
+          "raw_text_in_sample": null
+        }
+      ],
+      "attachments": [],
+      "related_links": [
+        {
+          "relationship_type": "REFERENCES_OFFICIAL_RECRUITMENT_SITE",
+          "target_kind": "OFFICIAL_RECRUITMENT_SITE",
+          "target_url": "https://talent.skhynix.com/",
+          "parse_status": "NOT_FETCHED_IN_THIS_SAMPLE"
+        }
+      ]
+    }
+  ],
+  "status_enum_draft": {
+    "fetch_status": [
+      "SUCCESS",
+      "FAILED",
+      "ACCESS_RESTRICTED",
+      "DISCOVERED"
+    ],
+    "parse_status": [
+      "SUCCESS",
+      "PARTIAL",
+      "UNPARSED",
+      "FAILED"
+    ]
+  },
+  "contract_notes_for_meeting": [
+    "본문 Source와 첨부 Source는 별도 ID를 갖고 관계로 연결한다.",
+    "공고의 published_at과 application_start/end는 별도 필드다.",
+    "본문이 파싱돼도 상세 JD가 첨부에만 있으면 completeness는 PARTIAL로 처리한다.",
+    "다운로드 실패와 실제 파일 부재를 구분한다.",
+    "null, 빈 배열, 필드 생략 규칙은 팀 Contract에서 별도 확정한다.",
+    "실제 구현에서는 raw/canonical text 저장 범위와 stable locator 형식을 Collector-Analysis 간 계약으로 고정한다."
+  ]
+}

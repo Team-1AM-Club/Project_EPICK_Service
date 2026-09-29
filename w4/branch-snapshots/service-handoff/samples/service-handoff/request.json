@@ -1,0 +1,11 @@
+{
+  "schema_version": "w4-service-input/0.1",
+  "request_id": "synthetic-service-review-v1",
+  "project_id": "project-demo-sk-hynix",
+  "question": {
+    "scope_id": "skhynix-2026-march-R260521-IT",
+    "question_id": "expertise",
+    "user_theme": null
+  },
+  "top_k": 3
+}

@@ -1,0 +1,17 @@
+{
+  "schema_version": "w4-model-policy/0.1",
+  "scorer_version": "w4-reviewed-exact/0.1",
+  "benchmark_sha256": "d82f07753c309a48239b4e0f127d56ad1e23e5d6a5df6fb2890903fee0d788d1",
+  "protocol_sha256": "1afe8a2d049e34d62c05039d9c2893bbde3f531ce98de807ddf1582876ed01ef",
+  "metric": "exact_match_accuracy",
+  "case_aggregation": "equal_case_mean",
+  "repetitions": 3,
+  "weights": {
+    "question": 50,
+    "matching": 50
+  },
+  "review": {
+    "status": "DRAFT"
+  },
+  "proposal_note": "50:50과 3회 반복은 검토용 제안. 실제 사람 승인 전에는 추천하지 않음. 비용과 지연은 점수에 추가하지 않음."
+}

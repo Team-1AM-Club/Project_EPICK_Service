@@ -1,0 +1,16 @@
+{
+  "schema_version": "w2.private-deletion.v1",
+  "deletion_id": "71000000-0000-4000-8000-000000000001",
+  "owner_user_id": "00000000-0000-4000-8000-000000006301",
+  "deletion_epoch": 7,
+  "attempt_ids": [
+    "72000000-0000-4000-8000-000000000001"
+  ],
+  "request_deduplication_ids": [
+    "73000000-0000-4000-8000-000000000001"
+  ],
+  "private_reference_keys": [
+    "w1-private:collection-attempt:72000000-0000-4000-8000-000000000001"
+  ],
+  "source_id": "74000000-0000-4000-8000-000000000001"
+}

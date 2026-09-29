@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:epick:w2:ct15:run-inspection:v1",
+  "title": "W2 CT15 joint count-only run inspection",
+  "$ref": "#/$defs/result",
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner_ref", "job_id", "command_id"],
+      "properties": {
+        "owner_ref": {"$ref": "#/$defs/uuid"},
+        "job_id": {"$ref": "#/$defs/uuid"},
+        "command_id": {"$ref": "#/$defs/uuid"}
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "run_id", "source_id", "primary", "secondary"],
+      "properties": {
+        "schema_version": {"const": "w2.ct15.run-inspection.scope.v1"},
+        "run_id": {
+          "type": "string",
+          "pattern": "^ct15-[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$"
+        },
+        "source_id": {"$ref": "#/$defs/uuid"},
+        "primary": {"$ref": "#/$defs/binding"},
+        "secondary": {"$ref": "#/$defs/binding"}
+      }
+    },
+    "stateCountsSingle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["STAGED", "PREPARED", "FINALIZED", "ABORTED", "PURGED"],
+      "properties": {
+        "STAGED": {"type": "integer", "minimum": 0, "maximum": 1},
+        "PREPARED": {"type": "integer", "minimum": 0, "maximum": 1},
+        "FINALIZED": {"type": "integer", "minimum": 0, "maximum": 1},
+        "ABORTED": {"type": "integer", "minimum": 0, "maximum": 1},
+        "PURGED": {"type": "integer", "minimum": 0, "maximum": 1}
+      }
+    },
+    "stateCountsTotal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["STAGED", "PREPARED", "FINALIZED", "ABORTED", "PURGED"],
+      "properties": {
+        "STAGED": {"type": "integer", "minimum": 0, "maximum": 2},
+        "PREPARED": {"type": "integer", "minimum": 0, "maximum": 2},
+        "FINALIZED": {"type": "integer", "minimum": 0, "maximum": 2},
+        "ABORTED": {"type": "integer", "minimum": 0, "maximum": 2},
+        "PURGED": {"type": "integer", "minimum": 0, "maximum": 2}
+      }
+    },
+    "singleCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state_counts",
+        "result_payload_count",
+        "visible_result_count",
+        "staged_outbox_count",
+        "staged_payload_count",
+        "pending_staged_count",
+        "ack_count",
+        "pending_ack_count"
+      ],
+      "properties": {
+        "state_counts": {"$ref": "#/$defs/stateCountsSingle"},
+        "result_payload_count": {"type": "integer", "minimum": 0, "maximum": 1},
+        "visible_result_count": {"type": "integer", "minimum": 0, "maximum": 1},
+        "staged_outbox_count": {"type": "integer", "minimum": 0, "maximum": 1},
+        "staged_payload_count": {"type": "integer", "minimum": 0, "maximum": 1},
+        "pending_staged_count": {"type": "integer", "minimum": 0, "maximum": 1},
+        "ack_count": {"type": "integer", "minimum": 0},
+        "pending_ack_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "totalCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state_counts",
+        "result_payload_count",
+        "visible_result_count",
+        "staged_outbox_count",
+        "staged_payload_count",
+        "pending_staged_count",
+        "ack_count",
+        "pending_ack_count"
+      ],
+      "properties": {
+        "state_counts": {"$ref": "#/$defs/stateCountsTotal"},
+        "result_payload_count": {"type": "integer", "minimum": 0, "maximum": 2},
+        "visible_result_count": {"type": "integer", "minimum": 0, "maximum": 2},
+        "staged_outbox_count": {"type": "integer", "minimum": 0, "maximum": 2},
+        "staged_payload_count": {"type": "integer", "minimum": 0, "maximum": 2},
+        "pending_staged_count": {"type": "integer", "minimum": 0, "maximum": 2},
+        "ack_count": {"type": "integer", "minimum": 0},
+        "pending_ack_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "run_id", "counts", "source_verification"],
+      "properties": {
+        "schema_version": {"const": "w2.ct15.run-inspection.v1"},
+        "run_id": {
+          "type": "string",
+          "pattern": "^ct15-[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$"
+        },
+        "counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["primary", "secondary", "total"],
+          "properties": {
+            "primary": {"$ref": "#/$defs/singleCounts"},
+            "secondary": {"$ref": "#/$defs/singleCounts"},
+            "total": {"$ref": "#/$defs/totalCounts"}
+          }
+        },
+        "source_verification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["primary", "secondary"],
+          "properties": {
+            "primary": {
+              "enum": ["matched", "absent", "erased_unverifiable"]
+            },
+            "secondary": {
+              "enum": ["matched", "absent", "erased_unverifiable"]
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,36 @@
+name: epick-w4-ct12
+services:
+  w4-question-core:
+    # W1 supplies an ECR repository@sha256 digest after building the tracked SHA.
+    image: ${W4_IMAGE_REF:?Set immutable W4 ECR image reference}
+    user: "10001:10001"
+    restart: "no"
+    read_only: true
+    init: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=16m"]
+    env_file:
+      - ${W4_RUNTIME_ENV_FILE:?Set W4-only root-owned env file}
+    environment:
+      W4_IMAGE_REF: ${W4_IMAGE_REF:?Set immutable W4 ECR image reference}
+      W1_W4_CONTEXT_BASE_URL: http://w1-w4-question-core-context:8081
+      W1_W4_CONTEXT_PRINCIPAL: w4
+      W4_CT12_PLAN_PATH: /run/w4-plan/plan.json
+      W4_AWS_SESSION_PATH: /run/w4-aws/session.json
+      W4_OUTBOX_PATH: /var/lib/w4/outbox.sqlite3
+      AWS_EC2_METADATA_DISABLED: "true"
+    volumes:
+      - w4-outbox:/var/lib/w4
+      - ${W4_CT12_PLAN_DIR:?Set reviewed synthetic plan directory}:/run/w4-plan:ro
+      - ${W4_AWS_SESSION_DIR:?Set rotated W4-only STS credential directory}:/run/w4-aws:ro
+    networks: [worker]
+    command: [relay]
+networks:
+  worker:
+    external: true
+    name: worker_default
+volumes:
+  w4-outbox:
+    name: epick-w4-ct12-outbox

@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:epick:w3-restriction:0.1-draft:consume-response",
+  "$defs": {
+    "IndexKey": {
+      "additionalProperties": false,
+      "properties": {
+        "source_version_id": {
+          "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+          "title": "Source Version Id",
+          "type": "string"
+        },
+        "extraction_revision_id": {
+          "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+          "title": "Extraction Revision Id",
+          "type": "string"
+        },
+        "representation": {
+          "enum": [
+            "text",
+            "html",
+            "markdown"
+          ],
+          "title": "Representation",
+          "type": "string"
+        },
+        "normalization_version": {
+          "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+          "title": "Normalization Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_version_id",
+        "extraction_revision_id",
+        "representation",
+        "normalization_version"
+      ],
+      "title": "IndexKey",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "w3-restriction/0.1-draft",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_id": {
+      "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+      "title": "Source Id",
+      "type": "string"
+    },
+    "restriction_revision": {
+      "maximum": 9223372036854775807,
+      "minimum": 0,
+      "title": "Restriction Revision",
+      "type": "integer"
+    },
+    "required_revision": {
+      "maximum": 9223372036854775807,
+      "minimum": 0,
+      "title": "Required Revision",
+      "type": "integer"
+    },
+    "generation": {
+      "maximum": 9223372036854775807,
+      "minimum": 0,
+      "title": "Generation",
+      "type": "integer"
+    },
+    "reason": {
+      "enum": [
+        "UNKNOWN_SOURCE",
+        "CONFLICT",
+        "EVENT_GAP",
+        "RESTRICTED",
+        "VERSION_UNAVAILABLE",
+        "INDEX_PENDING",
+        "INDEX_MISMATCH",
+        "INDEX_FAILED",
+        "BODY_EXPIRED",
+        "READY"
+      ],
+      "title": "Reason",
+      "type": "string"
+    },
+    "index_ack": {
+      "title": "Index Ack",
+      "type": "boolean"
+    },
+    "index_key": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/IndexKey"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "history_complete": {
+      "title": "History Complete",
+      "type": "boolean"
+    },
+    "receipt": {
+      "const": "COMMITTED",
+      "title": "Receipt",
+      "type": "string"
+    },
+    "event_id": {
+      "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+      "title": "Event Id",
+      "type": "string"
+    },
+    "outcome": {
+      "enum": [
+        "APPLIED",
+        "DUPLICATE",
+        "STALE",
+        "GAP",
+        "CONFLICT"
+      ],
+      "title": "Outcome",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "source_id",
+    "restriction_revision",
+    "required_revision",
+    "generation",
+    "reason",
+    "index_ack",
+    "index_key",
+    "history_complete",
+    "receipt",
+    "event_id",
+    "outcome"
+  ],
+  "title": "ConsumeResponse",
+  "type": "object"
+}

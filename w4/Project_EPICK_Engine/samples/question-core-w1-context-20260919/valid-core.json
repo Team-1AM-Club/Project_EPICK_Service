@@ -1,0 +1,20 @@
+{
+  "schema_version": "w4.private.question-core-decision/0.1-candidate",
+  "message_type": "w4.private.w1.question-core-decision",
+  "visibility_scope": "PRIVATE",
+  "producer": "w4",
+  "decision_scope": "QUESTION_MATCHING",
+  "decision_owner": "W4",
+  "company_id": null,
+  "message_id": "40000000-0000-4000-8000-000000000001",
+  "decision_id": "50000000-0000-4000-8000-000000000001",
+  "occurred_at": "2026-09-19T00:00:00Z",
+  "decision_version": 3,
+  "decision_code": "CORE_REQUIRED",
+  "reason_code": "QUESTION_EVIDENCE_REQUIRED",
+  "is_core": true,
+  "job_id": "10000000-0000-4000-8000-000000000001",
+  "question_version_id": "20000000-0000-4000-8000-000000000001",
+  "source_id": "30000000-0000-4000-8000-000000000001",
+  "analysis_input_version": "question-input:v4"
+}

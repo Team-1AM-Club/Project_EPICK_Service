@@ -1,0 +1,12 @@
+{
+  "repository": "Team-1AM-Club/Project_EPICK_Service",
+  "commit": "dc3a7b45e1297d5a5a66ee6a00cbec55f073f97d",
+  "path": "backend/app/runtime/w1_w2_ct15_harness.py",
+  "snapshot": "w1_w2_ct15_harness.py.txt",
+  "git_blob_sha": "bba6ac203be7cd60a5ac7c1eae56ef2251d595dc",
+  "sha256": "533c64ea6f1c0fd0d8dc00e6bd281cd3cf855755fcd769eece5193df42f636f9",
+  "status": "SOURCE_VERIFIED_FIXTURE_CONTRACT_BLOCKED_NOT_JOINT_CT15",
+  "finding": "Exported and stored collection command use fetch with null policy_revision; W2 rejects this combination. No local fix-up is applied.",
+  "reported_runbook_path": "backend/docs/runbooks/w2-commit-gate-e2e.md",
+  "reported_runbook_observation": "GitHub file fetch at this commit returned 404 on 2026-09-20"
+}

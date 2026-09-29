@@ -1,0 +1,21 @@
+{
+  "schema_version": "w4-stage-policy/0.3",
+  "scorer_version": "w4-source-context-meaning/0.3",
+  "benchmark_sha256": "4fd82a204c61dc2e32525645ede1e0d39c3591a62cd2178846dce877bf1efefd",
+  "protocol_sha256": "6198f5869836153defa58232f5ce3aa4c8aaced7588dd55d3965809cfc2abdcd",
+  "repetitions": 1,
+  "weights": {
+    "question": 50,
+    "matching": 50
+  },
+  "gates": {
+    "contract_valid_percent": 100,
+    "literal_quote_valid_percent": 100,
+    "context_preserved_percent": 100,
+    "unsafe_fact_admissions": 0,
+    "unsafe_fact_references": 0
+  },
+  "review": {
+    "status": "DRAFT"
+  }
+}

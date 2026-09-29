@@ -1,0 +1,726 @@
+{
+  "$defs": {
+    "AlternativeSourceReason": {
+      "enum": [
+        "UNSUPPORTED_FORMAT",
+        "NOT_FOUND",
+        "ACCESS_DENIED",
+        "SOURCE_POLICY_BLOCKED"
+      ],
+      "title": "AlternativeSourceReason",
+      "type": "string"
+    },
+    "CollectionCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "w2.collection.v1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "command_id": {
+          "format": "uuid",
+          "title": "Command Id",
+          "type": "string"
+        },
+        "job_id": {
+          "format": "uuid",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "authenticated_owner_ref": {
+          "format": "uuid",
+          "title": "Authenticated Owner Ref",
+          "type": "string"
+        },
+        "project_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Project Ref"
+        },
+        "company_id": {
+          "format": "uuid",
+          "title": "Company Id",
+          "type": "string"
+        },
+        "source_id": {
+          "format": "uuid",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "input_version": {
+          "minimum": 1,
+          "title": "Input Version",
+          "type": "integer"
+        },
+        "execution_fence": {
+          "minLength": 1,
+          "title": "Execution Fence",
+          "type": "string",
+          "pattern": "^[1-9][0-9]*$"
+        },
+        "purpose_ref": {
+          "format": "uuid",
+          "title": "Purpose Ref",
+          "type": "string"
+        },
+        "core_source_decision": {
+          "$ref": "#/$defs/CoreSourceDecision"
+        },
+        "resume_stage": {
+          "$ref": "#/$defs/CollectionStage"
+        },
+        "policy_revision": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Policy Revision"
+        },
+        "owner_deletion_epoch": {
+          "minimum": 0,
+          "title": "Owner Deletion Epoch",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "command_id",
+        "job_id",
+        "authenticated_owner_ref",
+        "project_ref",
+        "company_id",
+        "source_id",
+        "input_version",
+        "execution_fence",
+        "purpose_ref",
+        "core_source_decision",
+        "resume_stage",
+        "policy_revision",
+        "owner_deletion_epoch"
+      ],
+      "title": "CollectionCommand",
+      "type": "object"
+    },
+    "CollectionResult": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "w2.collection.v1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "command_id": {
+          "format": "uuid",
+          "title": "Command Id",
+          "type": "string"
+        },
+        "job_id": {
+          "format": "uuid",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "input_version": {
+          "minimum": 1,
+          "title": "Input Version",
+          "type": "integer"
+        },
+        "result_version": {
+          "minimum": 1,
+          "title": "Result Version",
+          "type": "integer"
+        },
+        "successful_source_refs": {
+          "items": {
+            "$ref": "#/$defs/SourceReference"
+          },
+          "maxItems": 1,
+          "title": "Successful Source Refs",
+          "type": "array"
+        },
+        "failures": {
+          "items": {
+            "$ref": "#/$defs/Failure"
+          },
+          "title": "Failures",
+          "type": "array"
+        },
+        "completion_kind": {
+          "$ref": "#/$defs/CompletionKind"
+        },
+        "resume_stage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CollectionStage"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "checkpoint_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Checkpoint Ref"
+        },
+        "retry_not_before": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Retry Not Before"
+        },
+        "message_ko": {
+          "minLength": 1,
+          "title": "Message Ko",
+          "type": "string"
+        },
+        "required_actions": {
+          "items": {
+            "$ref": "#/$defs/RequiredAction"
+          },
+          "title": "Required Actions",
+          "type": "array"
+        },
+        "source_id": {
+          "format": "uuid",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "policy_revision": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Policy Revision"
+        }
+      },
+      "required": [
+        "schema_version",
+        "command_id",
+        "job_id",
+        "input_version",
+        "result_version",
+        "successful_source_refs",
+        "failures",
+        "completion_kind",
+        "resume_stage",
+        "checkpoint_ref",
+        "retry_not_before",
+        "message_ko",
+        "required_actions",
+        "source_id",
+        "policy_revision"
+      ],
+      "title": "CollectionResult",
+      "type": "object"
+    },
+    "CollectionStage": {
+      "enum": [
+        "policy",
+        "fetch",
+        "parse",
+        "persist",
+        "deliver"
+      ],
+      "title": "CollectionStage",
+      "type": "string"
+    },
+    "CompanyCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "company_id": {
+          "format": "uuid",
+          "title": "Company Id",
+          "type": "string"
+        },
+        "legal_name": {
+          "minLength": 1,
+          "title": "Legal Name",
+          "type": "string"
+        },
+        "identity_evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Identity Evidence Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "company_id",
+        "legal_name",
+        "identity_evidence_refs"
+      ],
+      "title": "CompanyCandidate",
+      "type": "object"
+    },
+    "CompletionKind": {
+      "enum": [
+        "none",
+        "partial",
+        "complete"
+      ],
+      "title": "CompletionKind",
+      "type": "string"
+    },
+    "CoreFailureDecisionAction": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "const": "core_failure_decision",
+          "title": "Code",
+          "type": "string"
+        },
+        "label_ko": {
+          "minLength": 1,
+          "title": "Label Ko",
+          "type": "string"
+        },
+        "context": {
+          "$ref": "#/$defs/CoreFailureDecisionContext"
+        }
+      },
+      "required": [
+        "code",
+        "label_ko",
+        "context"
+      ],
+      "title": "CoreFailureDecisionAction",
+      "type": "object"
+    },
+    "CoreFailureDecisionContext": {
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {
+          "format": "uuid",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "core_decision_revision": {
+          "minimum": 1,
+          "title": "Core Decision Revision",
+          "type": "integer"
+        },
+        "choices": {
+          "maxItems": 3,
+          "minItems": 3,
+          "prefixItems": [
+            {
+              "const": "continue_limited",
+              "type": "string"
+            },
+            {
+              "const": "stop",
+              "type": "string"
+            },
+            {
+              "const": "retry",
+              "type": "string"
+            }
+          ],
+          "title": "Choices",
+          "type": "array"
+        }
+      },
+      "required": [
+        "source_id",
+        "core_decision_revision",
+        "choices"
+      ],
+      "title": "CoreFailureDecisionContext",
+      "type": "object"
+    },
+    "CoreSourceDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "is_core": {
+          "title": "Is Core",
+          "type": "boolean"
+        },
+        "decided_by": {
+          "minLength": 1,
+          "title": "Decided By",
+          "type": "string"
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "decision_revision": {
+          "minimum": 1,
+          "title": "Decision Revision",
+          "type": "integer"
+        },
+        "analysis_input_version": {
+          "minimum": 1,
+          "title": "Analysis Input Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "is_core",
+        "decided_by",
+        "rationale",
+        "decision_revision",
+        "analysis_input_version"
+      ],
+      "title": "CoreSourceDecision",
+      "type": "object"
+    },
+    "CorrectInputAction": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "const": "correct_input",
+          "title": "Code",
+          "type": "string"
+        },
+        "label_ko": {
+          "minLength": 1,
+          "title": "Label Ko",
+          "type": "string"
+        },
+        "context": {
+          "$ref": "#/$defs/CorrectInputContext"
+        }
+      },
+      "required": [
+        "code",
+        "label_ko",
+        "context"
+      ],
+      "title": "CorrectInputAction",
+      "type": "object"
+    },
+    "CorrectInputContext": {
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {
+          "format": "uuid",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "reason_code": {
+          "minLength": 1,
+          "title": "Reason Code",
+          "type": "string"
+        },
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/CompanyCandidate"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "identity_evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Identity Evidence Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "source_id",
+        "reason_code",
+        "candidates",
+        "identity_evidence_refs"
+      ],
+      "title": "CorrectInputContext",
+      "type": "object"
+    },
+    "Failure": {
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {
+          "format": "uuid",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "stage": {
+          "$ref": "#/$defs/CollectionStage"
+        },
+        "code": {
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "missing_sections": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Missing Sections",
+          "type": "array"
+        },
+        "impact": {
+          "minLength": 1,
+          "title": "Impact",
+          "type": "string"
+        },
+        "core_decision_revision": {
+          "minimum": 1,
+          "title": "Core Decision Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "source_id",
+        "stage",
+        "code",
+        "missing_sections",
+        "impact",
+        "core_decision_revision"
+      ],
+      "title": "Failure",
+      "type": "object"
+    },
+    "FindAlternativeSourceAction": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "const": "find_alternative_source",
+          "title": "Code",
+          "type": "string"
+        },
+        "label_ko": {
+          "minLength": 1,
+          "title": "Label Ko",
+          "type": "string"
+        },
+        "context": {
+          "$ref": "#/$defs/FindAlternativeSourceContext"
+        }
+      },
+      "required": [
+        "code",
+        "label_ko",
+        "context"
+      ],
+      "title": "FindAlternativeSourceAction",
+      "type": "object"
+    },
+    "FindAlternativeSourceContext": {
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {
+          "format": "uuid",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "reason_code": {
+          "$ref": "#/$defs/AlternativeSourceReason"
+        }
+      },
+      "required": [
+        "source_id",
+        "reason_code"
+      ],
+      "title": "FindAlternativeSourceContext",
+      "type": "object"
+    },
+    "RequiredAction": {
+      "discriminator": {
+        "mapping": {
+          "core_failure_decision": "#/$defs/CoreFailureDecisionAction",
+          "correct_input": "#/$defs/CorrectInputAction",
+          "find_alternative_source": "#/$defs/FindAlternativeSourceAction",
+          "user_retry": "#/$defs/UserRetryAction"
+        },
+        "propertyName": "code"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/CoreFailureDecisionAction"
+        },
+        {
+          "$ref": "#/$defs/UserRetryAction"
+        },
+        {
+          "$ref": "#/$defs/CorrectInputAction"
+        },
+        {
+          "$ref": "#/$defs/FindAlternativeSourceAction"
+        }
+      ]
+    },
+    "ResultDigest": {
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "SourceReference": {
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {
+          "format": "uuid",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_version_id": {
+          "format": "uuid",
+          "title": "Source Version Id",
+          "type": "string"
+        },
+        "extraction_revision_id": {
+          "format": "uuid",
+          "title": "Extraction Revision Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "source_version_id",
+        "extraction_revision_id"
+      ],
+      "title": "SourceReference",
+      "type": "object"
+    },
+    "UserRetryAction": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "const": "user_retry",
+          "title": "Code",
+          "type": "string"
+        },
+        "label_ko": {
+          "minLength": 1,
+          "title": "Label Ko",
+          "type": "string"
+        },
+        "context": {
+          "$ref": "#/$defs/UserRetryContext"
+        }
+      },
+      "required": [
+        "code",
+        "label_ko",
+        "context"
+      ],
+      "title": "UserRetryAction",
+      "type": "object"
+    },
+    "UserRetryContext": {
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {
+          "format": "uuid",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "resume_stage": {
+          "$ref": "#/$defs/CollectionStage"
+        },
+        "retry_not_before": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Retry Not Before"
+        }
+      },
+      "required": [
+        "source_id",
+        "resume_stage",
+        "retry_not_before"
+      ],
+      "title": "UserRetryContext",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "W2 UNADOPTED PROPOSAL. PRIVATE producer w2. No queue/runtime connection or W1 normalized ACK mapping.",
+  "properties": {
+    "schema_version": {
+      "const": "w2.private.staged-result.proposal.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "message_id": {
+      "format": "uuid",
+      "title": "Message Id",
+      "type": "string"
+    },
+    "message_type": {
+      "const": "w2.private.staged-result.proposal.v1",
+      "title": "Message Type",
+      "type": "string"
+    },
+    "producer": {
+      "const": "w2",
+      "title": "Producer",
+      "type": "string"
+    },
+    "occurred_at": {
+      "format": "date-time",
+      "title": "Occurred At",
+      "type": "string"
+    },
+    "visibility_scope": {
+      "const": "PRIVATE",
+      "title": "Visibility Scope",
+      "type": "string"
+    },
+    "command": {
+      "$ref": "#/$defs/CollectionCommand"
+    },
+    "result": {
+      "$ref": "#/$defs/CollectionResult"
+    },
+    "result_digest": {
+      "$ref": "#/$defs/ResultDigest"
+    }
+  },
+  "required": [
+    "schema_version",
+    "message_id",
+    "message_type",
+    "producer",
+    "occurred_at",
+    "visibility_scope",
+    "command",
+    "result",
+    "result_digest"
+  ],
+  "title": "StagedResultProposal",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w2/proposals/v1/source-collection.staged-result.schema.json",
+  "$comment": "Models additionally check immutable cross-field binding, newer PURGE epoch, and staged digest. JSON Schema alone cannot verify cross-field equality or recompute SHA-256."
+}

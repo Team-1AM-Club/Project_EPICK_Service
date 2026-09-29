@@ -1,0 +1,414 @@
+{
+  "schema_version": "1.0",
+  "synthetic": true,
+  "description": "Synthetic official API fixtures. Raw JSON is stored as strings so lexical object-key and array order remain observable.",
+  "cases": [
+    {
+      "case_id": "official_api_direct_json_ordered",
+      "description": "Direct synthetic official JSON response with nested objects and ordered release records.",
+      "transport": {
+        "request_url": "https://synthetic-meridian.example.test/api/public/releases",
+        "status": 200,
+        "content_type": "application/json; charset=utf-8",
+        "headers": {
+          "content-type": "application/json; charset=utf-8"
+        },
+        "raw_body": "{\"company\":{\"name\":\"Meridian Synthetic Industries\",\"summary\":\"Deterministic official API fixture.\"},\"published_at\":\"2031-05-14\",\"releases\":[{\"title\":\"Synthetic Q2 update\",\"published_at\":\"2031-05-14\"},{\"title\":\"Synthetic Q1 disclosure\",\"published_at\":\"2031-04-30\"}]}"
+      },
+      "expected": {
+        "source_type": "official_api",
+        "representation": "official_json",
+        "acquisition": "AVAILABLE",
+        "extraction": "complete",
+        "sections": [
+          {
+            "section_id": "company",
+            "heading": "Meridian Synthetic Industries",
+            "evidence_refs": [
+              "direct_company_name",
+              "direct_company_summary"
+            ]
+          },
+          {
+            "section_id": "releases",
+            "heading": "Releases",
+            "evidence_refs": [
+              "direct_release_0_title",
+              "direct_release_0_date",
+              "direct_release_1_title",
+              "direct_release_1_date"
+            ]
+          }
+        ],
+        "evidence": [
+          {
+            "ref": "direct_company_name",
+            "text_excerpt": "Meridian Synthetic Industries",
+            "locator": {
+              "kind": "json_pointer",
+              "value": "/company/name"
+            },
+            "chunk_order": 0
+          },
+          {
+            "ref": "direct_company_summary",
+            "text_excerpt": "Deterministic official API fixture.",
+            "locator": {
+              "kind": "json_pointer",
+              "value": "/company/summary"
+            },
+            "chunk_order": 1
+          },
+          {
+            "ref": "direct_api_published_at",
+            "text_excerpt": "2031-05-14",
+            "locator": {
+              "kind": "json_pointer",
+              "value": "/published_at"
+            },
+            "chunk_order": 2
+          },
+          {
+            "ref": "direct_release_0_title",
+            "text_excerpt": "Synthetic Q2 update",
+            "locator": {
+              "kind": "json_pointer",
+              "value": "/releases/0/title"
+            },
+            "chunk_order": 3
+          },
+          {
+            "ref": "direct_release_0_date",
+            "text_excerpt": "2031-05-14",
+            "locator": {
+              "kind": "json_pointer",
+              "value": "/releases/0/published_at"
+            },
+            "chunk_order": 4
+          },
+          {
+            "ref": "direct_release_1_title",
+            "text_excerpt": "Synthetic Q1 disclosure",
+            "locator": {
+              "kind": "json_pointer",
+              "value": "/releases/1/title"
+            },
+            "chunk_order": 5
+          },
+          {
+            "ref": "direct_release_1_date",
+            "text_excerpt": "2031-04-30",
+            "locator": {
+              "kind": "json_pointer",
+              "value": "/releases/1/published_at"
+            },
+            "chunk_order": 6
+          }
+        ],
+        "published_at": {
+          "status": "known",
+          "value": "2031-05-14",
+          "precision": "date",
+          "raw_text": "2031-05-14"
+        },
+        "limitations": []
+      }
+    },
+    {
+      "case_id": "official_api_embedded_json_html",
+      "description": "Static synthetic HTML response that embeds an official JSON payload without requiring rendering.",
+      "transport": {
+        "request_url": "https://synthetic-meridian.example.test/investors/releases",
+        "status": 200,
+        "content_type": "text/html; charset=utf-8",
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "raw_body": "<!doctype html>\n<html lang=\"en\" data-synthetic=\"true\">\n  <head><title>Embedded synthetic releases</title></head>\n  <body>\n    <main><h1>Embedded synthetic releases</h1></main>\n    <script id=\"official-release-data\" type=\"application/json\">{\"company\":{\"name\":\"Meridian Synthetic Industries\"},\"releases\":[{\"title\":\"Embedded synthetic release\",\"published_at\":\"2031-06-01\"},{\"title\":\"Embedded synthetic archive\",\"published_at\":\"2031-05-01\"}]}</script>\n  </body>\n</html>",
+        "embedded_json_raw_body": "{\"company\":{\"name\":\"Meridian Synthetic Industries\"},\"releases\":[{\"title\":\"Embedded synthetic release\",\"published_at\":\"2031-06-01\"},{\"title\":\"Embedded synthetic archive\",\"published_at\":\"2031-05-01\"}]}",
+        "embedded_json_script_id": "official-release-data"
+      },
+      "expected": {
+        "source_type": "official_api",
+        "representation": "static_html",
+        "acquisition": "AVAILABLE",
+        "extraction": "complete",
+        "sections": [
+          {
+            "section_id": "embedded_releases",
+            "heading": "Embedded synthetic releases",
+            "evidence_refs": [
+              "embedded_company_name",
+              "embedded_release_0_title",
+              "embedded_release_0_date",
+              "embedded_release_1_title",
+              "embedded_release_1_date"
+            ]
+          }
+        ],
+        "evidence": [
+          {
+            "ref": "embedded_company_name",
+            "text_excerpt": "Meridian Synthetic Industries",
+            "locator": {
+              "kind": "json_pointer",
+              "value": "/company/name"
+            },
+            "chunk_order": 0
+          },
+          {
+            "ref": "embedded_release_0_title",
+            "text_excerpt": "Embedded synthetic release",
+            "locator": {
+              "kind": "json_pointer",
+              "value": "/releases/0/title"
+            },
+            "chunk_order": 1
+          },
+          {
+            "ref": "embedded_release_0_date",
+            "text_excerpt": "2031-06-01",
+            "locator": {
+              "kind": "json_pointer",
+              "value": "/releases/0/published_at"
+            },
+            "chunk_order": 2
+          },
+          {
+            "ref": "embedded_release_1_title",
+            "text_excerpt": "Embedded synthetic archive",
+            "locator": {
+              "kind": "json_pointer",
+              "value": "/releases/1/title"
+            },
+            "chunk_order": 3
+          },
+          {
+            "ref": "embedded_release_1_date",
+            "text_excerpt": "2031-05-01",
+            "locator": {
+              "kind": "json_pointer",
+              "value": "/releases/1/published_at"
+            },
+            "chunk_order": 4
+          }
+        ],
+        "published_at": {
+          "status": "known",
+          "value": "2031-06-01",
+          "precision": "date",
+          "raw_text": "2031-06-01"
+        },
+        "limitations": [
+          "The source representation remains static_html even though extraction uses embedded JSON."
+        ]
+      }
+    },
+    {
+      "case_id": "official_api_200_partial",
+      "description": "Successful HTTP response with an intentionally incomplete public payload.",
+      "transport": {
+        "request_url": "https://synthetic-meridian.example.test/api/public/releases",
+        "status": 200,
+        "content_type": "application/json; charset=utf-8",
+        "headers": {
+          "content-type": "application/json; charset=utf-8"
+        },
+        "raw_body": "{\"company\":{\"name\":\"Meridian Synthetic Industries\"},\"releases\":[{\"title\":\"Partial synthetic release\"}],\"next_cursor\":\"synthetic-next\",\"warnings\":[\"summary omitted\"]}"
+      },
+      "expected": {
+        "source_type": "official_api",
+        "representation": "official_json",
+        "acquisition": "PARTIALLY_EXTRACTED",
+        "extraction": "partial",
+        "sections": [
+          {
+            "section_id": "partial_releases",
+            "heading": "Partial releases",
+            "evidence_refs": [
+              "partial_company_name",
+              "partial_release_0_title"
+            ]
+          }
+        ],
+        "evidence": [
+          {
+            "ref": "partial_company_name",
+            "text_excerpt": "Meridian Synthetic Industries",
+            "locator": {
+              "kind": "json_pointer",
+              "value": "/company/name"
+            },
+            "chunk_order": 0
+          },
+          {
+            "ref": "partial_release_0_title",
+            "text_excerpt": "Partial synthetic release",
+            "locator": {
+              "kind": "json_pointer",
+              "value": "/releases/0/title"
+            },
+            "chunk_order": 1
+          }
+        ],
+        "published_at": {
+          "status": "unknown",
+          "value": null
+        },
+        "limitations": [
+          "The response advertises a next cursor and omits release summaries and dates."
+        ]
+      }
+    },
+    {
+      "case_id": "official_api_403_access_denied",
+      "description": "Synthetic public endpoint responds with access denied and no body is retained.",
+      "transport": {
+        "request_url": "https://synthetic-meridian.example.test/api/public/restricted-summary",
+        "status": 403,
+        "content_type": "application/json; charset=utf-8",
+        "headers": {
+          "content-type": "application/json; charset=utf-8"
+        },
+        "raw_body": null
+      },
+      "expected": {
+        "source_type": "official_api",
+        "representation": null,
+        "acquisition": "ACCESS_DENIED",
+        "extraction": "not_attempted",
+        "envelope": null,
+        "sections": [],
+        "evidence": [],
+        "published_at": {
+          "status": "unknown",
+          "value": null
+        },
+        "limitations": [
+          "The access-denied response has no retained body."
+        ]
+      }
+    },
+    {
+      "case_id": "official_api_404_not_found",
+      "description": "Synthetic public endpoint responds with not found and no body is retained.",
+      "transport": {
+        "request_url": "https://synthetic-meridian.example.test/api/public/releases/missing",
+        "status": 404,
+        "content_type": "application/json; charset=utf-8",
+        "headers": {
+          "content-type": "application/json; charset=utf-8"
+        },
+        "raw_body": null
+      },
+      "expected": {
+        "source_type": "official_api",
+        "representation": null,
+        "acquisition": "NOT_FOUND",
+        "extraction": "not_attempted",
+        "envelope": null,
+        "sections": [],
+        "evidence": [],
+        "published_at": {
+          "status": "unknown",
+          "value": null
+        },
+        "limitations": [
+          "The not-found response has no retained body."
+        ]
+      }
+    },
+    {
+      "case_id": "official_api_429_rate_limited",
+      "description": "Synthetic rate-limit response preserves Retry-After and forbids automatic retries.",
+      "transport": {
+        "request_url": "https://synthetic-meridian.example.test/api/public/releases",
+        "status": 429,
+        "content_type": "application/json; charset=utf-8",
+        "headers": {
+          "content-type": "application/json; charset=utf-8",
+          "retry-after": "120"
+        },
+        "raw_body": null
+      },
+      "expected": {
+        "source_type": "official_api",
+        "representation": null,
+        "acquisition": "RATE_LIMITED",
+        "extraction": "not_attempted",
+        "retry_after_seconds": 120,
+        "automatic_retries": 0,
+        "envelope": null,
+        "sections": [],
+        "evidence": [],
+        "published_at": {
+          "status": "unknown",
+          "value": null
+        },
+        "limitations": [
+          "No automatic retry is permitted for this response."
+        ]
+      }
+    },
+    {
+      "case_id": "official_api_malformed_json",
+      "description": "Synthetic HTTP 200 response declares JSON but has malformed content.",
+      "transport": {
+        "request_url": "https://synthetic-meridian.example.test/api/public/releases-malformed",
+        "status": 200,
+        "content_type": "application/json; charset=utf-8",
+        "headers": {
+          "content-type": "application/json; charset=utf-8"
+        },
+        "raw_body": "{\"company\":{\"name\":\"Meridian Synthetic Industries\"},\"releases\":[}"
+      },
+      "expected": {
+        "source_type": "official_api",
+        "representation": "official_json",
+        "acquisition": "EXTRACTION_FAILED",
+        "extraction": "failed",
+        "envelope": null,
+        "sections": [],
+        "evidence": [],
+        "published_at": {
+          "status": "unknown",
+          "value": null
+        },
+        "limitations": [
+          "The declared JSON payload is intentionally malformed."
+        ]
+      }
+    },
+    {
+      "case_id": "official_api_private_endpoint_excluded",
+      "description": "Synthetic private endpoint is excluded before a request is made; no private payload or credential is included.",
+      "transport": {
+        "request_url": "https://synthetic-meridian.example.test/api/private/board-materials",
+        "endpoint_visibility": "private",
+        "request_performed": false,
+        "raw_body": null
+      },
+      "expected": {
+        "source_type": "official_api",
+        "representation": null,
+        "acquisition": null,
+        "extraction": "not_attempted",
+        "failure": {
+          "stage": "policy",
+          "code": "SOURCE_POLICY_BLOCKED",
+          "reason_code": "PRIVATE_ENDPOINT_NOT_PUBLIC"
+        },
+        "envelope": null,
+        "sections": [],
+        "evidence": [],
+        "published_at": {
+          "status": "unknown",
+          "value": null
+        },
+        "limitations": [
+          "Private endpoints are excluded before collection."
+        ]
+      }
+    }
+  ]
+}

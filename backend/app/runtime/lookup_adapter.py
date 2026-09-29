@@ -15,8 +15,10 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
 from app.db.session import set_local_owner_context
+from app.models.application_workspace import Company
 from app.models.identity import User
 from app.models.jobs import Job, JobCommand
+from app.models.sources import Source
 from app.runtime.core_decision_binding import (
     CoreDecisionBindingError,
     validate_core_pin_payload_binding,
@@ -75,6 +77,30 @@ class LookupResponse(BaseModel):
     ]
     reason_code: str | None
     command: dict[str, Any] | None
+
+
+class SourceOnboardingMetadata(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source_id: UUID
+    company_id: UUID
+    canonical_url: str
+    source_type: str
+    title: str | None
+    company_legal_name: str
+    company_official_domain: str | None
+    company_identification_status: str
+
+
+class SourceOnboardingLookupResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal["w1.private.source-onboarding-lookup.v1"] = (
+        "w1.private.source-onboarding-lookup.v1"
+    )
+    command_id: UUID
+    status: Literal["AVAILABLE", "UNAVAILABLE"]
+    source: SourceOnboardingMetadata | None
 
 
 class _LookupAuthorizationError(Exception):
@@ -170,6 +196,20 @@ def create_lookup_app(
             return _private_error(code="INTERNAL_RETRYABLE", retryable=True, status_code=503)
 
     @app.post(
+        "/internal/v1/w2-private/source-onboarding-lookup",
+        response_model=SourceOnboardingLookupResponse,
+        dependencies=[Depends(require_w2_service_principal)],
+    )
+    def lookup_source_onboarding(
+        body: LookupRequest,
+    ) -> SourceOnboardingLookupResponse | JSONResponse:
+        try:
+            with session_factory.begin() as session:
+                return _lookup_source_onboarding(session=session, request=body)
+        except SQLAlchemyError:
+            return _private_error(code="INTERNAL_RETRYABLE", retryable=True, status_code=503)
+
+    @app.post(
         "/internal/v1/w2-private/authority",
         response_model=PrivateWriteAuthorityResponse,
         dependencies=[Depends(require_w2_service_principal)],
@@ -261,6 +301,67 @@ def create_lookup_app(
             return _private_error(code="INTERNAL_RETRYABLE", retryable=True, status_code=503)
 
     return app
+
+
+def _lookup_source_onboarding(
+    *, session: Session, request: LookupRequest
+) -> SourceOnboardingLookupResponse:
+    # Reuse the canonical command/owner/fence/epoch/lease check. This response is
+    # identity metadata only: W2 must separately approve site and storage policy.
+    current = _lookup_command(session=session, request=request)
+    unavailable = SourceOnboardingLookupResponse(
+        command_id=request.command_id, status="UNAVAILABLE", source=None
+    )
+    if current.status != "AVAILABLE" or current.command is None:
+        return unavailable
+    try:
+        source_id = UUID(str(current.command["source_id"]))
+        company_id = UUID(str(current.command["company_id"]))
+    except (KeyError, TypeError, ValueError):
+        return unavailable
+    # The lookup login has narrowly scoped column grants. Never load whole ORM
+    # objects or expose owner-private source contents through this endpoint.
+    source = (
+        session.execute(
+            select(
+                Source.id,
+                Source.company_id,
+                Source.canonical_url,
+                Source.source_type,
+                Source.title,
+            ).where(Source.id == source_id, Source.company_id == company_id)
+        )
+        .mappings()
+        .one_or_none()
+    )
+    company = (
+        session.execute(
+            select(
+                Company.id,
+                Company.legal_name,
+                Company.official_domain,
+                Company.identification_status,
+            ).where(Company.id == company_id)
+        )
+        .mappings()
+        .one_or_none()
+    )
+    if source is None or company is None:
+        return unavailable
+    return SourceOnboardingLookupResponse(
+        command_id=request.command_id,
+        status="AVAILABLE",
+        source=SourceOnboardingMetadata(
+            source_id=source["id"],
+            company_id=source["company_id"],
+            canonical_url=source["canonical_url"],
+            source_type=source["source_type"],
+            title=source["title"],
+            company_legal_name=company["legal_name"],
+            company_official_domain=company["official_domain"],
+            company_identification_status=company["identification_status"],
+        ),
+    )
 
 
 def _lookup_command(*, session: Session, request: LookupRequest) -> LookupResponse:

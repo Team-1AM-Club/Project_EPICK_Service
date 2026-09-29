@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:epick:test-only:w4-question-core",
+  "$comment": "LOCAL TEST ONLY. W1 004 original schema not received; never deploy this schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "message_type",
+    "visibility_scope",
+    "producer",
+    "decision_scope",
+    "decision_owner",
+    "company_id",
+    "message_id",
+    "decision_id",
+    "job_id",
+    "question_version_id",
+    "source_id",
+    "occurred_at",
+    "analysis_input_version",
+    "decision_version",
+    "is_core",
+    "decision_code",
+    "reason_code"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "test-only.w4.question-core/0"
+    },
+    "message_type": {
+      "const": "test-only.w4.w1.question-core"
+    },
+    "visibility_scope": {
+      "const": "PRIVATE"
+    },
+    "producer": {
+      "const": "w4"
+    },
+    "decision_scope": {
+      "const": "QUESTION_MATCHING"
+    },
+    "decision_owner": {
+      "const": "W4"
+    },
+    "company_id": {
+      "const": null
+    },
+    "message_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "decision_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "job_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "question_version_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "source_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "analysis_input_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "\\S"
+    },
+    "decision_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "is_core": {
+      "type": "boolean"
+    },
+    "decision_code": {
+      "enum": [
+        "CORE_REQUIRED",
+        "NON_CORE_OPTIONAL"
+      ]
+    },
+    "reason_code": {
+      "enum": [
+        "QUESTION_EVIDENCE_REQUIRED",
+        "SUPPLEMENTARY_CONTEXT"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "decision_code": {
+            "const": "CORE_REQUIRED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "is_core": {
+            "const": true
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "is_core": {
+            "const": false
+          }
+        }
+      }
+    }
+  ]
+}

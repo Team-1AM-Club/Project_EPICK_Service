@@ -1,0 +1,27 @@
+{
+  "contract_status": "W1_STATIC_COMMIT_GATE_CONTRACT_PINNED",
+  "artifact_authority": "W1",
+  "schema_version": "w1.private.w2.commit-gate.v1",
+  "derivation": "The checksums pin only W1-owned command fixtures. They do not adopt or validate a W2 ACK wire contract.",
+  "artifacts": {
+    "private-w2-commit-gate.schema.json": "c2b2b5976225713c4c2fcd6ae5ab57feea1b0c3a068d84e11ce1bb034160dd5d"
+  },
+  "fixtures": {
+    "private-w2-commit-gate-prepare.json": "95279e2374363ec5fc9c7b7b64ed0af5f80d5a48645905704997da6c75b7cd00",
+    "private-w2-commit-gate-finalize.json": "ac660edb466eca1535abc6e0c116084299e7aa24abde4f3d0a812b553e208abc",
+    "private-w2-commit-gate-abort.json": "24304668c43a4c4a0d80d0dcc2f949fc3a8af41e433d83f6855d7a9b17bb7322",
+    "private-w2-commit-gate-purge.json": "76bf52ad430f157827b756dd1d8cbf532696543afd44377b246ca2b1db52bbd2",
+    "invalid-private-w2-commit-gate-owner.json": "8163edde8802e0171fea3cdd9ee837091aa0b2b61feebb27e397fa794a3aa9ec",
+    "invalid-private-w2-commit-gate-command.json": "8ff0a16acb29a3624cc04e9335d6ecde1f1b7aa4011f1d2b0f23a288ca7eac9c",
+    "invalid-private-w2-commit-gate-fence.json": "86e112ccdfa415be08a0a864bf63055d24a456d527c39c91d6f1c0ea51fa8536",
+    "invalid-private-w2-commit-gate-epoch.json": "9b9c904e6e6d963ef036cf3cda8ca22d52b6f1ac883edef26f964e06bc974a26",
+    "invalid-private-w2-commit-gate-digest.json": "f8835dd1e18a850bfcd3a5665f0e749924bc35660296de9da7b160bef9eb5448",
+    "invalid-private-w2-commit-gate-revision.json": "b9606deb065593ea8696e5b5e693d63e859336d55025f4485a7bdfacbdf6489e"
+  },
+  "pending_w2_canonical_ack": {
+    "status": "W2_CANONICAL_ACK_NOT_YET_SUPPLIED",
+    "artifact_authority": "W2",
+    "required_artifact": "source-collection.commit-gate-ack.schema.json and matching fixtures",
+    "completion_boundary": "The W1 checksum pin is not W2 ACK adoption and cannot make W1-R2-03 RESOLVED."
+  }
+}

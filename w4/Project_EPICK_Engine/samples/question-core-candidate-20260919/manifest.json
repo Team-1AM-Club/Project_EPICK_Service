@@ -1,0 +1,19 @@
+{
+  "status": "W1_CANDIDATE_RECEIVED_NOT_ADOPTED",
+  "schema_sha256": "1eb0506d9b13e22198ea11fb5fccd628096de2903b0fe5b1da3d383928d8407a",
+  "candidate_commit_sha": null,
+  "external_send_allowed": false,
+  "canonical_digest_status": "W4_PROPOSAL_EXISTING_W1_HELPER_MATCHED_NOT_004_CONSUMER_APPROVAL",
+  "policy_production_approved": false,
+  "max_body_bytes_status": "W4_LOCAL_LIMIT_16384_NOT_A_W1_SCHEMA_CONSTRAINT",
+  "files": {
+    "core-required.json": "3c62b345accd9d2a28cfe5a567846f5699b0ef120f663f240fc7b58787ec765d",
+    "digest-vectors.json": "edc9fd2fcd12d256bd3acbe7d491cf0ede1cadcdcd6947eaac12297915613e59",
+    "negative-events.json": "7b980de7fb74198dc8857fc2a74e757fcbff3f8a464028d6b7c00c826d6c5f7d",
+    "non-core-optional.json": "c325b4c1b166a5722887482ab651cd371f8e4cb59a209741ac328235f83b6cbe",
+    "policy-boundary.json": "61a520522a4bfccf85817466b553be904f4840b194d8fa53974cd574bdaafaa5",
+    "source-provenance.json": "ca63ea5cb940f2e55020547c3b2d4b2e10b5e3fa489cd6892bae8238aa59de47",
+    "upstream/w4-adoption.md": "6b4bfe3b0796c376b9b5f2831e66aaf526c3f27f94e80f5112f2df0d559b537f",
+    "upstream/w4-question-core-decision.event.schema.json": "1eb0506d9b13e22198ea11fb5fccd628096de2903b0fe5b1da3d383928d8407a"
+  }
+}

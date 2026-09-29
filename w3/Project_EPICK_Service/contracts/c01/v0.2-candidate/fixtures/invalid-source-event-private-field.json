@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "event_id": "20000000-0000-4000-8000-000000000006",
+  "event_type": "source.restriction.changed",
+  "producer": "w2",
+  "occurred_at": "2026-09-15T00:25:00Z",
+  "aggregate_type": "source",
+  "aggregate_id": "10000000-0000-4000-8000-000000000005",
+  "revision": 6,
+  "payload": {
+    "schema_version": "w2.source.v1",
+    "job_id": "10000000-0000-4000-8000-000000000002",
+    "restriction_id": "10000000-0000-4000-8000-000000000015",
+    "source_id": "10000000-0000-4000-8000-000000000005",
+    "source_version_id": "10000000-0000-4000-8000-000000000007",
+    "restriction_revision": 1,
+    "restriction_status": "active",
+    "accuracy_status": "error_confirmed",
+    "reason_code": "SOURCE_POLICY_BLOCKED",
+    "changed_at": "2026-09-15T00:25:00Z",
+    "replacement_ref": null
+  }
+}

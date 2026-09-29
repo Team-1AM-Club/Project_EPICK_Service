@@ -1,0 +1,407 @@
+{
+  "schema_version": "w4-detailed-output/0.2",
+  "request_id": "synthetic-service-review-v1",
+  "project_id": "project-demo-sk-hynix",
+  "data_kind": "SYNTHETIC",
+  "processing_status": "COMPLETED_WITH_LIMITATIONS",
+  "question_scope": {
+    "scope_id": "skhynix-2026-march-R260521-IT",
+    "question_id": "expertise",
+    "user_theme": null,
+    "catalog_sha256": "84f84710aa12628aa7a52ad31ae5aba9a99753768be57db5317607ed712146fb",
+    "status": "DRAFT_FOR_LOCAL_REVIEW",
+    "official_text": null,
+    "is_official_rubric": false,
+    "form_constraints": {
+      "max_characters": null,
+      "required": null,
+      "max_hashtags": null
+    },
+    "enforced_form_constraints": []
+  },
+  "candidates": [
+    {
+      "episode_id": "v4-raw-study",
+      "episode_version": 1,
+      "title": "가상 원문 v4-raw-study",
+      "status": "DIRECT_MATCH",
+      "content_checks": [
+        {
+          "check_id": "expertise.specific_area",
+          "description": "어떤 직무 지식·기술을 익혔는지 구체적으로 드러나는가",
+          "status": "SUPPORTED",
+          "model_status": "SUPPORTED",
+          "validation_issue": null,
+          "evidence": [
+            {
+              "evidence_id": "extract:v4-raw-study:v1:u2",
+              "episode_id": "v4-raw-study",
+              "episode_version": 1,
+              "start": 25,
+              "end": 71,
+              "exact_quote": "저는 6주 동안 매주 JSON Schema 안내서를 읽고 검증 예제를 실습했습니다.",
+              "kinds": [
+                "ACTION",
+                "PERIOD"
+              ],
+              "subject": "SELF",
+              "assertion": "AFFIRMED",
+              "issue": null
+            }
+          ],
+          "follow_up_question": null
+        },
+        {
+          "check_id": "expertise.sustained_learning",
+          "description": "학습을 지속하거나 반복한 과정이 드러나는가",
+          "status": "SUPPORTED",
+          "model_status": "SUPPORTED",
+          "validation_issue": null,
+          "evidence": [
+            {
+              "evidence_id": "extract:v4-raw-study:v1:u2",
+              "episode_id": "v4-raw-study",
+              "episode_version": 1,
+              "start": 25,
+              "end": 71,
+              "exact_quote": "저는 6주 동안 매주 JSON Schema 안내서를 읽고 검증 예제를 실습했습니다.",
+              "kinds": [
+                "ACTION",
+                "PERIOD"
+              ],
+              "subject": "SELF",
+              "assertion": "AFFIRMED",
+              "issue": null
+            }
+          ],
+          "follow_up_question": null
+        },
+        {
+          "check_id": "expertise.practical_use",
+          "description": "배운 내용을 실제 작업에 사용한 행동이 있는가",
+          "status": "SUPPORTED",
+          "model_status": "SUPPORTED",
+          "validation_issue": null,
+          "evidence": [
+            {
+              "evidence_id": "extract:v4-raw-study:v1:u2",
+              "episode_id": "v4-raw-study",
+              "episode_version": 1,
+              "start": 25,
+              "end": 71,
+              "exact_quote": "저는 6주 동안 매주 JSON Schema 안내서를 읽고 검증 예제를 실습했습니다.",
+              "kinds": [
+                "ACTION",
+                "PERIOD"
+              ],
+              "subject": "SELF",
+              "assertion": "AFFIRMED",
+              "issue": null
+            },
+            {
+              "evidence_id": "extract:v4-raw-study:v1:u3",
+              "episode_id": "v4-raw-study",
+              "episode_version": 1,
+              "start": 72,
+              "end": 104,
+              "exact_quote": "저는 학습한 검증 규칙을 파일 업로드 기능에 적용했습니다.",
+              "kinds": [
+                "ACTION"
+              ],
+              "subject": "SELF",
+              "assertion": "AFFIRMED",
+              "issue": null
+            }
+          ],
+          "follow_up_question": null
+        }
+      ],
+      "reasons": [
+        "어떤 직무 지식·기술을 익혔는지 구체적으로 드러나는가",
+        "학습을 지속하거나 반복한 과정이 드러나는가",
+        "배운 내용을 실제 작업에 사용한 행동이 있는가"
+      ],
+      "confirmation_items": [],
+      "ranking_evidence_kind_count": 2,
+      "rank": 1,
+      "tied_on_quality_keys": false,
+      "company_support": [],
+      "used_company_refs": {
+        "claim_ids": [],
+        "requirement_ids": [],
+        "source_version_ids": [],
+        "evidence_ids": []
+      }
+    },
+    {
+      "episode_id": "v4-raw-challenge",
+      "episode_version": 1,
+      "title": "가상 원문 v4-raw-challenge",
+      "status": "NEEDS_CONFIRMATION",
+      "content_checks": [
+        {
+          "check_id": "expertise.specific_area",
+          "description": "어떤 직무 지식·기술을 익혔는지 구체적으로 드러나는가",
+          "status": "NOT_SHOWN",
+          "model_status": "NOT_SHOWN",
+          "validation_issue": null,
+          "evidence": [],
+          "follow_up_question": "어떤 지식이나 기술을 어떤 방법으로 배웠나요?"
+        },
+        {
+          "check_id": "expertise.sustained_learning",
+          "description": "학습을 지속하거나 반복한 과정이 드러나는가",
+          "status": "NOT_SHOWN",
+          "model_status": "NOT_SHOWN",
+          "validation_issue": null,
+          "evidence": [],
+          "follow_up_question": "그 학습을 언제부터 어떤 주기로 이어 갔나요?"
+        },
+        {
+          "check_id": "expertise.practical_use",
+          "description": "배운 내용을 실제 작업에 사용한 행동이 있는가",
+          "status": "NOT_SHOWN",
+          "model_status": "NOT_SHOWN",
+          "validation_issue": null,
+          "evidence": [],
+          "follow_up_question": "배운 내용을 실제로 어디에 어떻게 사용했나요?"
+        }
+      ],
+      "reasons": [],
+      "confirmation_items": [
+        {
+          "check_id": "expertise.specific_area",
+          "status": "NOT_SHOWN",
+          "question": "어떤 지식이나 기술을 어떤 방법으로 배웠나요?"
+        },
+        {
+          "check_id": "expertise.sustained_learning",
+          "status": "NOT_SHOWN",
+          "question": "그 학습을 언제부터 어떤 주기로 이어 갔나요?"
+        },
+        {
+          "check_id": "expertise.practical_use",
+          "status": "NOT_SHOWN",
+          "question": "배운 내용을 실제로 어디에 어떻게 사용했나요?"
+        }
+      ],
+      "ranking_evidence_kind_count": 0,
+      "rank": 2,
+      "tied_on_quality_keys": true,
+      "company_support": [],
+      "used_company_refs": {
+        "claim_ids": [],
+        "requirement_ids": [],
+        "source_version_ids": [],
+        "evidence_ids": []
+      }
+    },
+    {
+      "episode_id": "v4-raw-cooperation",
+      "episode_version": 1,
+      "title": "가상 원문 v4-raw-cooperation",
+      "status": "NEEDS_CONFIRMATION",
+      "content_checks": [
+        {
+          "check_id": "expertise.specific_area",
+          "description": "어떤 직무 지식·기술을 익혔는지 구체적으로 드러나는가",
+          "status": "NOT_SHOWN",
+          "model_status": "NOT_SHOWN",
+          "validation_issue": null,
+          "evidence": [],
+          "follow_up_question": "어떤 지식이나 기술을 어떤 방법으로 배웠나요?"
+        },
+        {
+          "check_id": "expertise.sustained_learning",
+          "description": "학습을 지속하거나 반복한 과정이 드러나는가",
+          "status": "NOT_SHOWN",
+          "model_status": "NOT_SHOWN",
+          "validation_issue": null,
+          "evidence": [],
+          "follow_up_question": "그 학습을 언제부터 어떤 주기로 이어 갔나요?"
+        },
+        {
+          "check_id": "expertise.practical_use",
+          "description": "배운 내용을 실제 작업에 사용한 행동이 있는가",
+          "status": "NOT_SHOWN",
+          "model_status": "NOT_SHOWN",
+          "validation_issue": null,
+          "evidence": [],
+          "follow_up_question": "배운 내용을 실제로 어디에 어떻게 사용했나요?"
+        }
+      ],
+      "reasons": [],
+      "confirmation_items": [
+        {
+          "check_id": "expertise.specific_area",
+          "status": "NOT_SHOWN",
+          "question": "어떤 지식이나 기술을 어떤 방법으로 배웠나요?"
+        },
+        {
+          "check_id": "expertise.sustained_learning",
+          "status": "NOT_SHOWN",
+          "question": "그 학습을 언제부터 어떤 주기로 이어 갔나요?"
+        },
+        {
+          "check_id": "expertise.practical_use",
+          "status": "NOT_SHOWN",
+          "question": "배운 내용을 실제로 어디에 어떻게 사용했나요?"
+        }
+      ],
+      "ranking_evidence_kind_count": 0,
+      "rank": 3,
+      "tied_on_quality_keys": true,
+      "company_support": [],
+      "used_company_refs": {
+        "claim_ids": [],
+        "requirement_ids": [],
+        "source_version_ids": [],
+        "evidence_ids": []
+      }
+    }
+  ],
+  "snapshot": {
+    "snapshot_id": "synthetic-service-snapshot-v1",
+    "extracted_episode_versions": {
+      "v4-raw-cooperation": 1,
+      "v4-raw-study": 1,
+      "v4-raw-challenge": 1
+    }
+  },
+  "diagnostics": [
+    {
+      "code": "DIAGNOSTIC_SAMPLE_REJECTED"
+    },
+    {
+      "code": "NO_USABLE_COMPANY_EVIDENCE"
+    }
+  ],
+  "follow_up_questions": [],
+  "ranking_policy": [
+    "문항 전체의 근거 상태",
+    "지원 근거의 종류 수",
+    "경험 ID"
+  ],
+  "subcheck_counts_used_as_ranking_points": false,
+  "inference": {
+    "extraction": {
+      "mode": "SIMULATED_LLM",
+      "provider": "simulated-fixture",
+      "model": "simulated-extraction",
+      "prompt_version": "w4-source-unit-extraction/0.3",
+      "prompt_sha256": "a44b9c7c15ccce0791a4333a3c113294f94519c79276a1b9b1c4005b64e809ff",
+      "calls": [
+        {
+          "stage": "extraction",
+          "episode_id": "v4-raw-cooperation",
+          "episode_version": 1,
+          "input_sha256": "3a36cbc15ccdb3e719c8c72d3fc7ebf70a64832b75ec6c3e4887a7e62db3342c"
+        },
+        {
+          "stage": "extraction",
+          "episode_id": "v4-raw-study",
+          "episode_version": 1,
+          "input_sha256": "26e6abb6e4e85a34f4cfb81315e826c832c011e9cfa4359edc970ae315f463a1"
+        },
+        {
+          "stage": "extraction",
+          "episode_id": "v4-raw-challenge",
+          "episode_version": 1,
+          "input_sha256": "914c3e41ecb9e27defd027787c47d16a83e290c3d66d8ca8a833054f930a7b72"
+        }
+      ]
+    },
+    "judgment": {
+      "mode": "SIMULATED_LLM",
+      "provider": "simulated-fixture",
+      "model": "simulated-judgment",
+      "prompt_version": "w4-company-content-checks/0.1",
+      "prompt_sha256": "f0f5e92e73628cd979c13690ee52c83f41b70e832feb3fa7958143eeaed7f4b8",
+      "calls": [
+        {
+          "episode_id": "v4-raw-cooperation",
+          "input_sha256": "991a23916b43ec53eff8b776dacf10bbe5fc344add45fd06bef8bf281722392a"
+        },
+        {
+          "episode_id": "v4-raw-study",
+          "input_sha256": "777ce67cb8f99d41e6b200f75c439916dbe6ea52078f2c421ac59b6a55aeaf42"
+        },
+        {
+          "episode_id": "v4-raw-challenge",
+          "input_sha256": "4efd907861db7b98c902adc53250c175da73b92fed9913b596518e134f55c899"
+        }
+      ]
+    },
+    "selection_status": "EXPLORATORY_NOT_PRODUCTION_SELECTED"
+  },
+  "eligibility_assessment": {
+    "status": "NOT_ASSESSED"
+  },
+  "limitations": [
+    "문항 5개·내용 점검 10개는 공식 지원서가 확인되지 않은 해석 초안입니다.",
+    "SUPPORTED는 원문 진술의 뒷받침이며 실제 수행·인과·지원 자격의 독립 검증이 아닙니다.",
+    "미확인 글자 수·필수 여부를 적용하지 않았으며 NOT_SHOWN은 경험의 부재를 뜻하지 않습니다.",
+    "일부 점검의 충족을 별도 가산점으로 더하지 않습니다. 같은 정렬 조건이면 경험 ID로 순서를 정합니다.",
+    "게시일 미상 및 근거 검증 미완료. 상세 JD 분석 불가. 과거 공고의 조건을 현행 전사 지원요건으로 적용하지 않는다.",
+    "게시일은 샘플 제공값으로 보존한다. 실제 정책 시행일·종료일과 적용 공고/직무는 미확인이다. MAIN_ARTICLE_PARSED가 관련 채용 사이트 분석 완료를 뜻하지 않는다.",
+    "기업 근거의 부족·제한은 회사 요구 없음이나 지원 불가를 뜻하지 않습니다.",
+    "정렬 정책과 W1 작업 상태 대응은 팀 검토 전입니다. 기업 연결을 별도 순위 점수로 쓰지 않습니다."
+  ],
+  "company_context": {
+    "status": "UNAVAILABLE",
+    "knowledge_bundle_id": null,
+    "contract_version": null,
+    "input_version_refs": {
+      "source_version_ids": []
+    },
+    "accepted_refs": {
+      "claim_ids": [],
+      "requirement_ids": [],
+      "source_version_ids": [],
+      "evidence_ids": []
+    },
+    "diagnostics": [
+      "DIAGNOSTIC_SAMPLE_REJECTED",
+      "NO_USABLE_COMPANY_EVIDENCE"
+    ],
+    "source_reviews": [
+      {
+        "review_id": "local-diagnostic-review-1",
+        "source_version_id": null,
+        "required": true,
+        "status": "UNAVAILABLE",
+        "codes": [
+          "SOURCE_VERSION_MISSING",
+          "RAW_TEXT_MISSING",
+          "LOCATOR_UNVERIFIED",
+          "HASH_EXPECTATION_MISSING",
+          "ACCESS_UNCONFIRMED",
+          "ATTACHMENT_UNPARSED",
+          "COMPANY_PUBLICATION_DATE_UNKNOWN"
+        ],
+        "limitations": [
+          "게시일 미상 및 근거 검증 미완료. 상세 JD 분석 불가. 과거 공고의 조건을 현행 전사 지원요건으로 적용하지 않는다."
+        ]
+      },
+      {
+        "review_id": "local-diagnostic-review-2",
+        "source_version_id": null,
+        "required": false,
+        "status": "UNAVAILABLE",
+        "codes": [
+          "SOURCE_VERSION_MISSING",
+          "RAW_TEXT_MISSING",
+          "LOCATOR_UNVERIFIED",
+          "HASH_EXPECTATION_MISSING",
+          "ACCESS_UNCONFIRMED"
+        ],
+        "limitations": [
+          "게시일은 샘플 제공값으로 보존한다. 실제 정책 시행일·종료일과 적용 공고/직무는 미확인이다. MAIN_ARTICLE_PARSED가 관련 채용 사이트 분석 완료를 뜻하지 않는다."
+        ]
+      }
+    ]
+  },
+  "server_context_version": "synthetic-context-v1",
+  "ranking_policy_approval": "PENDING_PRODUCT_REVIEW",
+  "job_state_mapping": "OWNED_BY_W1_PENDING_AGREEMENT"
+}

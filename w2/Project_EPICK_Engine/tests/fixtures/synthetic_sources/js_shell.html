@@ -1,0 +1,34 @@
+<!doctype html>
+<html
+  lang="en"
+  data-synthetic="true"
+  data-fixture-kind="js-shell"
+  data-js-required="true"
+  data-static-representation="rendering_required"
+  data-rendered-representation="rendered_html"
+>
+  <head>
+    <meta charset="utf-8">
+    <meta name="synthetic-expected-representation" content="rendered_html">
+    <title>Synthetic rendering shell</title>
+  </head>
+  <body>
+    <main id="synthetic-render-root" data-evidence-ref="rendered-main"></main>
+    <script>
+      (function () {
+        const main = document.getElementById("synthetic-render-root");
+        const section = document.createElement("section");
+        const heading = document.createElement("h1");
+        const paragraph = document.createElement("p");
+
+        section.setAttribute("data-evidence-ref", "rendered-company-section");
+        heading.setAttribute("data-evidence-ref", "rendered-company-heading");
+        paragraph.setAttribute("data-evidence-ref", "rendered-company-paragraph");
+        heading.textContent = "Rendered synthetic company update";
+        paragraph.textContent = "This paragraph exists only after synchronous synthetic rendering.";
+        section.append(heading, paragraph);
+        main.replaceChildren(section);
+      }());
+    </script>
+  </body>
+</html>

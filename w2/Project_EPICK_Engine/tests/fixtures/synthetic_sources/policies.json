@@ -1,0 +1,103 @@
+{
+  "schema_version": "1.0",
+  "synthetic": true,
+  "description": "Synthetic policy decisions. Each policy axis is recorded independently and does not imply another axis.",
+  "policies": [
+    {
+      "policy_decision_id": "00000000-0000-4000-8000-000000000301",
+      "source_id": "00000000-0000-4000-8000-000000000403",
+      "revision": 1,
+      "official_status": "verified",
+      "access_class": "public",
+      "collection_permission": "allowed",
+      "excerpt_storage_permission": "allowed",
+      "body_storage_permission": "allowed",
+      "redistribution_permission": "allowed",
+      "evidence_refs": [
+        "https://synthetic-meridian-careers.test/policy/static-posting"
+      ],
+      "checked_at": "2026-09-01T00:00:00Z",
+      "policy_version": "synthetic-policy-v1"
+    },
+    {
+      "policy_decision_id": "00000000-0000-4000-8000-000000000302",
+      "source_id": "00000000-0000-4000-8000-000000000401",
+      "revision": 1,
+      "official_status": "verified",
+      "access_class": "public",
+      "collection_permission": "allowed",
+      "excerpt_storage_permission": "allowed",
+      "body_storage_permission": "denied",
+      "redistribution_permission": "unknown",
+      "evidence_refs": [
+        "https://synthetic-meridian-a.test/policy/limited-retention"
+      ],
+      "checked_at": "2026-09-01T00:00:00Z",
+      "policy_version": "synthetic-policy-v1"
+    },
+    {
+      "policy_decision_id": "00000000-0000-4000-8000-000000000303",
+      "source_id": "00000000-0000-4000-8000-000000000402",
+      "revision": 1,
+      "official_status": "unverified",
+      "access_class": "public",
+      "collection_permission": "allowed",
+      "excerpt_storage_permission": "allowed",
+      "body_storage_permission": "unknown",
+      "redistribution_permission": "unknown",
+      "evidence_refs": [
+        "https://synthetic-meridian-research.test/policy/unverified-origin"
+      ],
+      "checked_at": "2026-09-01T00:00:00Z",
+      "policy_version": "synthetic-policy-v1"
+    },
+    {
+      "policy_decision_id": "00000000-0000-4000-8000-000000000304",
+      "source_id": "00000000-0000-4000-8000-000000000404",
+      "revision": 1,
+      "official_status": "verified",
+      "access_class": "restricted",
+      "collection_permission": "allowed",
+      "excerpt_storage_permission": "allowed",
+      "body_storage_permission": "allowed",
+      "redistribution_permission": "denied",
+      "evidence_refs": [
+        "https://synthetic-meridian-restricted.test/policy/access"
+      ],
+      "checked_at": "2026-09-01T00:00:00Z",
+      "policy_version": "synthetic-policy-v1"
+    },
+    {
+      "policy_decision_id": "00000000-0000-4000-8000-000000000305",
+      "source_id": "00000000-0000-4000-8000-000000000405",
+      "revision": 1,
+      "official_status": "rejected",
+      "access_class": "unavailable",
+      "collection_permission": "unknown",
+      "excerpt_storage_permission": "unknown",
+      "body_storage_permission": "unknown",
+      "redistribution_permission": "unknown",
+      "evidence_refs": [
+        "https://synthetic-meridian-unavailable.test/policy/rejected"
+      ],
+      "checked_at": "2026-09-01T00:00:00Z",
+      "policy_version": "synthetic-policy-v1"
+    },
+    {
+      "policy_decision_id": "00000000-0000-4000-8000-000000000306",
+      "source_id": "00000000-0000-4000-8000-000000000406",
+      "revision": 1,
+      "official_status": "verified",
+      "access_class": "unknown",
+      "collection_permission": "allowed",
+      "excerpt_storage_permission": "unknown",
+      "body_storage_permission": "denied",
+      "redistribution_permission": "denied",
+      "evidence_refs": [
+        "https://synthetic-meridian-unknown.test/policy/access"
+      ],
+      "checked_at": "2026-09-01T00:00:00Z",
+      "policy_version": "synthetic-policy-v1"
+    }
+  ]
+}

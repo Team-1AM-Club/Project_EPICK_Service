@@ -1,0 +1,125 @@
+{
+  "schema_version": "w4-server-context/0.1",
+  "context_version": "synthetic-context-v1",
+  "data_kind": "SYNTHETIC",
+  "project": {
+    "project_id": "project-demo-sk-hynix",
+    "owner_id": "user-demo"
+  },
+  "snapshot": {
+    "snapshot_id": "synthetic-service-snapshot-v1",
+    "episode_versions": {
+      "v4-raw-cooperation": 1,
+      "v4-raw-study": 1,
+      "v4-raw-challenge": 1
+    }
+  },
+  "episodes": [
+    {
+      "episode_id": "v4-raw-cooperation",
+      "version": 1,
+      "owner_id": "user-demo",
+      "activity_id": "v4-raw-cooperation",
+      "title": "가상 원문 v4-raw-cooperation",
+      "raw_text": "저는 과학관 체험 부스의 접수 담당자였습니다.\n팀은 대기 시간을 10분 이내로 줄이는 목표를 정했습니다.\n저는 진행자와 의견을 나누고 접수와 체험 시작 시간을 함께 합의했습니다.\n동료 서현이 안내 표지의 문구를 바꿨습니다.\n평균 대기 시간이 18분에서 9분으로 줄었습니다."
+    },
+    {
+      "episode_id": "v4-raw-study",
+      "version": 1,
+      "owner_id": "user-demo",
+      "activity_id": "v4-raw-study",
+      "title": "가상 원문 v4-raw-study",
+      "raw_text": "저는 파일 검증 도구의 개발 담당자였습니다.\n저는 6주 동안 매주 JSON Schema 안내서를 읽고 검증 예제를 실습했습니다.\n저는 학습한 검증 규칙을 파일 업로드 기능에 적용했습니다.\n잘못된 형식의 파일이 저장되는 건수가 8건에서 0건으로 줄었습니다.\n저는 예제를 직접 바꾸며 검증하는 일이 중요하다는 점을 배웠습니다."
+    },
+    {
+      "episode_id": "v4-raw-challenge",
+      "version": 1,
+      "owner_id": "user-demo",
+      "activity_id": "v4-raw-challenge",
+      "title": "가상 원문 v4-raw-challenge",
+      "raw_text": "저는 개인 달리기 훈련의 참여자였습니다.\n저는 이전에 완주하지 못한 10km를 완주하겠다는 목표를 정했습니다.\n첫 시도에서 체력 부족으로 6km 지점에 멈췄습니다.\n저는 두 달 동안 매주 훈련 기록을 비교하고 속도를 조정하며 반복해서 연습했습니다.\n마지막 시도에서는 8km를 달렸습니다."
+    }
+  ],
+  "excluded_episode_ids": [],
+  "question_scope_id": "skhynix-2026-march-R260521-IT",
+  "company_knowledge": {
+    "schema_version": "w4-knowledge-bundle/0.1",
+    "knowledge_bundle_id": "synthetic-knowledge-v1",
+    "contract_version": "w3-w4-projection/0.1-draft",
+    "scope_id": "skhynix-2026-march-R260521-IT",
+    "data_kind": "SYNTHETIC",
+    "as_of": "2026-09-09",
+    "input_version_refs": {
+      "source_version_ids": [
+        "synthetic-service-source-v1"
+      ]
+    },
+    "source_versions": [
+      {
+        "source_version_id": "synthetic-service-source-v1",
+        "source_id": "synthetic-company-document",
+        "scope_id": "skhynix-2026-march-R260521-IT",
+        "content_sha256": "ccc933fa4f8d051e3f4de488328e06dff49fd7bbca23c840c4f8b8dd81ef2425",
+        "published_at": "2026-09-01",
+        "parse_status": "PARSED"
+      }
+    ],
+    "evidence": [
+      {
+        "evidence_id": "synthetic-company-evidence-1",
+        "source_version_id": "synthetic-service-source-v1",
+        "exact_quote": "가상 기업은 꾸준한 기술 학습 경험을 참고합니다.",
+        "locator": "synthetic-document:line-1"
+      },
+      {
+        "evidence_id": "synthetic-company-evidence-2",
+        "source_version_id": "synthetic-service-source-v1",
+        "exact_quote": "가상 기업은 배운 검증 규칙을 프로그램에 적용한 경험을 우대합니다.",
+        "locator": "synthetic-document:line-2"
+      }
+    ],
+    "claims": [
+      {
+        "statement": "가상 기업은 꾸준한 기술 학습 경험을 참고합니다.",
+        "scope_id": "skhynix-2026-march-R260521-IT",
+        "source_version_id": "synthetic-service-source-v1",
+        "evidence_ids": [
+          "synthetic-company-evidence-1"
+        ],
+        "verification_status": "VERIFIED",
+        "usage_status": "USABLE",
+        "published_at": "2026-09-01",
+        "valid_from": "2026-09-01",
+        "valid_to": "2026-12-31",
+        "claim_id": "synthetic-learning-claim"
+      }
+    ],
+    "explicit_requirements": [
+      {
+        "statement": "가상 기업은 배운 검증 규칙을 프로그램에 적용한 경험을 우대합니다.",
+        "scope_id": "skhynix-2026-march-R260521-IT",
+        "source_version_id": "synthetic-service-source-v1",
+        "evidence_ids": [
+          "synthetic-company-evidence-2"
+        ],
+        "verification_status": "VERIFIED",
+        "usage_status": "USABLE",
+        "published_at": "2026-09-01",
+        "valid_from": "2026-09-01",
+        "valid_to": "2026-12-31",
+        "requirement_id": "synthetic-application-preference",
+        "requirement_type": "PREFERRED"
+      }
+    ],
+    "source_reviews": [
+      {
+        "review_id": "synthetic-review-v1",
+        "source_version_id": "synthetic-service-source-v1",
+        "required": true,
+        "status": "USABLE",
+        "codes": [],
+        "limitations": []
+      }
+    ]
+  }
+}

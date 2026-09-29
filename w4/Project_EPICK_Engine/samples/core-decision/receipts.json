@@ -1,0 +1,56 @@
+[
+  {
+    "schema_version": "w1.private.receipt.v1",
+    "message_id": "30000000-0000-4000-8000-000000000003",
+    "consumer": "w1.core-source-decision",
+    "outcome": "APPLIED",
+    "retryable": false,
+    "error_code": null,
+    "received_at": "2026-09-18T03:00:01Z"
+  },
+  {
+    "schema_version": "w1.private.receipt.v1",
+    "message_id": "30000000-0000-4000-8000-000000000003",
+    "consumer": "w1.core-source-decision",
+    "outcome": "DUPLICATE",
+    "retryable": false,
+    "error_code": "SYNTHETIC_DUPLICATE",
+    "received_at": "2026-09-18T03:00:01Z"
+  },
+  {
+    "schema_version": "w1.private.receipt.v1",
+    "message_id": "30000000-0000-4000-8000-000000000003",
+    "consumer": "w1.core-source-decision",
+    "outcome": "STALE_DISCARDED",
+    "retryable": false,
+    "error_code": "SYNTHETIC_STALE_DISCARDED",
+    "received_at": "2026-09-18T03:00:01Z"
+  },
+  {
+    "schema_version": "w1.private.receipt.v1",
+    "message_id": "30000000-0000-4000-8000-000000000003",
+    "consumer": "w1.core-source-decision",
+    "outcome": "REJECTED_SCHEMA",
+    "retryable": false,
+    "error_code": "SYNTHETIC_REJECTED_SCHEMA",
+    "received_at": "2026-09-18T03:00:01Z"
+  },
+  {
+    "schema_version": "w1.private.receipt.v1",
+    "message_id": "30000000-0000-4000-8000-000000000003",
+    "consumer": "w1.core-source-decision",
+    "outcome": "REJECTED_PRINCIPAL",
+    "retryable": false,
+    "error_code": "SYNTHETIC_REJECTED_PRINCIPAL",
+    "received_at": "2026-09-18T03:00:01Z"
+  },
+  {
+    "schema_version": "w1.private.receipt.v1",
+    "message_id": "30000000-0000-4000-8000-000000000003",
+    "consumer": "w1.core-source-decision",
+    "outcome": "RETRYABLE_INFRA_FAILURE",
+    "retryable": true,
+    "error_code": "SYNTHETIC_RETRYABLE_INFRA_FAILURE",
+    "received_at": "2026-09-18T03:00:01Z"
+  }
+]

@@ -1,0 +1,9 @@
+**
+!epick_w4/
+!epick_w4/**
+!deploy/
+!deploy/recommendation/
+!deploy/recommendation/Dockerfile
+!deploy/recommendation/requirements.lock
+**/__pycache__
+**/*.pyc

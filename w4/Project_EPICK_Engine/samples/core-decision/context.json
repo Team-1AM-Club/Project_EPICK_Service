@@ -1,0 +1,15 @@
+{
+  "schema_version": "w4-core-decision-context/0.1-proposal",
+  "data_kind": "SYNTHETIC",
+  "owner_id": "10000000-0000-4000-8000-000000000003",
+  "project_id": "10000000-0000-4000-8000-000000000010",
+  "question_version_id": "10000000-0000-4000-8000-000000000009",
+  "source_id": "10000000-0000-4000-8000-000000000005",
+  "collection_company_id": "10000000-0000-4000-8000-000000000004",
+  "analysis_input_version": "question-input:v4",
+  "authorization_revision": "synthetic-authorization-v1",
+  "current_decision_version": 1,
+  "processing_allowed": true,
+  "question_current": true,
+  "source_active": true
+}

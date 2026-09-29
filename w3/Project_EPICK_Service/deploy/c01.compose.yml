@@ -1,0 +1,49 @@
+services:
+  c01:
+    image: ${W3_C01_IMAGE:?set an immutable image reference, preferably repository@sha256:digest}
+    command:
+      - --db
+      - ${W3_C01_DB_PATH:-/var/lib/w3/c01.sqlite}
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8764"
+      - --restriction-scope
+      - version
+      - --max-ttl-seconds
+      - ${W3_C01_MAX_TTL_SECONDS:?set the approved positive TTL cap}
+      - --source-authority
+      - w3_knowledge.c01.source_authority_http:create_source_authority
+    environment:
+      W3_W2_TOKEN: ${W3_W2_TOKEN:?set via approved secret injection}
+      W3_OPERATOR_TOKEN: ${W3_OPERATOR_TOKEN:?set via approved secret injection}
+      W3_W4_TOKEN: ${W3_W4_TOKEN:?set via approved secret injection}
+      W3_SOURCE_AUTHORITY_ENDPOINT: ${W3_SOURCE_AUTHORITY_ENDPOINT:?set W2 authority HTTPS endpoint}
+      W3_SOURCE_AUTHORITY_TOKEN: ${W3_SOURCE_AUTHORITY_TOKEN:?set via approved secret injection}
+      W3_SOURCE_AUTHORITY_CONNECT_TIMEOUT_SECONDS: ${W3_SOURCE_AUTHORITY_CONNECT_TIMEOUT_SECONDS:-2}
+      W3_SOURCE_AUTHORITY_READ_TIMEOUT_SECONDS: ${W3_SOURCE_AUTHORITY_READ_TIMEOUT_SECONDS:-2}
+      W3_SOURCE_AUTHORITY_TOTAL_TIMEOUT_SECONDS: ${W3_SOURCE_AUTHORITY_TOTAL_TIMEOUT_SECONDS:-5}
+      W3_SOURCE_AUTHORITY_CA_FILE: ${W3_SOURCE_AUTHORITY_CA_FILE:-}
+    expose:
+      - "8764"
+    volumes:
+      - c01-data:/var/lib/w3
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: "on-failure:3"
+    stop_grace_period: 20s
+    networks:
+      - epick-private
+
+volumes:
+  c01-data:
+
+networks:
+  epick-private:
+    name: epick-private
+    internal: true

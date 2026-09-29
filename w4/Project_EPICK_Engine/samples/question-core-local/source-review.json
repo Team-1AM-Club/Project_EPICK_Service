@@ -1,0 +1,383 @@
+{
+  "checked_at": "2026-09-18T15:58:30.548165+00:00",
+  "w1_original_status": "NOT_FOUND_IN_CHECKED_COMMITS",
+  "w1_004_schema_approved": false,
+  "availability": [
+    {
+      "repository": "Project_EPICK_Service",
+      "sha": "9cbfa4284b5f74d2492618e71518ffe13d3b7a45",
+      "requested_files": {
+        "specs/004-w1-w4-question-core/w4-adoption.md": false,
+        "specs/004-w1-w4-question-core/contracts/w4-question-core-decision.event.schema.json": false
+      }
+    },
+    {
+      "repository": "Project_EPICK_Service",
+      "sha": "5b056261591b91f8ed84ded50ee0f5885b92c58d",
+      "requested_files": {
+        "specs/004-w1-w4-question-core/w4-adoption.md": false,
+        "specs/004-w1-w4-question-core/contracts/w4-question-core-decision.event.schema.json": false
+      }
+    },
+    {
+      "repository": "Project_EPICK_Engine",
+      "sha": "16a7bd2653873a20a563e6d2f54c24c6dc18c373",
+      "requested_files": {
+        "specs/004-w1-w4-question-core/w4-adoption.md": false,
+        "specs/004-w1-w4-question-core/contracts/w4-question-core-decision.event.schema.json": false
+      }
+    }
+  ],
+  "w2_delivery_sha": "16a7bd2653873a20a563e6d2f54c24c6dc18c373",
+  "w2_checksum_verified_count": 81,
+  "w2_checksum_results": [
+    {
+      "path": ".gitattributes",
+      "sha256": "aee286b9dde7b7e9ff1af52723f83b6c20eb1fee14a9de2d0ca7d347e0bb11ee"
+    },
+    {
+      "path": "contracts/w2-private/W2_Implementation_Handoff_2026-09-18.md",
+      "sha256": "635f3a6893d89551375a66e5c2f549e48e79b3de63363f37454de3adb497ff0f"
+    },
+    {
+      "path": "contracts/w2-private/source-collection.commit-gate-ack.schema.json",
+      "sha256": "c7470349720e217a090798000f9e2ead34b96bd7c00db33050405c2f151d5d99"
+    },
+    {
+      "path": "contracts/w2-private/source-collection.staged-result.schema.json",
+      "sha256": "96a820dd3c40746aa8e7a2ac6cb34b3ee73efa5f748e3149e68584ecca08d77d"
+    },
+    {
+      "path": "contracts/w2-private/verification.md",
+      "sha256": "88a5ee7dd4b37f14914bdd5fe41ee7c96e837a1669c82263b4316259b66af8e7"
+    },
+    {
+      "path": "contracts/w2-private/w2-commit-gate-proposal.md",
+      "sha256": "908f6a4f6cdb7543f71d825f67a7c4f3ad5d974d7de4ae7ddc2d2a8645e8b495"
+    },
+    {
+      "path": "migrations/env.py",
+      "sha256": "4baddbf64eafd37b09903346f06532f7e72094013c887715bf9eadbeaa5c3010"
+    },
+    {
+      "path": "migrations/versions/0004_private_commit_gate.py",
+      "sha256": "aae870a88d707917ec4a97dfb903ee0f0ec8d6b31e418828a0e2ca837f734803"
+    },
+    {
+      "path": "src/epick_engine/source_collection/commit_gate_contracts.py",
+      "sha256": "436d5ec4b76f1ad651752c2c0c725d1122214d9b444d85f1da5ed8df2b9b85c9"
+    },
+    {
+      "path": "src/epick_engine/source_collection/commit_gate_store.py",
+      "sha256": "f318b5b3b52c0331fd4097408c185ef5666fa61d5bbd7846c8980bd93f28519e"
+    },
+    {
+      "path": "src/epick_engine/source_collection/w1_transport.py",
+      "sha256": "33e28843fcbd3e47f52602223e305754e85cd93008f83fc31ab823202a19b326"
+    },
+    {
+      "path": "tests/contract/source_collection/test_commit_gate_contracts.py",
+      "sha256": "a21fc57863bc9f23c060669add3d7307be122abc963c8f97703624938efcfb69"
+    },
+    {
+      "path": "tests/contract/source_collection/test_foundation_boundary.py",
+      "sha256": "d0d7a2b1206533118da2796dcedad6438e5bb1cb470b083f34b7b9234b18e3a0"
+    },
+    {
+      "path": "tests/contract/source_collection/test_w1_transport.py",
+      "sha256": "c77538670504a1e71694f969f69ae293f565682d6c0065cc220178861729f649"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/README.md",
+      "sha256": "32a8e48bb04e6a4b14d34e717ea3e79ae034b059c9f4c74430229d42352b5bf0"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/commit-gate-manifest.json",
+      "sha256": "fc4a643a8bbfe97a4f9984014da41ea98fb62cd9207f10b8e07d1a2a857fcfd6"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/invalid-private-w2-commit-gate-command.json",
+      "sha256": "8ff0a16acb29a3624cc04e9335d6ecde1f1b7aa4011f1d2b0f23a288ca7eac9c"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/invalid-private-w2-commit-gate-digest.json",
+      "sha256": "f8835dd1e18a850bfcd3a5665f0e749924bc35660296de9da7b160bef9eb5448"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/invalid-private-w2-commit-gate-epoch.json",
+      "sha256": "9b9c904e6e6d963ef036cf3cda8ca22d52b6f1ac883edef26f964e06bc974a26"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/invalid-private-w2-commit-gate-fence.json",
+      "sha256": "86e112ccdfa415be08a0a864bf63055d24a456d527c39c91d6f1c0ea51fa8536"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/invalid-private-w2-commit-gate-owner.json",
+      "sha256": "8163edde8802e0171fea3cdd9ee837091aa0b2b61feebb27e397fa794a3aa9ec"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/invalid-private-w2-commit-gate-revision.json",
+      "sha256": "b9606deb065593ea8696e5b5e693d63e859336d55025f4485a7bdfacbdf6489e"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/manifest.json",
+      "sha256": "47566b5b182f97b0f125b2b00d717791c6eab34bf299c7d1e3290b3f8baeab7a"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-command-lookup-available.json",
+      "sha256": "9949cebf055a3310d693136efbc723629e3116c88e2228348dd4c31d2bc02083"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-command-lookup-deleted.json",
+      "sha256": "2c4a7c33edee22eead80a67eb64aeb28b3a90dc0d59ac5382b699e5c81d4844e"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-command-lookup-expired.json",
+      "sha256": "81b9ad60168a6df50c5a5d1ddf13cab96f3ae37a621c6ee531cd7d9630d43a60"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-command-lookup-invalidated.json",
+      "sha256": "1dc75d8ee162cdce8ac1f9159bf8168813e0b73672c12ca20f3f4abc995f26e7"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-command-lookup-not-found.json",
+      "sha256": "387e535bd9e80d19b2fbdddbed8f4e8c4a4774cdd36f0d15f1a3ab64351b70fb"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-command-lookup-request.json",
+      "sha256": "62e7e5e43ba2c8be1b6c67f6e7146e2b36432368623ab33048bd213b5dafb723"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-command-lookup-request.schema.json",
+      "sha256": "93e54e677c3f907bd0902bd630684544471a1c5793cc9a6f57d370e1afbce2b3"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-command-lookup-response.schema.json",
+      "sha256": "aded743e4962329b0f2c5fb8ed804e0191ae8839d59e1fa8a5136af6157f410c"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-command-lookup-stale-deletion-epoch.json",
+      "sha256": "1ba7b32bb67cf4c6f12bcfa2fcb15a34106010e47d6e89b94dbce2d9a93e0368"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-command-lookup-stale-fence.json",
+      "sha256": "5716e7613e3f206f558c3807608c159dc57060a95a20fb1b9e380c073646997b"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-error-forbidden.json",
+      "sha256": "cdb3d9d5790986a898b527606951bb17422af4006923e2e0ad5ec4b87affd267"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-error-unauthenticated.json",
+      "sha256": "7f3ebf2dd279126e8ebc561fe787b330d8e36c4843328371a3fb2bf505341df2"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-error.schema.json",
+      "sha256": "4277c455af383c97a7b249ea7e90659e79f88d9cbfc12ba44cc3f6370ef385d7"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-message-envelope.schema.json",
+      "sha256": "8119cb594782187669df608d6f1748c57c45130356998c7cd77867cdd9f80201"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-w2-collection-result-complete.json",
+      "sha256": "0cc45bcaf5c403defc36b54df57926b6d917e722b7313f2ede157f11aa4302b8"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-w2-command-dispatch.json",
+      "sha256": "aa142cd06ced65eef9108678f66c27c8202a1c7dddb8629ed3f431f4b0848bd7"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-w2-command-dispatch.schema.json",
+      "sha256": "10527bd6c976bc05005c2954bd0735289fbda0d99344862544367ed84a4a70e7"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-w2-commit-gate-abort.json",
+      "sha256": "24304668c43a4c4a0d80d0dcc2f949fc3a8af41e433d83f6855d7a9b17bb7322"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-w2-commit-gate-finalize.json",
+      "sha256": "ac660edb466eca1535abc6e0c116084299e7aa24abde4f3d0a812b553e208abc"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-w2-commit-gate-prepare.json",
+      "sha256": "95279e2374363ec5fc9c7b7b64ed0af5f80d5a48645905704997da6c75b7cd00"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-w2-commit-gate-purge.json",
+      "sha256": "76bf52ad430f157827b756dd1d8cbf532696543afd44377b246ca2b1db52bbd2"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-w2-commit-gate.schema.json",
+      "sha256": "c2b2b5976225713c4c2fcd6ae5ab57feea1b0c3a068d84e11ce1bb034160dd5d"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-w2-direct-source-registration-dispatch.json",
+      "sha256": "6a410abb6f53a6401ac2fa0a065c4ce7d16496ee077f75df4dec3eef74e191eb"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/private-w2-direct-source-registration-dispatch.schema.json",
+      "sha256": "5e7f48bf6eabbc792578bcf8fd81b328d6a54531a34996d56835a9c670fddf10"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/source-collection-result-failure.json",
+      "sha256": "124a19ea95ecae16b1944e6fceefc4531a941d3c1119908b0ba6d46c051f3c16"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/source-collection-result-partial.json",
+      "sha256": "84b35ca2d363588d0a50d6a6836897ea6aa84a73ebac5c3eb4725dbe71448c3c"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/source-collection-result-policy-failure.json",
+      "sha256": "a401ace339aba5e892ef33ff2aacedab0511d1379cf6c1908b27bd8d0ed4c312"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/source-collection.command.schema.json",
+      "sha256": "615b7810ff0a3c20a8013c7549ef7f5bb5439715e8a47b480ceae1a92d5f32e1"
+    },
+    {
+      "path": "tests/fixtures/w1_private_contract/source-collection.result.schema.json",
+      "sha256": "3ffc6187595b084b84a9365a09002b6035637cd5890645e22caf3979408f66ad"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/README.md",
+      "sha256": "0c7e3c4a77c8c21067a1e7f61f778f8fa52ac91b83c052140bf2e8986bbfe77d"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/ack-abort-applied.json",
+      "sha256": "f81647ff51a151c4ea8aba539cf427fd59b1c930955a65e53205c84a2b114fc2"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/ack-abort-duplicate.json",
+      "sha256": "ee726776d7c09174ab249a4e70f19407418e8332bbe291d6c055aa6900a11985"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/ack-abort-rejected.json",
+      "sha256": "375f5fd39009b6db370136b1b627ea983022d3164f6794f4e4304cd7af5afabc"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/ack-finalize-applied.json",
+      "sha256": "750f5139f5bd865d7fa009c7f07642f711dfb450de729b8cfe70f2e990c5cd97"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/ack-finalize-duplicate.json",
+      "sha256": "afe3ac6a67c43ac8debac60b5fcf192a73c342d87360216a098bbb0a2cf8280d"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/ack-finalize-rejected.json",
+      "sha256": "54e6eaa02071db5bd79a3ac0e8848f89192b965e5583d81aba9df624f41e8b4d"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/ack-prepare-applied.json",
+      "sha256": "730e7057b32475287d557f688263fcb7e62c284e3898add0842fcbde1c54ddf4"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/ack-prepare-duplicate.json",
+      "sha256": "4c40e3d3d6973053f93f236e4931e18f2ff790f10129669bb4a5bfd7d5b17092"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/ack-prepare-rejected.json",
+      "sha256": "37bb9eee8dee44d69373f6bfe06e74aaab00ace5662c8adc11d667de98f27b75"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/ack-purge-applied.json",
+      "sha256": "34c1f4ba21f8a49ef8f235d3aaeb503bc371ae81c228668ac33a9e58be11f725"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/ack-purge-duplicate.json",
+      "sha256": "623ac5e5b607be642b336266fc61991945f9099ad6f111c969407d3e37cdc49e"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/ack-purge-rejected.json",
+      "sha256": "b0c8348183c0628e36c79302987fa2334e7c6c7da90dcf508a8a43f61fe04de1"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/digest-vector.json",
+      "sha256": "8cae7e73d841f81dcbdca85f9dad13fff6628673552e5c40dc70cb95a4a32ab0"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/invalid-ack-bool-revision.json",
+      "sha256": "826f9085822c8bbd3543199421ab39cb9d37e72f291d18f0cddcd315ff18e06e"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/invalid-ack-nonpurge-epoch-null.json",
+      "sha256": "e990c296a12a22f89378fa6ed255cdd624ffa0428162f6eb9a41e38eb380ef60"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/invalid-ack-outcome.json",
+      "sha256": "fa899d72de4c5c4c77b9316ec3e991c002f58d01c2634715ca76d13de18414a1"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/invalid-staged-digest.json",
+      "sha256": "aab6ed32e3940b496d553ecebffe9c61781a967751bd249a210e24f699ddf4cc"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/invalid-staged-fence.json",
+      "sha256": "c9afcda04545bf6015a8bde5b188ac79d771d9dbf9b8ceef0862949e8ea00f8c"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/invalid-staged-message-id.json",
+      "sha256": "fb91874ec861631cce0a58717ec999156bf1aa8f8dd9ab047e0abff20f9946cb"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/manifest.json",
+      "sha256": "6c759fd6d5b11f84965609311da62adfc0084bea1b3a43ddc6dc4621a355f428"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/semantic-invalid-ack-purge-epoch.json",
+      "sha256": "dde82b390042af2f4c86995bdfb0367b02558a1edcedf6c95fdf98910d07e507"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/semantic-invalid-staged-binding.json",
+      "sha256": "06fb01f45f18282d692bfc33358b699832005ec2d879a747c05d9fc73775f1a0"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/semantic-invalid-staged-digest.json",
+      "sha256": "4935ae7433c58956c644037856dcdbcd632480dc8fafa62279362ac88e94c1de"
+    },
+    {
+      "path": "tests/fixtures/w2_commit_gate_proposal/staged-result.json",
+      "sha256": "bbcb915df169e638c38304c33986dee7dfa223c6cb3283e00f681e4de6a24a92"
+    },
+    {
+      "path": "tests/integration/source_collection/test_private_commit_gate.py",
+      "sha256": "b6137154defc25e048024f695da3b21f8d117d1bfdc6258a08938e7cd5e0935c"
+    },
+    {
+      "path": "tests/integration/source_collection/test_retention_origin.py",
+      "sha256": "d8eea7111e5dafd5a2b818e16ab1787881f64841334c33224016571e3b656fa2"
+    },
+    {
+      "path": "tests/support/commit_gate_inspection.py",
+      "sha256": "96e8d2c697554d57ee55801206a05128f3db68af15dc1445800e22cd1e02a699"
+    },
+    {
+      "path": "tests/unit/source_collection/test_alembic_config.py",
+      "sha256": "17073b600fc534f63898d9775545aa01443934e515e7060ab463d34e1dd58fbd"
+    }
+  ],
+  "pinned_sources": [
+    {
+      "path": "docs/inputs/W1_W4_Required_Contracts_2026-09-18.md",
+      "sha256": "f6e0a64a4eef42fabe90e24136aa9651bb9faa04e88d0d316ed486e489bc0e4e"
+    },
+    {
+      "path": "samples/question-core-local/upstream/w2-W2_Implementation_Handoff_2026-09-18.md",
+      "sha256": "635f3a6893d89551375a66e5c2f549e48e79b3de63363f37454de3adb497ff0f"
+    },
+    {
+      "path": "samples/question-core-local/upstream/w2-artifacts.sha256",
+      "sha256": "8c537b32139be4e83119f96aa04b993daed19985f6b67dab9cb1a1cf55b1788a"
+    },
+    {
+      "path": "samples/question-core-local/upstream/w1_core_decision_binding.py",
+      "sha256": "5058935c05df7057ed2d56cb9361cc2f0627d26fbb27dfbd6445c8ab850dd67c"
+    }
+  ],
+  "digest_helper": {
+    "repository": "Project_EPICK_Service",
+    "sha": "9cbfa4284b5f74d2492618e71518ffe13d3b7a45",
+    "path": "backend/app/runtime/core_decision_binding.py",
+    "scope": "EXISTING_GENERIC_HELPER_NOT_W4_004_CONSUMER"
+  }
+}

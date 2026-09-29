@@ -1,0 +1,7 @@
+{
+  "decision_version": 3,
+  "decision_code": "CORE_REQUIRED",
+  "reason_code": "QUESTION_EVIDENCE_REQUIRED",
+  "policy_revision": "synthetic-policy-v1",
+  "approved": true
+}

@@ -1,0 +1,22 @@
+name: epick-source-collection-test
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: epick_test
+      POSTGRES_USER: epick_test
+      # Test-only: loopback binding and tmpfs keep trust authentication local and ephemeral.
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "127.0.0.1:55439:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U epick_test -d epick_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 2s
+    labels:
+      com.epick.test-service: "source-collection-postgres"

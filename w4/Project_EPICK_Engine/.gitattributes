@@ -1,0 +1,27 @@
+* text=auto
+*.py text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+samples/upstream/* -text
+epick_w4/c01_schemas/*.schema.json -text
+samples/c01/upstream/* -text
+epick_w4/core_decision_schemas/*.schema.json -text
+samples/core-decision/upstream/* -text
+samples/question-core-candidate-20260919/upstream/* -text
+samples/question-core-w1-runtime-20260919/* -text
+samples/question-core-w1-context-20260919/* -text
+docs/inputs/W1_W4_CT12_Environment_and_Context_Contract_2026-09-19.md -text
+docs/inputs/W1_W4_Actual_Runtime_Handoff_Request_2026-09-19-r2.md -text
+deploy/question-core/requirements.lock text eol=lf
+# Preserve reviewed byte hashes and upstream Markdown formatting.
+docs/inputs/** -text -whitespace
+samples/question-core-*/** -text -whitespace
+samples/**/upstream/** -text -whitespace
+epick_w4/c01_schemas/*.schema.json -whitespace
+epick_w4/core_decision_schemas/*.schema.json -whitespace
+*.yaml text eol=lf
+*.toml text eol=lf
+*.lock text eol=lf
+Dockerfile text eol=lf
+*.dockerignore text eol=lf

@@ -1,0 +1,50 @@
+{
+  "status": "W1_WIRE_ADOPTED_SOURCE_PINNED_RUNTIME_NOT_ENABLED",
+  "w1_repository": "https://github.com/Team-1AM-Club/Project_EPICK_Service",
+  "w1_full_sha": "519b9127227ad3ca6483a61a5143d355c5eea5eb",
+  "files": {
+    "question-core-decision.event.schema.json": {
+      "upstream_path": "backend/contracts/w4/v1/question-core-decision.event.schema.json",
+      "sha256": "1d004ea5ea4bbd346926c6be878de759f25b43011b7117ff8700c4d48e8b71af",
+      "bytes": 2079
+    },
+    "w4-question-core-decision.event.candidate.schema.json": {
+      "upstream_path": "backend/contracts/w4/v1/w4-question-core-decision.event.candidate.schema.json",
+      "sha256": "1eb0506d9b13e22198ea11fb5fccd628096de2903b0fe5b1da3d383928d8407a",
+      "bytes": 2499
+    },
+    "W1-CONTRACT-README.md": {
+      "upstream_path": "backend/contracts/w4/v1/README.md",
+      "sha256": "b276f655d5b63ea053ef03e54fc20f3ee7dd73a9fbd24fd1fd07fa3a6d571b35",
+      "bytes": 2139
+    },
+    "valid-core.json": {
+      "upstream_path": "backend/contracts/fixtures/v1/w4/valid-core.json",
+      "sha256": "6d6037ad7463f0ddb5b4aa8f769620be920f1d952a9647b506a3ace5bd8efd2f",
+      "bytes": 776
+    },
+    "valid-non-core.json": {
+      "upstream_path": "backend/contracts/fixtures/v1/w4/valid-non-core.json",
+      "sha256": "4ce3b904cd543ec31b56b04c3959d27856e38a6bc038c4484db96b077368d173",
+      "bytes": 776
+    },
+    "negative-events.json": {
+      "upstream_path": "backend/contracts/fixtures/v1/w4/negative-events.json",
+      "sha256": "9bf55808eac4eb448158b0e830e3cd71593edf47586f5200019462533ce7601a",
+      "bytes": 4252
+    },
+    "digest-vectors.json": {
+      "upstream_path": "backend/contracts/fixtures/v1/w4/digest-vectors.json",
+      "sha256": "f8e504ae0c7ae802bdab1f6bcaa3de6bb0ea7649396633bbafeb6bf2deca12f6",
+      "bytes": 522
+    }
+  },
+  "request_document": "docs/inputs/W1_W4_Actual_Runtime_Handoff_Request_2026-09-19.md",
+  "request_sha256": "ebe4497cff9edfdd48cc24d16ea6d29b1fa1c1daa6a09c50d00ba96b0ea4674c",
+  "w4_accessible_full_sha": null,
+  "runtime_approved": false,
+  "real_data_enabled": false,
+  "actual_w1_context_connected": false,
+  "actual_sqs_requests": 0,
+  "joint_ct12": "NOT_RUN"
+}

@@ -1,0 +1,77 @@
+# Project EPICK Service — W3 Knowledge Validation
+
+Current C01 canonical: [W3 contract reply, profile r2](docs/w3-additional-reply-2026-09-16.md).
+The adjacent SHA256 sidecar identifies its exact bytes. This remains a candidate,
+not a jointly adopted contract. Earlier handoffs are historical reference only.
+The confirmed scope is version-specific, with null restrictions applying to the whole Source.
+
+The W3 service validates SourceVersion and Evidence lineage, structures Claims and
+Requirements, and projects only verified, usable knowledge to W4.
+
+## Local verification
+
+```powershell
+uv run --locked pytest -q
+uv run --locked ruff check src/w3_knowledge tests
+uv run --locked ruff format --check src/w3_knowledge tests
+```
+
+Solar live validation is intentionally opt-in and requires explicit
+`--run-live` authorization and provider configuration.
+
+The implementation specification and verification record are in
+[`specs/001-source-knowledge-validation`](specs/001-source-knowledge-validation/).
+
+## Offline event/index validation lab
+
+Run synthetic restriction, index mismatch, replay/snapshot recovery, and retention
+scenarios with Python 3.11+ (no third-party packages):
+
+```powershell
+python src/w3_knowledge/lab.py --scenario examples/w3-lab-scenario.json
+```
+
+See the [handoff and limitations](docs/w3-validation-lab.md). This standalone lab
+does not implement the official event/ACK contract or connect to production services.
+
+## Restriction integration candidate
+
+The executable `w3-restriction/0.1-draft` candidate now provides an authenticated
+local HTTP consumer, persistent SQLite FTS search, replay/snapshot recovery,
+retention enforcement and a durable W4 signal/cache adapter.
+
+```powershell
+uv sync --locked
+uv run --locked python scripts/restriction_smoke.py
+```
+
+This starts a real local server process and writes the results under `.runtime/`.
+Read the [PM response and runbook](docs/w3-restriction-handoff.md) and
+[proposed contract](contracts/restriction/v0.1-draft/README.md).
+Team adoption and actual W2/W4 application deployment remain pending.
+
+## W2 C-01 compatible candidate
+
+The separate `w3-c01/0.2-candidate` accepts the supplied W2 envelope/payload and UUIDs,
+tracks transport and restriction revisions separately, and provides recovery,
+Evidence-bound indexing and a W4 reference cache. Use a new database and explicit
+restriction scope and TTL settings; this is not an in-place legacy migration.
+
+```powershell
+uv sync --locked
+uv run --locked python scripts/c01_smoke.py
+```
+
+See the [C01 implementation handoff](docs/w3-c01-handoff-2026-09-16.md) for exact
+schemas, test evidence, endpoints, and decisions still requiring W2/W4 agreement.
+
+The [additional W2 reply and W4 agreement request](docs/w3-additional-reply-2026-09-16.md)
+adds the knowledge DTO, typed reference consumer, ACK redelivery tests, and W1 private
+deletion proposal. W4 team acceptance and actual service integration remain pending.
+# W3 → W1 Core Decision 추가 인계
+
+W1 채택 후 supplier/relay/삭제 구현: [최신 runtime 인계](docs/w3-core-runtime-handoff-2026-09-18.md).
+로컬 검증 완료 범위와 실제 앱/인증/배포 미연결 범위를 구분한다.
+
+2026-09-18 후보 계약·생산 모듈: [정본 문서](docs/w3-w1-core-decision-handoff-2026-09-18.md).
+최초 전달 기록이며 기존 C01과 별도 계약이다. 이후 W1은 계약을 채택했고 실제 W3 배포·연결은 대기 중이다.

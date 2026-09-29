@@ -1,0 +1,76 @@
+{
+  "status": "W3_LIFECYCLE_LOCAL_VERIFIED_ENVIRONMENT_PENDING",
+  "w3_full_sha": "0c4f01f9537a3129c976fae5e63111a7982c5da6",
+  "contract": "w3.private.core-decision/0.1-candidate",
+  "analysis_supplier": {
+    "status": "LOCAL_VERIFIED_AUTHORITY_AND_ANALYSIS_CALLER_INTEGRATION_PENDING",
+    "entrypoint": "w3_knowledge.core_runtime.CoreRuntime.supply",
+    "trusted_request_binding": "AnalysisPlan requires immutable analysis_request_id and trusted analysis_request_issued_at; actual caller/currentness adapter source pin pending",
+    "synthetic_input_procedure": "python -m w3_knowledge.core_runtime_cli smoke --directory .runtime/core-relay-smoke"
+  },
+  "relay": {
+    "status": "LOCAL_VERIFIED_NOT_DEPLOYED",
+    "entrypoint": "python -m w3_knowledge.core_runtime_cli relay-once",
+    "durable_outbox": "Shared local SQLite w3_core_decision_outbox/core_delivery/w3_core_counters; retry same bytes with bounded backoff, then HELD",
+    "send_success_semantics": "TRANSPORT_HANDOFF_NOT_W1_ACCEPTANCE"
+  },
+  "lifecycle_dispatch": {
+    "status": "LOCAL_VERIFIED_W1_INFRA_AND_ADOPTION_PENDING",
+    "entrypoint": "python -m w3_knowledge.core_runtime_cli lifecycle-once --consume",
+    "owner_command_schema": "contracts/core-runtime/owner-deletion-command.schema.json",
+    "source_command_schema": "contracts/core-runtime/source-retirement-command.schema.json",
+    "receipt_schema": "contracts/core-runtime/lifecycle-receipt.schema.json",
+    "transaction": "State mutation, command digest, exact receipt, and receipt outbox commit in the same SQLite transaction",
+    "restart_ordering": "Relay every unfinished receipt before receiving a new command; RETRY_WAIT or HELD receipt blocks new intake",
+    "command_id_conflict": "Terminal reject and acknowledge without emitting a receipt",
+    "source_target_ref": "Must equal source_id, the authoritative W1 Source.id",
+    "ack": "Delete inbound command only after receipt SendMessage returns HTTP 200 and MessageId; uncertain DB or transport result is not acknowledged",
+    "live_e2e": "NOT_RUN"
+  },
+  "c01_w2_integration": {
+    "status": "W2_W3_SYNTHETIC_PRODUCT_FLOW_JOINT_GATE_PASS_BY_EVIDENCE_REVIEW",
+    "entrypoint": "python -m w3_knowledge.c01.http",
+    "source_authority": "w3_knowledge.c01.source_authority_http:create_source_authority; literal registered=true only; connect/read/total timeout fail closed",
+    "w2_full_sha": "40ca63447287432d5a127f6001fc984dc8980dd5",
+    "w2_wire_sha256": "c964bdd81bda7c9c5b3710c8cc6310a3521178839a24b744ba277f4b4e489b3e",
+    "w2_product_code_sha": "7523d757d59ed0e28c9102ebf456140e76e2c493",
+    "w2_product_harness_sha": "df10726cb2dfa90f1742505d76e2e03108c62b0d",
+    "w2_execution_checkout_sha": "d99eb516c64dc16e92a5a76e528a8098024c1778",
+    "product_flow_joint_gate": "PASS by W3 review of W2 committed 2026-09-22 result JSON, pinned verification script, and code diff; not independently rerun by W3; synthetic fixture and isolated PostgreSQL/HTTP only",
+    "compatibility": "Initial 2026-09-21 W2 wire pin and isolated PostgreSQL synthetic OutboxEvent/W3 HTTP joint evidence remain valid; 2026-09-22 W2 product-flow result status PASS exit 0 with 15 Evidence, product W3 cursor 1, 11 total deliveries, unregistered/authority/conflict/replay/snapshot/restriction cases true; W3 pinned C01 local tests 76 passed; W2 executed d99eb... with only unrelated SQS preflight source change from product baseline 7523d...",
+    "live_e2e": "NOT_RUN"
+  },
+  "iam": {
+    "role_arn": null,
+    "stable_role_id": null,
+    "main_queue_send_only": null,
+    "w1_sender_stable_role_id": null,
+    "lifecycle_command_queue_url": null,
+    "lifecycle_receipt_queue_url": null
+  },
+  "retention": {
+    "policy_revision": "w3.retention/1.1",
+    "status": "LOCAL_VERIFIED_SCHEDULER_AND_STORAGE_LIFECYCLE_PENDING",
+    "private_body_absolute_max_seconds": 2592000,
+    "transport_handoff_seconds": 1209600,
+    "terminal_metadata_seconds": 7776000,
+    "owner_tombstone_seconds": 31536000,
+    "retired_source_counter_seconds": 7776000,
+    "backup_max_seconds": 2592000,
+    "published_event_retention": "min(last_successful_published_at + 1209600, created_at + 2592000); replay never extends the absolute maximum",
+    "user_deletion_behavior": "Authenticated lifecycle consumer applies higher-epoch deletion, immediately purges event/request, persists the exact receipt atomically, and preserves first deleted_at; live Queue/Role integration pending",
+    "source_retirement_behavior": "command_id-bound retire_source preserves the first authoritative retired_at, rejects later supply, and persists the exact receipt atomically; live Queue/Role integration pending",
+    "backup_replay_behavior": "Supported backup redacts before disk write, records a capped expiry, and is quarantined; supply/relay/replay disabled. Raw snapshot restore unsupported."
+  },
+  "phase4_t058": {
+    "status": "W3_OWNER_READY_JOINT_RUN_PENDING",
+    "w3_artifact_sha": "b94986b6a5d191446a474d2d6193fcd04a6d4542",
+    "runtime": "W3 C-01 source-authority failure handling, restriction clear/re-index, replacement, duplicate/gap/conflict/replay/snapshot and durable restart are locally verified",
+    "deployment": "deploy/Dockerfile and deploy/c01.compose.yml build/config validation passed; actual W1 private topology has not run",
+    "count_evidence_schema": "contracts/c01/v0.2-candidate/t058-count-evidence.schema.json",
+    "joint_gate": "NOT_RUN; requires the same W1 job/run ID with W2 FINALIZED and W3 READY after restart"
+  },
+  "joint_window": null,
+  "joint_ct12": "NOT_RUN",
+  "evidence": "Implementation pin 0c4f01f9537a3129c976fae5e63111a7982c5da6; W2 Engine feat/crawler 69f8984dba2f3c56d66c97f8a9edd5de5c4513ff supplied 2026-09-21 Postgres/HTTP JSON Git blob SHA256 F5F910FD5AE57144FA129873D0536B089E395B8F7D3DFC15C5CF17BE1E5052F2; W2 Engine 2bf8156371b87894b92cd92959bc31b44c534795 docs/w2-w3-product-flow-e2e-result-2026-09-22.json; W2 Engine 5a2d73f74ee6be54dc4af259a68610ff9b3761ad corrected SHA boundary in docs/w2-w3-product-flow-e2e-result-2026-09-22.md; docs/w3-lifecycle-dispatch-handoff-2026-09-20.md; docs/w3-integration-input-request-2026-09-20.md; docs/w2-w3-local-e2e-contract-response-2026-09-21.md; docs/w3-w2-joint-revalidation-response-2026-09-22.md"
+}

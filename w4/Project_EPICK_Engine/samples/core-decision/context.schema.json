@@ -1,0 +1,90 @@
+{
+  "additionalProperties": false,
+  "description": "Private local context proposal, not additional fields on W1's wire payload.",
+  "properties": {
+    "schema_version": {
+      "const": "w4-core-decision-context/0.1-proposal",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "data_kind": {
+      "enum": [
+        "SYNTHETIC",
+        "REAL"
+      ],
+      "title": "Data Kind",
+      "type": "string"
+    },
+    "owner_id": {
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "title": "Owner Id",
+      "type": "string"
+    },
+    "project_id": {
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "title": "Project Id",
+      "type": "string"
+    },
+    "question_version_id": {
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "title": "Question Version Id",
+      "type": "string"
+    },
+    "source_id": {
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "title": "Source Id",
+      "type": "string"
+    },
+    "collection_company_id": {
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "title": "Collection Company Id",
+      "type": "string"
+    },
+    "analysis_input_version": {
+      "maxLength": 64,
+      "minLength": 1,
+      "pattern": "\\S",
+      "title": "Analysis Input Version",
+      "type": "string"
+    },
+    "authorization_revision": {
+      "pattern": "^[^\\s{}]{1,200}$",
+      "title": "Authorization Revision",
+      "type": "string"
+    },
+    "current_decision_version": {
+      "minimum": 0,
+      "title": "Current Decision Version",
+      "type": "integer"
+    },
+    "processing_allowed": {
+      "title": "Processing Allowed",
+      "type": "boolean"
+    },
+    "question_current": {
+      "title": "Question Current",
+      "type": "boolean"
+    },
+    "source_active": {
+      "title": "Source Active",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "schema_version",
+    "data_kind",
+    "owner_id",
+    "project_id",
+    "question_version_id",
+    "source_id",
+    "collection_company_id",
+    "analysis_input_version",
+    "authorization_revision",
+    "current_decision_version",
+    "processing_allowed",
+    "question_current",
+    "source_active"
+  ],
+  "title": "DecisionContext",
+  "type": "object"
+}

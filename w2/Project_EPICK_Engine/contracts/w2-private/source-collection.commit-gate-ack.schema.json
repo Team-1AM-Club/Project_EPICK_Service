@@ -1,0 +1,155 @@
+{
+  "$defs": {
+    "CommitGateAction": {
+      "enum": [
+        "PREPARE",
+        "FINALIZE",
+        "ABORT",
+        "PURGE"
+      ],
+      "type": "string"
+    },
+    "CommitGateOutcome": {
+      "enum": [
+        "APPLIED",
+        "DUPLICATE",
+        "REJECTED"
+      ],
+      "type": "string"
+    },
+    "NonNegativeWireInt": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "PositiveWireInt": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "ResultDigest": {
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "W2 UNADOPTED PROPOSAL. PRIVATE producer w2. No queue/runtime connection or W1 normalized ACK mapping.",
+  "properties": {
+    "operation_id": {
+      "format": "uuid",
+      "title": "Operation Id",
+      "type": "string"
+    },
+    "operation_revision": {
+      "$ref": "#/$defs/PositiveWireInt"
+    },
+    "action": {
+      "$ref": "#/$defs/CommitGateAction"
+    },
+    "command_id": {
+      "format": "uuid",
+      "title": "Command Id",
+      "type": "string"
+    },
+    "job_id": {
+      "format": "uuid",
+      "title": "Job Id",
+      "type": "string"
+    },
+    "authenticated_owner_ref": {
+      "format": "uuid",
+      "title": "Authenticated Owner Ref",
+      "type": "string"
+    },
+    "execution_fence": {
+      "$ref": "#/$defs/PositiveWireInt"
+    },
+    "owner_deletion_epoch": {
+      "$ref": "#/$defs/NonNegativeWireInt"
+    },
+    "purge_owner_deletion_epoch": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "result_digest": {
+      "$ref": "#/$defs/ResultDigest"
+    },
+    "schema_version": {
+      "const": "w2.private.commit-gate-ack.proposal.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "message_id": {
+      "format": "uuid",
+      "title": "Message Id",
+      "type": "string"
+    },
+    "message_type": {
+      "const": "w2.private.commit-gate-ack.proposal.v1",
+      "title": "Message Type",
+      "type": "string"
+    },
+    "producer": {
+      "const": "w2",
+      "title": "Producer",
+      "type": "string"
+    },
+    "occurred_at": {
+      "format": "date-time",
+      "title": "Occurred At",
+      "type": "string"
+    },
+    "visibility_scope": {
+      "const": "PRIVATE",
+      "title": "Visibility Scope",
+      "type": "string"
+    },
+    "outcome": {
+      "$ref": "#/$defs/CommitGateOutcome"
+    }
+  },
+  "required": [
+    "operation_id",
+    "operation_revision",
+    "action",
+    "command_id",
+    "job_id",
+    "authenticated_owner_ref",
+    "execution_fence",
+    "owner_deletion_epoch",
+    "result_digest",
+    "schema_version",
+    "message_id",
+    "message_type",
+    "producer",
+    "occurred_at",
+    "visibility_scope",
+    "outcome"
+  ],
+  "title": "CommitGateAckProposal",
+  "type": "object",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "PURGE"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "purge_owner_deletion_epoch"
+        ]
+      },
+      "else": {
+        "not": {
+          "required": [
+            "purge_owner_deletion_epoch"
+          ]
+        }
+      }
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.epick.local/w2/proposals/v1/source-collection.commit-gate-ack.schema.json",
+  "$comment": "Models additionally check immutable cross-field binding, newer PURGE epoch, and staged digest. JSON Schema alone cannot verify cross-field equality or recompute SHA-256."
+}

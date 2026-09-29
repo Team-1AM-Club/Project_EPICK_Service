@@ -1,0 +1,8 @@
+{
+  "schema_version": "w4-company-fiction-allowlist/0.1",
+  "note": "Fixed fictional statements only. These are not verified SK hynix facts.",
+  "criteria_sha256": [
+    "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "c45de3bb06e6d14e75a487c725ad471cb7b81715680649132c383c1c53a2fa11"
+  ]
+}

@@ -1,0 +1,911 @@
+{
+  "schema_version": "w4-c01-domain-reference/0.2",
+  "review_status": "ASSISTANT_DRAFT",
+  "human_reviewed": false,
+  "cases": [
+    {
+      "case_id": "c01-fresh-01",
+      "lines": [
+        "저는 수족관 관찰 일지 프로그램의 개발 담당자였습니다.",
+        "저는 삼 주 동안 매주 JSON 형식 검사 강의를 수강하고 예제 코드를 수정하며 학습했습니다.",
+        "저는 배운 JSON 검사 방법을 관찰 일지 코드에 적용해 수온 입력값을 검증했습니다."
+      ],
+      "checks": {
+        "expertise.specific_area": {
+          "statuses": [
+            "SUPPORTED"
+          ],
+          "required_units": [
+            "u2"
+          ],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3"
+          ]
+        },
+        "expertise.sustained_learning": {
+          "statuses": [
+            "SUPPORTED"
+          ],
+          "required_units": [
+            "u2"
+          ],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3"
+          ]
+        },
+        "expertise.practical_use": {
+          "statuses": [
+            "SUPPORTED"
+          ],
+          "required_units": [
+            "u3"
+          ],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3"
+          ]
+        }
+      },
+      "claim": {
+        "statuses": [
+          "SUPPORTED"
+        ],
+        "required_units": [
+          "u2"
+        ],
+        "allowed_units": [
+          "u1",
+          "u2",
+          "u3"
+        ]
+      },
+      "leaves": {
+        "apply": {
+          "statuses": [
+            "SUPPORTED"
+          ],
+          "required_units": [
+            "u3"
+          ],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3"
+          ]
+        },
+        "validation": {
+          "statuses": [
+            "SUPPORTED"
+          ],
+          "required_units": [
+            "u3"
+          ],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3"
+          ]
+        },
+        "documentation": {
+          "statuses": [
+            "NOT_SHOWN",
+            "AMBIGUOUS"
+          ],
+          "required_units": [],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3"
+          ]
+        }
+      },
+      "root": {
+        "statuses": [
+          "SUPPORTED"
+        ],
+        "required_units": [],
+        "allowed_units": []
+      },
+      "extraction": {
+        "units": [
+          {
+            "unit_id": "u1",
+            "kinds": [
+              "ROLE"
+            ],
+            "subject": "SELF",
+            "assertion": "AFFIRMED",
+            "issue": null
+          },
+          {
+            "unit_id": "u2",
+            "kinds": [
+              "ACTION",
+              "PERIOD"
+            ],
+            "subject": "SELF",
+            "assertion": "AFFIRMED",
+            "issue": null
+          },
+          {
+            "unit_id": "u3",
+            "kinds": [
+              "ACTION"
+            ],
+            "subject": "SELF",
+            "assertion": "AFFIRMED",
+            "issue": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "c01-fresh-02",
+      "lines": [
+        "저는 도서 목록 검색 도구의 개발 담당자였습니다.",
+        "저는 열흘 동안 매일 인덱스 구조를 설명한 자료를 읽고 검색 예제를 풀며 학습했습니다.",
+        "저는 배운 인덱스 구성 방법을 목록 검색 코드에 구현했습니다.",
+        "저는 그 코드의 설치와 사용 방법을 설명하는 문서를 작성했습니다."
+      ],
+      "checks": {
+        "expertise.specific_area": {
+          "statuses": [
+            "SUPPORTED"
+          ],
+          "required_units": [
+            "u2"
+          ],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3",
+            "u4"
+          ]
+        },
+        "expertise.sustained_learning": {
+          "statuses": [
+            "SUPPORTED"
+          ],
+          "required_units": [
+            "u2"
+          ],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3",
+            "u4"
+          ]
+        },
+        "expertise.practical_use": {
+          "statuses": [
+            "SUPPORTED"
+          ],
+          "required_units": [
+            "u3"
+          ],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3",
+            "u4"
+          ]
+        }
+      },
+      "claim": {
+        "statuses": [
+          "SUPPORTED"
+        ],
+        "required_units": [
+          "u2"
+        ],
+        "allowed_units": [
+          "u1",
+          "u2",
+          "u3",
+          "u4"
+        ]
+      },
+      "leaves": {
+        "apply": {
+          "statuses": [
+            "SUPPORTED"
+          ],
+          "required_units": [
+            "u3"
+          ],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3",
+            "u4"
+          ]
+        },
+        "validation": {
+          "statuses": [
+            "NOT_SHOWN",
+            "AMBIGUOUS"
+          ],
+          "required_units": [],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3",
+            "u4"
+          ]
+        },
+        "documentation": {
+          "statuses": [
+            "SUPPORTED"
+          ],
+          "required_units": [
+            "u4"
+          ],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3",
+            "u4"
+          ]
+        }
+      },
+      "root": {
+        "statuses": [
+          "SUPPORTED"
+        ],
+        "required_units": [],
+        "allowed_units": []
+      },
+      "extraction": {
+        "units": [
+          {
+            "unit_id": "u1",
+            "kinds": [
+              "ROLE"
+            ],
+            "subject": "SELF",
+            "assertion": "AFFIRMED",
+            "issue": null
+          },
+          {
+            "unit_id": "u2",
+            "kinds": [
+              "ACTION",
+              "PERIOD"
+            ],
+            "subject": "SELF",
+            "assertion": "AFFIRMED",
+            "issue": null
+          },
+          {
+            "unit_id": "u3",
+            "kinds": [
+              "ACTION"
+            ],
+            "subject": "SELF",
+            "assertion": "AFFIRMED",
+            "issue": null
+          },
+          {
+            "unit_id": "u4",
+            "kinds": [
+              "ACTION"
+            ],
+            "subject": "SELF",
+            "assertion": "AFFIRMED",
+            "issue": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "c01-fresh-03",
+      "lines": [
+        "저는 지역 박물관의 통역 안내 담당자였습니다.",
+        "저는 한 달 동안 매일 일본어 교재를 읽고 전시 설명 표현을 학습했습니다.",
+        "저는 배운 일본어 표현을 관람객에게 전시물을 설명할 때 사용했습니다.",
+        "저는 전시 설명 표현을 정리한 안내 문서를 작성했습니다."
+      ],
+      "checks": {
+        "expertise.specific_area": {
+          "statuses": [
+            "SUPPORTED"
+          ],
+          "required_units": [
+            "u2"
+          ],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3",
+            "u4"
+          ]
+        },
+        "expertise.sustained_learning": {
+          "statuses": [
+            "SUPPORTED"
+          ],
+          "required_units": [
+            "u2"
+          ],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3",
+            "u4"
+          ]
+        },
+        "expertise.practical_use": {
+          "statuses": [
+            "SUPPORTED"
+          ],
+          "required_units": [
+            "u3"
+          ],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3",
+            "u4"
+          ]
+        }
+      },
+      "claim": {
+        "statuses": [
+          "NOT_SHOWN",
+          "AMBIGUOUS"
+        ],
+        "required_units": [],
+        "allowed_units": [
+          "u1",
+          "u2",
+          "u3",
+          "u4"
+        ]
+      },
+      "leaves": {
+        "apply": {
+          "statuses": [
+            "NOT_SHOWN",
+            "AMBIGUOUS"
+          ],
+          "required_units": [],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3",
+            "u4"
+          ]
+        },
+        "validation": {
+          "statuses": [
+            "NOT_SHOWN",
+            "AMBIGUOUS"
+          ],
+          "required_units": [],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3",
+            "u4"
+          ]
+        },
+        "documentation": {
+          "statuses": [
+            "SUPPORTED"
+          ],
+          "required_units": [
+            "u4"
+          ],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3",
+            "u4"
+          ]
+        }
+      },
+      "root": {
+        "statuses": [
+          "NOT_SHOWN",
+          "AMBIGUOUS"
+        ],
+        "required_units": [],
+        "allowed_units": [
+          "u1",
+          "u2",
+          "u3",
+          "u4"
+        ]
+      },
+      "extraction": {
+        "units": [
+          {
+            "unit_id": "u1",
+            "kinds": [
+              "ROLE"
+            ],
+            "subject": "SELF",
+            "assertion": "AFFIRMED",
+            "issue": null
+          },
+          {
+            "unit_id": "u2",
+            "kinds": [
+              "ACTION",
+              "PERIOD"
+            ],
+            "subject": "SELF",
+            "assertion": "AFFIRMED",
+            "issue": null
+          },
+          {
+            "unit_id": "u3",
+            "kinds": [
+              "ACTION"
+            ],
+            "subject": "SELF",
+            "assertion": "AFFIRMED",
+            "issue": null
+          },
+          {
+            "unit_id": "u4",
+            "kinds": [
+              "ACTION"
+            ],
+            "subject": "SELF",
+            "assertion": "AFFIRMED",
+            "issue": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "c01-fresh-04",
+      "lines": [
+        "저는 행사 신청 명단의 정리 담당자였습니다.",
+        "저는 두 달 동안 매주 이미 완성된 프로그램의 실행 버튼을 눌러 명단을 정렬했습니다.",
+        "정렬된 명단 파일이 여덟 개 생성되었습니다."
+      ],
+      "checks": {
+        "expertise.specific_area": {
+          "statuses": [
+            "NOT_SHOWN",
+            "AMBIGUOUS"
+          ],
+          "required_units": [],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3"
+          ]
+        },
+        "expertise.sustained_learning": {
+          "statuses": [
+            "NOT_SHOWN",
+            "AMBIGUOUS"
+          ],
+          "required_units": [],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3"
+          ]
+        },
+        "expertise.practical_use": {
+          "statuses": [
+            "NOT_SHOWN",
+            "AMBIGUOUS"
+          ],
+          "required_units": [],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3"
+          ]
+        }
+      },
+      "claim": {
+        "statuses": [
+          "NOT_SHOWN",
+          "AMBIGUOUS"
+        ],
+        "required_units": [],
+        "allowed_units": [
+          "u1",
+          "u2",
+          "u3"
+        ]
+      },
+      "leaves": {
+        "apply": {
+          "statuses": [
+            "NOT_SHOWN",
+            "AMBIGUOUS"
+          ],
+          "required_units": [],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3"
+          ]
+        },
+        "validation": {
+          "statuses": [
+            "NOT_SHOWN",
+            "AMBIGUOUS"
+          ],
+          "required_units": [],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3"
+          ]
+        },
+        "documentation": {
+          "statuses": [
+            "NOT_SHOWN",
+            "AMBIGUOUS"
+          ],
+          "required_units": [],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3"
+          ]
+        }
+      },
+      "root": {
+        "statuses": [
+          "NOT_SHOWN",
+          "AMBIGUOUS"
+        ],
+        "required_units": [],
+        "allowed_units": [
+          "u1",
+          "u2",
+          "u3"
+        ]
+      },
+      "extraction": {
+        "units": [
+          {
+            "unit_id": "u1",
+            "kinds": [
+              "ROLE"
+            ],
+            "subject": "SELF",
+            "assertion": "AFFIRMED",
+            "issue": null
+          },
+          {
+            "unit_id": "u2",
+            "kinds": [
+              "ACTION",
+              "PERIOD"
+            ],
+            "subject": "SELF",
+            "assertion": "AFFIRMED",
+            "issue": null
+          },
+          {
+            "unit_id": "u3",
+            "kinds": [
+              "RESULT"
+            ],
+            "subject": "UNSPECIFIED",
+            "assertion": "AFFIRMED",
+            "issue": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "c01-fresh-05",
+      "lines": [
+        "저는 센서 자료 업로드 도구의 개발 담당자였습니다.",
+        "저는 다음 분기에 여섯 주 동안 매주 Python의 예외 처리 예제를 학습할 계획입니다.",
+        "저는 학습한 예외 처리 방식을 업로드 코드의 입력값 검증에 적용할 계획입니다."
+      ],
+      "checks": {
+        "expertise.specific_area": {
+          "statuses": [
+            "NOT_SHOWN",
+            "AMBIGUOUS"
+          ],
+          "required_units": [],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3"
+          ]
+        },
+        "expertise.sustained_learning": {
+          "statuses": [
+            "NOT_SHOWN",
+            "AMBIGUOUS"
+          ],
+          "required_units": [],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3"
+          ]
+        },
+        "expertise.practical_use": {
+          "statuses": [
+            "NOT_SHOWN",
+            "AMBIGUOUS"
+          ],
+          "required_units": [],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3"
+          ]
+        }
+      },
+      "claim": {
+        "statuses": [
+          "NOT_SHOWN",
+          "AMBIGUOUS"
+        ],
+        "required_units": [],
+        "allowed_units": [
+          "u1",
+          "u2",
+          "u3"
+        ]
+      },
+      "leaves": {
+        "apply": {
+          "statuses": [
+            "NOT_SHOWN",
+            "AMBIGUOUS"
+          ],
+          "required_units": [],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3"
+          ]
+        },
+        "validation": {
+          "statuses": [
+            "NOT_SHOWN",
+            "AMBIGUOUS"
+          ],
+          "required_units": [],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3"
+          ]
+        },
+        "documentation": {
+          "statuses": [
+            "NOT_SHOWN",
+            "AMBIGUOUS"
+          ],
+          "required_units": [],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3"
+          ]
+        }
+      },
+      "root": {
+        "statuses": [
+          "NOT_SHOWN",
+          "AMBIGUOUS"
+        ],
+        "required_units": [],
+        "allowed_units": [
+          "u1",
+          "u2",
+          "u3"
+        ]
+      },
+      "extraction": {
+        "units": [
+          {
+            "unit_id": "u1",
+            "kinds": [
+              "ROLE"
+            ],
+            "subject": "SELF",
+            "assertion": "AFFIRMED",
+            "issue": null
+          },
+          {
+            "unit_id": "u2",
+            "kinds": [
+              "ACTION",
+              "PERIOD"
+            ],
+            "subject": "SELF",
+            "assertion": "PLANNED",
+            "issue": null
+          },
+          {
+            "unit_id": "u3",
+            "kinds": [
+              "ACTION"
+            ],
+            "subject": "SELF",
+            "assertion": "PLANNED",
+            "issue": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "c01-fresh-06",
+      "lines": [
+        "저는 전시 프로젝트의 회의 일정 담당자였습니다.",
+        "동료 민지는 네 주 동안 매주 데이터 형식 검사 자료를 읽고 학습했습니다.",
+        "동료 민지는 배운 형식 검사 방법을 전시 예약 코드에 적용해 입력값을 검증했습니다.",
+        "저는 회의에 참석할 수 있는 날짜를 모아 일정을 확정했습니다."
+      ],
+      "checks": {
+        "expertise.specific_area": {
+          "statuses": [
+            "NOT_SHOWN",
+            "AMBIGUOUS"
+          ],
+          "required_units": [],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3",
+            "u4"
+          ]
+        },
+        "expertise.sustained_learning": {
+          "statuses": [
+            "NOT_SHOWN",
+            "AMBIGUOUS"
+          ],
+          "required_units": [],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3",
+            "u4"
+          ]
+        },
+        "expertise.practical_use": {
+          "statuses": [
+            "NOT_SHOWN",
+            "AMBIGUOUS"
+          ],
+          "required_units": [],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3",
+            "u4"
+          ]
+        }
+      },
+      "claim": {
+        "statuses": [
+          "NOT_SHOWN",
+          "AMBIGUOUS"
+        ],
+        "required_units": [],
+        "allowed_units": [
+          "u1",
+          "u2",
+          "u3",
+          "u4"
+        ]
+      },
+      "leaves": {
+        "apply": {
+          "statuses": [
+            "NOT_SHOWN",
+            "AMBIGUOUS"
+          ],
+          "required_units": [],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3",
+            "u4"
+          ]
+        },
+        "validation": {
+          "statuses": [
+            "NOT_SHOWN",
+            "AMBIGUOUS"
+          ],
+          "required_units": [],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3",
+            "u4"
+          ]
+        },
+        "documentation": {
+          "statuses": [
+            "NOT_SHOWN",
+            "AMBIGUOUS"
+          ],
+          "required_units": [],
+          "allowed_units": [
+            "u1",
+            "u2",
+            "u3",
+            "u4"
+          ]
+        }
+      },
+      "root": {
+        "statuses": [
+          "NOT_SHOWN",
+          "AMBIGUOUS"
+        ],
+        "required_units": [],
+        "allowed_units": [
+          "u1",
+          "u2",
+          "u3",
+          "u4"
+        ]
+      },
+      "extraction": {
+        "units": [
+          {
+            "unit_id": "u1",
+            "kinds": [
+              "ROLE"
+            ],
+            "subject": "SELF",
+            "assertion": "AFFIRMED",
+            "issue": null
+          },
+          {
+            "unit_id": "u2",
+            "kinds": [
+              "ACTION",
+              "PERIOD"
+            ],
+            "subject": "OTHER",
+            "assertion": "AFFIRMED",
+            "issue": null
+          },
+          {
+            "unit_id": "u3",
+            "kinds": [
+              "ACTION"
+            ],
+            "subject": "OTHER",
+            "assertion": "AFFIRMED",
+            "issue": null
+          },
+          {
+            "unit_id": "u4",
+            "kinds": [
+              "ACTION"
+            ],
+            "subject": "SELF",
+            "assertion": "AFFIRMED",
+            "issue": null
+          }
+        ]
+      }
+    }
+  ],
+  "notes": [
+    "Frozen before inference. Correct affirmative status requires sufficient exact source units.",
+    "NOT_SHOWN and AMBIGUOUS are acceptable for absent completion; uncertainty is reported separately.",
+    "Relevant surrounding lines may be cited; necessary evidence units must remain present."
+  ]
+}

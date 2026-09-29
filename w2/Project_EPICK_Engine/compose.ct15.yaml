@@ -1,0 +1,29 @@
+services:
+  w2-commit-gate:
+    profiles: [ct15]
+    image: ${W2_CT15_IMAGE_REPOSITORY:?Set the W1 approved repository}@sha256:${W2_CT15_IMAGE_SHA256:?Set the published manifest digest hex}
+    command: [preflight]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    environment:
+      W2_CT15_ENABLED: ${W2_CT15_ENABLED:?Explicit CT15 opt-in required}
+      W2_CT15_GATE_ONLY_QUEUE_APPROVED: ${W2_CT15_GATE_ONLY_QUEUE_APPROVED:?W1 must approve a gate-only test queue}
+      W2_CT15_DATABASE_URL: ${W2_CT15_DATABASE_URL:?Supply through the approved secret channel}
+      W2_CT15_REGION: ${W2_CT15_REGION:?W1 supplies the region}
+      W2_CT15_COMMAND_QUEUE_URL: ${W2_CT15_COMMAND_QUEUE_URL:?W1 supplies the dedicated command queue}
+      W2_CT15_INBOUND_QUEUE_URL: ${W2_CT15_INBOUND_QUEUE_URL:?W1 supplies the dedicated inbound queue}
+      W2_CT15_EXPECTED_W1_SENDER_ID: ${W2_CT15_EXPECTED_W1_SENDER_ID:?W1 supplies its stable sender role ID}
+      W2_CT15_RUNTIME_LABEL: ${W2_CT15_RUNTIME_LABEL:?Use an isolated CT15 runtime label}
+      W1_LOOKUP_ENDPOINT: ${W1_LOOKUP_ENDPOINT:?W1 supplies the authenticated lookup endpoint}
+      W1_LOOKUP_BEARER: ${W1_LOOKUP_BEARER:?Supply through the approved secret channel}
+      W1_LOOKUP_CA_FILE: /run/epick/source-runtime/w1-ca.pem
+    volumes:
+      - type: bind
+        source: ${W1_LOOKUP_CA_HOST_FILE:?Supply the W1 CA certificate file}
+        target: /run/epick/source-runtime/w1-ca.pem
+        read_only: true
+    # W1 supplies workload-role credential delivery and private network connectivity.
+    # No static AWS credentials, host credential mounts or production defaults.

@@ -1,0 +1,121 @@
+{
+  "schema_version": "w4-recommendation-input/0.1",
+  "request_id": "demo-semantic",
+  "data_kind": "SYNTHETIC",
+  "fixture_note": "문항과 경험은 의미 매칭 연결을 점검하기 위해 만든 가상 데이터다. 실제 모델 품질의 평가 결과가 아니다.",
+  "project": {
+    "project_id": "project-demo-semantic",
+    "owner_id": "user-demo",
+    "company_id": "synthetic-company",
+    "job_role": "IT",
+    "job_posting_version_id": "synthetic-posting-v1"
+  },
+  "snapshot": {
+    "snapshot_id": "snapshot-demo-semantic-v1",
+    "as_of": "2026-09-08",
+    "question_id": "question-semantic",
+    "question_version": 1,
+    "episode_versions": {
+      "episode-common-plan": 1,
+      "episode-solo-fix": 1
+    },
+    "source_version_ids": []
+  },
+  "question": {
+    "question_id": "question-semantic",
+    "version": 1,
+    "text": "상반된 입장을 가진 구성원들이 같은 결론에 도달하도록 기여한 사례에서 본인의 역할과 행동 및 결과를 설명해 주세요. 700자 이내"
+  },
+  "episodes": [
+    {
+      "episode_id": "episode-common-plan",
+      "version": 1,
+      "owner_id": "user-demo",
+      "activity_id": "activity-episode-common-plan",
+      "title": "서로 다른 요구를 하나의 안으로 정리",
+      "raw_text": "백엔드 담당으로 참여했습니다.\n서로 원하는 기능을 표로 정리한 뒤 구성원들을 설득해 공통안을 만들었습니다.\n공통안으로 기능을 구현했습니다.",
+      "facts": [
+        {
+          "fact_id": "episode-common-plan-fact-1",
+          "kind": "ROLE",
+          "text": "백엔드 담당으로 참여했습니다.",
+          "evidence": {
+            "episode_id": "episode-common-plan",
+            "episode_version": 1,
+            "start": 0,
+            "end": 16
+          }
+        },
+        {
+          "fact_id": "episode-common-plan-fact-2",
+          "kind": "ACTION",
+          "text": "서로 원하는 기능을 표로 정리한 뒤 구성원들을 설득해 공통안을 만들었습니다.",
+          "evidence": {
+            "episode_id": "episode-common-plan",
+            "episode_version": 1,
+            "start": 17,
+            "end": 59
+          }
+        },
+        {
+          "fact_id": "episode-common-plan-fact-3",
+          "kind": "RESULT",
+          "text": "공통안으로 기능을 구현했습니다.",
+          "evidence": {
+            "episode_id": "episode-common-plan",
+            "episode_version": 1,
+            "start": 60,
+            "end": 77
+          }
+        }
+      ]
+    },
+    {
+      "episode_id": "episode-solo-fix",
+      "version": 1,
+      "owner_id": "user-demo",
+      "activity_id": "activity-episode-solo-fix",
+      "title": "개인 프로그램의 오류 수정",
+      "raw_text": "저는 개인 프로그램의 개발을 맡았습니다.\n저는 오류 로그를 분석해 중복 요청의 원인을 찾아 수정했습니다.\n같은 요청이 중복 처리되지 않는 것을 테스트로 확인했습니다.",
+      "facts": [
+        {
+          "fact_id": "episode-solo-fix-fact-1",
+          "kind": "ROLE",
+          "text": "저는 개인 프로그램의 개발을 맡았습니다.",
+          "evidence": {
+            "episode_id": "episode-solo-fix",
+            "episode_version": 1,
+            "start": 0,
+            "end": 22
+          }
+        },
+        {
+          "fact_id": "episode-solo-fix-fact-2",
+          "kind": "ACTION",
+          "text": "저는 오류 로그를 분석해 중복 요청의 원인을 찾아 수정했습니다.",
+          "evidence": {
+            "episode_id": "episode-solo-fix",
+            "episode_version": 1,
+            "start": 23,
+            "end": 58
+          }
+        },
+        {
+          "fact_id": "episode-solo-fix-fact-3",
+          "kind": "RESULT",
+          "text": "같은 요청이 중복 처리되지 않는 것을 테스트로 확인했습니다.",
+          "evidence": {
+            "episode_id": "episode-solo-fix",
+            "episode_version": 1,
+            "start": 59,
+            "end": 92
+          }
+        }
+      ]
+    }
+  ],
+  "excluded_episode_ids": [],
+  "company_context_policy": "OPTIONAL",
+  "company_knowledge": {},
+  "top_k": 3
+}

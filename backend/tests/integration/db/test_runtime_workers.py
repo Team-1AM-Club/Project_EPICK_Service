@@ -445,6 +445,24 @@ def test_job_worker_creates_one_w2_outbox_and_lookup_uses_only_private_adapter(
     assert available.json()["command"]["command_id"] == str(w2_command_id)
     assert available.json()["command"] == payload
 
+    metadata_url = "/internal/v1/w2-private/source-onboarding-lookup"
+    assert lookup.post(metadata_url, json=body).status_code == 401
+    metadata = lookup.post(metadata_url, json=body, headers=_lookup_headers())
+    assert metadata.status_code == 200
+    assert metadata.json()["status"] == "AVAILABLE"
+    assert metadata.json()["source"]["source_id"] == payload["source_id"]
+    assert metadata.json()["source"]["company_id"] == payload["company_id"]
+    assert metadata.json()["source"]["canonical_url"] == "https://example.test/dispatch"
+    assert "collection_permission" not in metadata.json()["source"]
+    stale = lookup.post(
+        metadata_url,
+        json={**body, "execution_fence": body["execution_fence"] + 1},
+        headers=_lookup_headers(),
+    )
+    assert stale.status_code == 200
+    assert stale.json()["status"] == "UNAVAILABLE"
+    assert stale.json()["source"] is None
+
 
 @pytest.mark.postgres
 @pytest.mark.parametrize(
@@ -947,10 +965,23 @@ def test_lookup_adapter_works_with_the_real_column_limited_lookup_role(
             },
             headers=_lookup_headers(),
         )
+        source_metadata = lookup.post(
+            "/internal/v1/w2-private/source-onboarding-lookup",
+            json={
+                "schema_version": "w1.private.command-lookup.v1",
+                "command_id": str(command.id),
+                "execution_fence": command.execution_fence,
+                "owner_deletion_epoch": command.owner_deletion_epoch,
+            },
+            headers=_lookup_headers(),
+        )
     finally:
         lookup_engine.dispose()
     assert response.status_code == 200
     assert response.json()["status"] == "AVAILABLE"
+    assert source_metadata.status_code == 200
+    assert source_metadata.json()["status"] == "AVAILABLE"
+    assert source_metadata.json()["source"]["canonical_url"] == "https://example.test/lookup-role"
 
 
 @pytest.mark.postgres

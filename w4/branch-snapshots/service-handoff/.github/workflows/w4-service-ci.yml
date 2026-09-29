@@ -1,0 +1,56 @@
+name: W4 service verification
+
+on:
+  pull_request:
+    branches: [develop]
+  push:
+    branches: [develop, feat/w4-service-handoff]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            python: "3.12"
+          - os: windows-2022
+            python: "3.13"
+    defaults:
+      run:
+        shell: bash
+    env:
+      PYTHONUTF8: "1"
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "0.12.0"
+          python-version: ${{ matrix.python }}
+          enable-cache: false
+      - name: Install locked API and test dependencies
+        run: |
+          mkdir -p output/ci
+          uv --version > output/ci/uv-version.txt
+          uv sync --locked --extra api --extra test 2>&1 | tee output/ci/install.log
+      - name: Run full suite and two synthetic HTTP demos
+        run: |
+          uv run --locked --extra api --extra test python scripts/verify_service_handoff.py --output-dir output/ci/verification
+      - name: Retain verification artifacts, including failures
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: w4-service-${{ matrix.os }}-py${{ matrix.python }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: output/ci/
+          if-no-files-found: error
+          retention-days: 14

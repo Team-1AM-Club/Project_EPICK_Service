@@ -1,0 +1,25 @@
+{
+  "note": "Explicit W4 fiction only; domain benchmark references are assistant-authored drafts.",
+  "criteria_sha256": [
+    "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "783f63f9c0893a5ac751e3040311103c4431ebc2248acaac0599da738b471e05",
+    "4197ced9702435c5e7cdd17d9990c95594ed5f56133c4e509747f12f3124f6f5"
+  ],
+  "staged_criteria_sha256": {
+    "c01_question": [
+      "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "9a1d3512ce33db88bf6055233e31d2329dc029210766339dde6142b0c445aef0",
+      "8812b8057e93301e8492987f068f8930925a8885566cb98410060129a67e089b"
+    ],
+    "c01_claims": [
+      "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "a28f6055ecabc59a604655aeb5f97903d92d0facf939e862b773d668269abae2",
+      "b4850168ad3c030fc31baea3619504f130d2ac6d177d8793624f6d6dc7717e62"
+    ],
+    "c01_requirements": [
+      "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "e3b5854c30f9ba90dfbd66c7c61ba659f27ef3347cbeaea0c97f64103e1fb9c8",
+      "0247c525a2bb9ac1f13a7160f225c549b22a93f89ecb27e0c636723de4cda4bc"
+    ]
+  }
+}

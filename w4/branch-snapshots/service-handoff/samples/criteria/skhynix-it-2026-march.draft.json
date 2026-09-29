@@ -1,0 +1,228 @@
+{
+  "schema_version": "w4-question-criteria-draft/0.1",
+  "status": "DRAFT_FOR_LOCAL_REVIEW",
+  "created_on": "2026-09-08",
+  "scope_id": "skhynix-2026-march-R260521-IT",
+  "runtime_integration": "NOT_LOADED_BY_RECOMMENDATION_PIPELINE",
+  "is_w4_request": false,
+  "is_official_rubric": false,
+  "is_model_evaluation_ground_truth": false,
+  "author": "ASSISTANT",
+  "provisional_use": {
+    "authorized_by_user": true,
+    "user_instruction": "고정하지 않고 진행하자",
+    "scope": "미확인 서식 조건을 강제하지 않고 경험 선택 기준의 초안을 정리한다.",
+    "official_conditions_approved": false,
+    "model_evaluation_answers_or_weights_approved": false
+  },
+  "references": {
+    "question_scope": "samples/verification/skhynix-question-scope-2026-09-08.json",
+    "company_review": "samples/verification/skhynix-source-review-2026-09-08.json",
+    "current_contract": "docs/w4-contract.md",
+    "synthetic_examples": "samples/w4_collaboration.json"
+  },
+  "unknown_constraint_policy": {
+    "meaning_of_null": "UNCONFIRMED",
+    "enforced_fields": [],
+    "reject_episode_for_unknown_form_constraint": false,
+    "downrank_episode_for_unknown_form_constraint": false,
+    "apply_answer_length_to_episode_raw_text": false,
+    "request_scope": "ONLY_THE_REQUESTED_QUESTION",
+    "reported_constraints_location": "question_scope",
+    "on_official_form_arrival": "문항과 부연 안내의 차이를 기록하고 영향을 받는 기준을 재검토한다."
+  },
+  "questions": [
+    {
+      "question_id": "expertise",
+      "official_text": null,
+      "form_constraints": {"max_characters": null, "required": null, "max_hashtags": null},
+      "content_checks": [
+        {
+          "id": "expertise.specific_area",
+          "description": "어떤 직무 지식·기술을 익혔는지 구체적으로 드러나는가",
+          "origin": "QUESTION_CONTENT_INTERPRETATION",
+          "question_source_ids": ["catch_march_listing"]
+        },
+        {
+          "id": "expertise.sustained_learning",
+          "description": "학습을 지속하거나 반복한 과정이 드러나는가",
+          "origin": "QUESTION_CONTENT_INTERPRETATION",
+          "question_source_ids": ["catch_march_listing"]
+        },
+        {
+          "id": "expertise.practical_use",
+          "description": "배운 내용을 실제 작업에 사용한 행동이 있는가",
+          "origin": "QUESTION_CONTENT_INTERPRETATION",
+          "question_source_ids": ["catch_march_listing"]
+        }
+      ],
+      "evidence_to_collect": ["전문 분야", "학습 방법", "학습 기간 또는 반복", "활용 행동", "결과와 근거 자료"],
+      "question_source_ids": ["catch_march_listing"],
+      "implementation_notes": ["특정 학습 기간이나 횟수의 하한을 만들지 않는다.", "자격증·성과 수치를 일괄 필수로 만들지 않는다."]
+    },
+    {
+      "question_id": "teamwork",
+      "official_text": null,
+      "form_constraints": {"max_characters": null, "required": null, "max_hashtags": null},
+      "content_checks": [
+        {
+          "id": "teamwork.shared_goal",
+          "description": "함께 이루려던 일이 구체적으로 드러나는가",
+          "origin": "QUESTION_CONTENT_INTERPRETATION",
+          "question_source_ids": ["jobplanet_march_article"]
+        },
+        {
+          "id": "teamwork.cooperation_action",
+          "description": "본인이 다른 사람들의 협력을 이끌어 낸 행동이 있는가",
+          "origin": "QUESTION_CONTENT_INTERPRETATION",
+          "question_source_ids": ["jobplanet_march_article"]
+        },
+        {
+          "id": "teamwork.contribution",
+          "description": "본인의 행동이 공동 목표에 어떻게 보탬이 되었는가",
+          "origin": "QUESTION_CONTENT_INTERPRETATION",
+          "question_source_ids": ["jobplanet_march_article"]
+        }
+      ],
+      "evidence_to_collect": ["상황", "참여자 관계", "공동 목표", "본인 행동", "이후 결과", "소회"],
+      "question_source_ids": ["jobplanet_march_article"],
+      "implementation_notes": ["리더 직책이나 갈등의 존재를 필수로 만들지 않는다.", "팀의 성과를 본인의 단독 기여로 바꾸지 않는다."]
+    },
+    {
+      "question_id": "challenge",
+      "official_text": null,
+      "form_constraints": {"max_characters": null, "required": null, "max_hashtags": null},
+      "content_checks": [
+        {
+          "id": "challenge.self_set_goal",
+          "description": "본인이 높은 목표를 정한 과정이 드러나는가",
+          "origin": "QUESTION_CONTENT_INTERPRETATION",
+          "question_source_ids": ["jobkorea_march_question_listing"]
+        },
+        {
+          "id": "challenge.persistence",
+          "description": "어려움 속에서도 행동을 이어 가거나 조정한 과정이 있는가",
+          "origin": "QUESTION_CONTENT_INTERPRETATION",
+          "question_source_ids": ["jobkorea_march_question_listing"]
+        }
+      ],
+      "evidence_to_collect": ["목표 설정", "당시 여건과 난관", "대응 행동", "지속한 과정", "결과", "소회"],
+      "question_source_ids": ["jobkorea_march_question_listing"],
+      "implementation_notes": ["목표 미달을 이유로 경험을 자동 제외하지 않는다.", "성과 수치만으로 노력의 지속성을 인정하지 않는다."]
+    },
+    {
+      "question_id": "self_description",
+      "official_text": null,
+      "form_constraints": {"max_characters": null, "required": null, "max_hashtags": null},
+      "content_checks": [
+        {
+          "id": "self_description.theme",
+          "description": "사용자가 드러내려는 가치관·개성·강점 중 선택한 주제와 연결되는가",
+          "origin": "QUESTION_CONTENT_INTERPRETATION",
+          "question_source_ids": ["jobkorea_march_question_listing"]
+        }
+      ],
+      "evidence_to_collect": ["사용자가 선택한 주제", "그 주제를 뒷받침하는 본인 행동", "행동의 맥락"],
+      "evidence_collection_origin": "IMPLEMENTATION_PROPOSAL",
+      "question_source_ids": ["jobkorea_march_question_listing"],
+      "implementation_notes": ["가치관·개성·강점을 모두 제시하도록 강제하지 않는다.", "사용자가 선택하지 않은 성격이나 정체성을 단정하지 않는다.", "해시태그 개수를 후보 경험 개수 제한으로 사용하지 않는다."]
+    },
+    {
+      "question_id": "job_experience",
+      "official_text": null,
+      "form_constraints": {"max_characters": null, "required": null, "max_hashtags": null},
+      "content_checks": [
+        {
+          "id": "job_experience.job_connection",
+          "description": "경험에서 실제 수행한 작업이 대상 IT 업무와 연결되는가",
+          "origin": "QUESTION_CONTENT_INTERPRETATION",
+          "question_source_ids": ["jobplanet_march_article"],
+          "company_evidence_ids": ["ko-it-duties"]
+        }
+      ],
+      "evidence_to_collect": ["활동 범위", "본인 역할", "작업 내용", "사용한 기술", "결과"],
+      "evidence_collection_origin": "IMPLEMENTATION_PROPOSAL",
+      "question_source_ids": ["jobplanet_march_article"],
+      "implementation_notes": ["반도체 업계 경험만 허용하지 않는다.", "특정 기술이나 경험 개수를 일괄 필수로 두지 않는다."]
+    }
+  ],
+  "company_context": {
+    "scope": "R260521 / 국문 IT JD 10쪽",
+    "origin": "PRIMARY_SOURCE_REVIEW_PLUS_IMPLEMENTATION_PROPOSAL",
+    "use": "SECONDARY_CONTEXT",
+    "cannot_replace_question_evidence": true,
+    "duties_evidence_ids": ["ko-it-duties"],
+    "preferences": [
+      {"id": "software", "summary": "소프트웨어 설계·개발", "evidence_ids": ["ko-it-preference"]},
+      {"id": "data_tools", "summary": "DBMS 또는 오픈소스 활용", "evidence_ids": ["ko-it-preference"]},
+      {"id": "ai_application", "summary": "AI 앱 구현·활용", "evidence_ids": ["ko-it-ai"]},
+      {"id": "transport_automation", "summary": "반송 설비의 하드웨어·소프트웨어 이해", "evidence_ids": ["ko-it-preference"]},
+      {"id": "new_technology", "summary": "새 IT 기술을 배우고 사용한 경험", "evidence_ids": ["ko-it-preference"]}
+    ],
+    "all_preferences_required": false,
+    "experience_scope_exception_evidence_ids": ["faq-experience"],
+    "excluded_evidence_ids_for_this_round": ["news-interview", "news-ai", "news-education", "news-form"],
+    "eligibility_used_for_experience_ranking": false
+  },
+  "evidence_review": {
+    "origin": "IMPLEMENTATION_PROPOSAL",
+    "statuses": {
+      "SUPPORTED": "제공 원문에서 내용을 뒷받침하는 구절을 확인함",
+      "NOT_SHOWN": "필요한 내용이 원문에 나타나지 않음; 미경험으로 단정하지 않음",
+      "AMBIGUOUS": "관련 표현의 주체·범위·연결이 불명확함",
+      "CONTRADICTED": "원문에 반대되거나 충돌하는 진술이 있음"
+    },
+    "meaning_of_supported": "SOURCE_TEXT_SUPPORT_ONLY_NOT_INDEPENDENT_FACT_VERIFICATION",
+    "raw_reference_contract": "기존 경험 ID·버전과 Python Unicode [start:end] 발췌 일치",
+    "separate_integrity_checks": ["소유권", "제외 요청", "스냅샷 버전", "원문 위치", "본인 기여 범위"],
+    "missing_evidence_action": "ASK_FOR_SPECIFIC_MISSING_INFORMATION_WITHOUT_INVENTING_FACTS",
+    "content_checks_are_not_api_criterion_ids": true,
+    "counting_subchecks_as_new_ranking_points": false
+  },
+  "manual_examples": {
+    "method": "ASSISTANT_MANUAL_REVIEW_OF_EXISTING_SYNTHETIC_RAW_TEXT",
+    "source_ref": "synthetic_examples",
+    "trusted_example_user_id": "user-demo",
+    "external_model_called": false,
+    "pipeline_executed_with_this_draft": false,
+    "cases": [
+      {
+        "question_id": "expertise",
+        "episode_id": "episode-learning",
+        "episode_version": 1,
+        "checks": [
+          {"check_id": "expertise.specific_area", "status": "SUPPORTED", "observed_fact_ids": ["episode-learning-fact-1", "episode-learning-fact-2"], "note": "Python과 데이터 정리 작업이 명시되어 있다."},
+          {"check_id": "expertise.sustained_learning", "status": "NOT_SHOWN", "observed_fact_ids": ["episode-learning-fact-2"], "note": "학습은 기록되어 있으나 기간·반복 과정은 나타나지 않는다."},
+          {"check_id": "expertise.practical_use", "status": "SUPPORTED", "observed_fact_ids": ["episode-learning-fact-2", "episode-learning-fact-3"], "note": "배운 내용을 코드에 적용해 파일 정리를 자동화했다."}
+        ],
+        "follow_up_questions": ["학습을 언제부터 어떤 주기로 이어 갔고, 적용 후 무엇을 더 배우거나 보완했나요?"],
+        "prohibited_inference": "파일 3개라는 수를 학습 기간이나 반복 횟수로 바꾸지 않는다.",
+        "rank": null,
+        "api_candidate_status": null
+      },
+      {
+        "question_id": "teamwork",
+        "episode_id": "episode-team-api",
+        "episode_version": 1,
+        "checks": [
+          {"check_id": "teamwork.shared_goal", "status": "NOT_SHOWN", "observed_fact_ids": ["episode-team-api-fact-1"], "note": "팀 구성과 역할은 있으나 공동으로 정한 목표는 명시되지 않았다."},
+          {"check_id": "teamwork.cooperation_action", "status": "SUPPORTED", "observed_fact_ids": ["episode-team-api-fact-2"], "note": "본인이 회의를 진행해 요구를 조율하고 역할을 나눈 행동이 있다."},
+          {"check_id": "teamwork.contribution", "status": "AMBIGUOUS", "observed_fact_ids": ["episode-team-api-fact-2", "episode-team-api-fact-3", "episode-team-api-fact-4"], "note": "본인 작업과 오류 감소는 있으나 공동 목표와 협력 행동의 기여 연결은 추가 설명이 필요하다."}
+        ],
+        "follow_up_questions": ["팀이 함께 정한 목표와 완료 기준은 무엇이었나요?", "요구 조율과 역할 분담 후 무엇이 달라졌고, 이 과정에서 무엇을 느꼈나요?"],
+        "prohibited_inference": "오류 감소를 회의 진행만의 효과나 본인의 단독 성과로 단정하지 않는다.",
+        "rank": null,
+        "api_candidate_status": null
+      }
+    ]
+  },
+  "implementation_boundary": {
+    "new_ranking_weights": null,
+    "runtime_ranking_policy_changed": false,
+    "synthetic_fixtures_modified": false,
+    "external_model_allowlist_modified": false,
+    "model_evaluation_approvals_modified": false,
+    "next_step": "경험 원문에서 역할·행동·결과 및 문항별 맥락을 발췌하는 계약 정리",
+    "next_step_gap": "목표·기간·난관·소회를 기존 ROLE/ACTION/RESULT에 억지로 넣지 않는 표현 방법이 필요하다."
+  }
+}

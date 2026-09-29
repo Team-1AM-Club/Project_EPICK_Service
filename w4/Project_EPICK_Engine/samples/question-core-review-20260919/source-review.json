@@ -1,0 +1,62 @@
+{
+  "checked_at": "2026-09-19T04:51:32.667666+00:00",
+  "status": "BASELINE_VERIFIED_PRE_ADOPTION",
+  "repository": "https://github.com/Team-1AM-Club/Project_EPICK_Service",
+  "baseline_full_sha": "bb27a692cf002100a3f773df7e434e90fe03f83f",
+  "baseline_scope": "EXISTING_ENVELOPE_AND_STORAGE_NOT_W4_FLAT_ADOPTION",
+  "baseline_checksums_verified": 3,
+  "pinned_sources": [
+    {
+      "path": "samples/question-core-review-20260919/upstream/private-message-envelope.schema.json",
+      "sha256": "8119cb594782187669df608d6f1748c57c45130356998c7cd77867cdd9f80201"
+    },
+    {
+      "path": "samples/question-core-review-20260919/upstream/core-source-decision.schema.json",
+      "sha256": "421cf7808c1e15758b9de1164b606f7007010636e3394befadb1f38ff5997b4e"
+    },
+    {
+      "path": "samples/question-core-review-20260919/upstream/private-core-source-decision-question.json",
+      "sha256": "805cdd8a88271ca5ea9f2712a5b6cec3c1bee2d8e72e361b08b892508d99ba7f"
+    },
+    {
+      "path": "docs/inputs/W1_W4_Required_Contracts_2026-09-19.md",
+      "sha256": "28d34f0d142766f798897e8d41cf13cddec2cfe4c6539bcca50881d08df53359"
+    }
+  ],
+  "candidate_sources": [
+    {
+      "path": "specs/004-w1-w4-question-core/w4-adoption.md",
+      "review_sha256_from_request": "6b4bfe3b0796c376b9b5f2831e66aaf526c3f27f94e80f5112f2df0d559b537f",
+      "present_in_baseline_commit": false,
+      "original_bytes_verified": false,
+      "review_status": "ORIGINAL_NOT_RECEIVED"
+    },
+    {
+      "path": "specs/004-w1-w4-question-core/contracts/w4-question-core-decision.event.schema.json",
+      "review_sha256_from_request": "1eb0506d9b13e22198ea11fb5fccd628096de2903b0fe5b1da3d383928d8407a",
+      "present_in_baseline_commit": false,
+      "original_bytes_verified": false,
+      "review_status": "ORIGINAL_NOT_RECEIVED"
+    }
+  ],
+  "boundary_checks": {
+    "existing_fixture_passes_envelope": true,
+    "existing_fixture_passes_storage_payload": true,
+    "existing_question_pin_company_is_null": true,
+    "existing_fixture_has_no_explicit_job_binding": true,
+    "existing_storage_rejects_non_null_question_company": true,
+    "existing_storage_rejects_missing_question_identity": true,
+    "existing_storage_rejects_code_boolean_mismatch": true,
+    "existing_envelope_rejects_w4_using_w3_channel": true,
+    "existing_storage_cannot_gain_job_id_without_revision": true,
+    "test_only_flat_event_is_not_existing_envelope": true,
+    "test_only_flat_event_is_not_existing_storage_payload": true
+  },
+  "boundary_checks_passed": 11,
+  "w1_w4_contract_adopted": false,
+  "w1_consumer_contract_suite": "NOT_RUN",
+  "joint_ct12": "NOT_RUN",
+  "actual_queue_calls": 0,
+  "real_model_calls": 0,
+  "next_step": "REVIEW_CANDIDATE_BYTES_AND_AGREE_D01_D03_BEFORE_ADOPTED_SHA_EXCHANGE"
+}

@@ -1,0 +1,62 @@
+{
+  "source_repository": "https://github.com/Team-1AM-Club/Project_EPICK_Service",
+  "source_commit": "a7e70cbac366b0128d559773ed9ebf240ac96ba6",
+  "source_subdirectory": "w4/EPICK_W4_HTTP_Runtime_2026-09-20_r5",
+  "engine_base_commit": "9121219e06c83a29251ee60c6c48849bd902c4c7",
+  "source_files": [
+    {
+      "source_path": "w4/EPICK_W4_HTTP_Runtime_2026-09-20_r5/epick_w4/w1_runtime.py",
+      "destination_path": "epick_w4/w1_runtime.py",
+      "source_sha256": "2da3763234464d4b9b16dab656f1ba864f28f42a9b61f445b406f686a154696a"
+    },
+    {
+      "source_path": "w4/EPICK_W4_HTTP_Runtime_2026-09-20_r5/epick_w4/w1_http_run_store.py",
+      "destination_path": "epick_w4/w1_http_run_store.py",
+      "source_sha256": "bfe86c75cb550f0cab900dd36b40cad4f609907b3a0721ba3a287f188b8149e8"
+    },
+    {
+      "source_path": "w4/EPICK_W4_HTTP_Runtime_2026-09-20_r5/epick_w4/acceptance_bootstrap.py",
+      "destination_path": "epick_w4/acceptance_bootstrap.py",
+      "source_sha256": "b930fc3d2804a605566891918b62ff45de4c0660315388df5890feaecbf90f42"
+    },
+    {
+      "source_path": "w4/EPICK_W4_HTTP_Runtime_2026-09-20_r5/tests/test_w1_runtime.py",
+      "destination_path": "tests/test_w1_runtime.py",
+      "source_sha256": "b6e61c5de2a361cc6e8eba6698c260f0fde0efe2ff7b9cf28b4f4f9247053bbb"
+    },
+    {
+      "source_path": "w4/EPICK_W4_HTTP_Runtime_2026-09-20_r5/tests/test_w1_http_run_store.py",
+      "destination_path": "tests/test_w1_http_run_store.py",
+      "source_sha256": "ae5d86ba2ea949b64eae4217ad1da1330d45d7a1c7d42f82b4beae7a183581bb"
+    },
+    {
+      "source_path": "w4/EPICK_W4_HTTP_Runtime_2026-09-20_r5/tests/test_w1_acceptance_bootstrap.py",
+      "destination_path": "tests/test_w1_acceptance_bootstrap.py",
+      "source_sha256": "e883ca1e0e68c78cdc859efd146ccf9cb94abae657138faedc365c8d99133023"
+    },
+    {
+      "source_path": "w4/EPICK_W4_HTTP_Runtime_2026-09-20_r5/deploy/recommendation/Dockerfile",
+      "destination_path": "deploy/recommendation/Dockerfile",
+      "source_sha256": "3bbe4e17bdb58283b1e1b47d8a60958e1958a103ff8b77cbdc2b7bb22fea3241"
+    },
+    {
+      "source_path": "w4/EPICK_W4_HTTP_Runtime_2026-09-20_r5/deploy/recommendation/Dockerfile.dockerignore",
+      "destination_path": "deploy/recommendation/Dockerfile.dockerignore",
+      "source_sha256": "1e85f78af6d52bbbb0f83e65094f411d08e6a9ce99bf8b33bba02a968e906902"
+    },
+    {
+      "source_path": "w4/EPICK_W4_HTTP_Runtime_2026-09-20_r5/epick_w4/w1_bridge.py",
+      "destination_path": "epick_w4/w1_bridge.py",
+      "source_sha256": "a7474b92a188e6f4210f17d96690d891662f2b14565c210023356d00d9c3093a"
+    }
+  ],
+  "scope": "Bring the existing fixed-synthetic recommendation worker into the Engine repository; no Gemma inference or AWS deployment is claimed.",
+  "local_adaptations": {
+    "tests/test_w1_acceptance_bootstrap.py": "Convert two pytest functions to unittest for complete discovery with the existing lock; add REAL-data refusal test.",
+    "tests/test_w1_runtime.py": "Add configured entrypoint smoke with fake SQS and no external calls.",
+    "deploy/recommendation/Dockerfile": "Use recommendation-local hash-locked export; require a full source revision build argument.",
+    "deploy/recommendation/Dockerfile.dockerignore": "Allow only the production package and recommendation build inputs.",
+    "epick_w4/w1_bridge.py": "Port only the upstream opt-in simulated publication gate and explicit limitation; preserve existing Engine formatting.",
+    "tests/test_w1_bridge.py": "Add default-deny and mixed-mode denial regression checks for the imported gate."
+  }
+}

@@ -321,8 +321,15 @@ GRANT SELECT (id, job_id, owner_user_id, source_id, command_id, purpose_ref, ana
 ON TABLE job_source_links
 TO epick_lookup;
 
-GRANT SELECT (id, company_id)
+-- W2 may retrieve a source URL only for a currently valid W1-issued command.
+-- The adapter still applies owner/fence/epoch checks before this projection;
+-- these metadata grants convey no approval to collect or retain content.
+GRANT SELECT (id, company_id, canonical_url, source_type, title)
 ON TABLE sources
+TO epick_lookup;
+
+GRANT SELECT (id, legal_name, official_domain, identification_status)
+ON TABLE companies
 TO epick_lookup;
 
 GRANT SELECT (

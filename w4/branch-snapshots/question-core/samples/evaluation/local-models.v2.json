@@ -1,0 +1,38 @@
+{
+  "model_directory": "C:\\.lmstudio\\models",
+  "models": [
+    {
+      "candidate_id": "qwen35-9b-q4",
+      "provider": "qwen-local-llama.cpp",
+      "model": "Qwen3.5-9B",
+      "filename": "lmstudio-community/Qwen3.5-9B-GGUF/Qwen3.5-9B-Q4_K_M.gguf",
+      "size": 5627044256,
+      "sha256": "cd76ec205963b3b33350093e6904d9de16c4e666fd104e1f632d25c7f15f2a13"
+    },
+    {
+      "candidate_id": "qwen3-14b-q6",
+      "provider": "qwen-local-llama.cpp",
+      "model": "Qwen3-14B",
+      "filename": "lmstudio-community/Qwen3-14B-GGUF/Qwen3-14B-Q6_K.gguf",
+      "size": 12121937696,
+      "sha256": "cbc303a666337cbac396c808d26a3875ab4290b1c6e47d2a157e26980ae5b421"
+    },
+    {
+      "candidate_id": "gemma4-12b-qat",
+      "provider": "google-local-llama.cpp",
+      "model": "Gemma-4-12B-QAT",
+      "filename": "lmstudio-community/gemma-4-12B-it-QAT-GGUF/gemma-4-12B-it-QAT-Q4_0.gguf",
+      "size": 6975879008,
+      "sha256": "f568ac5de71c8fcac5d5794494388ad94db9e18b4368ca897e21b30d2448eeec"
+    },
+    {
+      "candidate_id": "gemma4-26b-qat",
+      "provider": "google-local-llama.cpp",
+      "model": "Gemma-4-26B-A4B-QAT",
+      "filename": "lmstudio-community/gemma-4-26B-A4B-it-QAT-GGUF/gemma-4-26B-A4B-it-QAT-Q4_0.gguf",
+      "size": 14439363264,
+      "sha256": "a586dac572e606b1f2ad0011f7465aa1dffdb0f6516c5b5809fab35857865389"
+    }
+  ],
+  "note": "Existing user downloads; hash pins the actual local artifact, not a verified publisher signature."
+}

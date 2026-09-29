@@ -1,0 +1,20 @@
+{
+  "schema_version": "w4-stage-policy/0.2",
+  "scorer_version": "w4-separated-grounding/0.2",
+  "benchmark_sha256": "07cf8a0bd12da2602664e1e06d9abf0acfa0213863de1402d55b87f0e63c38b4",
+  "protocol_sha256": "06ac35055013cf605b4b060153cc0b75f6a56611493abb13d2b2607544c64fc4",
+  "repetitions": 1,
+  "weights": {
+    "question": 50,
+    "matching": 50
+  },
+  "gates": {
+    "contract_valid_percent": 100,
+    "unsafe_fact_admissions": 0,
+    "question_quote_valid_percent": 100
+  },
+  "review": {
+    "status": "DRAFT"
+  },
+  "proposal_note": "1회씩 서로 다른 사례를 평가한다. 정답 의미 앵커를 포함한 더 긴 원문 인용은 허용. 추출 점수는 합산하지 않는다."
+}

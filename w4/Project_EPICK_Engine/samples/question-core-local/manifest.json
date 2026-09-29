@@ -1,0 +1,15 @@
+{
+  "status": "TEST_ONLY_W1_ORIGINAL_MISSING",
+  "w1_canonical_schema": null,
+  "external_send_allowed": false,
+  "files": {
+    "context.json": "654240efcd89b5f643a1452b42fd694c01b9f944be80d69b6d06a21050056c8c",
+    "core-required.json": "7c863875d047281c190d5a61492081011863e199110cc22bc9db8d490553a275",
+    "digest-vectors.json": "feff6a34595b184b62a096c35ce458066bafb5c71ed2827840f778073e51887c",
+    "negative-events.json": "79072855678c7191ff308cc7d4aaeca01a69a9b66015fab0b6cd45ead43b89ef",
+    "non-core-optional.json": "bcdca35e9c22bdd53871c7d99483bc8b1ff9eebbba251931c45b67a72dbb8763",
+    "policy.json": "60e10ca58062e6af970e6cfa9e207f1b80656f8b4883aca1d97015d7d16e227f",
+    "source-review.json": "7179cb4a5943fc289b58a6a20f1f282e7a3ad1a1c53543db17ce11b14bead3e9",
+    "test-only.schema.json": "0969f30fa96d9ddc3435b2239e2d3556edf495ff6b5d58ecb2fce60420aae1ad"
+  }
+}

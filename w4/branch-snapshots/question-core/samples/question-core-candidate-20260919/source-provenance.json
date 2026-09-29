@@ -1,0 +1,20 @@
+{
+  "status": "W1_CANDIDATE_SOURCE_VERIFIED_NOT_ADOPTED",
+  "source_document": "docs/inputs/W1_W4_Candidate_Contract_Source_2026-09-19.md",
+  "candidate_originals_verified": 2,
+  "candidate_commit_sha": null,
+  "w1_existing_baseline_sha": "bb27a692cf002100a3f773df7e434e90fe03f83f",
+  "historical_authoring_baseline_sha": "41dd0c21692c7f59c87962cf1e7d2746bac73303",
+  "contract_adopted": false,
+  "files": {
+    "samples/question-core-candidate-20260919/upstream/w4-adoption.md": "6b4bfe3b0796c376b9b5f2831e66aaf526c3f27f94e80f5112f2df0d559b537f",
+    "samples/question-core-candidate-20260919/upstream/w4-question-core-decision.event.schema.json": "1eb0506d9b13e22198ea11fb5fccd628096de2903b0fe5b1da3d383928d8407a",
+    "docs/inputs/W1_W4_Candidate_Contract_Source_2026-09-19.md": "2e2cab3ab20d52e6e5752e5faa54fcb6fbfa711b9129b2bd8d91dfd2072c53d1",
+    "docs/inputs/w1-runtime-status-reported-20260919.png": "3f8790efef7f2e04bfbf5b59069900fb80797a7e4798c785984fe3ac6902a3b0"
+  },
+  "team_image_claims": {
+    "w1_implementation_and_aws_setup": "TEAM_REPORTED_COMPLETE_NOT_INDEPENDENTLY_VERIFIED",
+    "w4_runtime_integration": "PENDING",
+    "joint_ct12": "NOT_RUN"
+  }
+}

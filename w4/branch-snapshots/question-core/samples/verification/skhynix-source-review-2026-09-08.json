@@ -1,0 +1,547 @@
+{
+  "schema_version": "local-company-source-review/0.1",
+  "reviewed_at": "2026-09-08T05:48:38.440741+00:00",
+  "reviewer": {
+    "type": "AI_ASSISTANT",
+    "name": "Codex",
+    "human_approval": null
+  },
+  "task": "제공된 수집·Claim 샘플의 공식 출처 대조와 IT 관련 첨부 확인",
+  "review_status": "SOURCE_COMPARISON_COMPLETE_FOR_DECLARED_SCOPE",
+  "original_inputs": [
+    {
+      "file": "samples/upstream/skhynix_claim_handoff_sample.json",
+      "sha256": "a806995e4a8b221a0b2b3aae69269a827f698af04a6a90d038e4c423611333ac",
+      "matches_downloads_copy": true
+    },
+    {
+      "file": "samples/upstream/skhynix_claim_handoff.md",
+      "sha256": "0b1069f13a9c962830b2a3dc318c27900946b635909011e442d9cb11ecbb0a3d",
+      "matches_downloads_copy": true
+    },
+    {
+      "file": "samples/upstream/skhynix_collection_contract_sample.json",
+      "sha256": "1acfbcce9749fef01f7a643142baa94a4cd2ec5c1db5ee61222291c052f40154"
+    }
+  ],
+  "captures": [
+    {
+      "key": "posting",
+      "url": "https://www.skcareers.com/Recruit/Detail/R260521",
+      "attempted_at": "2026-09-08T05:37:37.373837+00:00",
+      "http_status": 200,
+      "final_url": "https://www.skcareers.com/Recruit/Detail/R260521",
+      "content_type": "text/html; charset=utf-8",
+      "last_modified": null,
+      "status": "CAPTURED",
+      "file": "output/source-verification/2026-09-08/posting.html",
+      "byte_length": 86565,
+      "sha256": "05921efd2481625687780e16fe14e73d42c69f9d70a65d66d5190b827f5746f8",
+      "local_capture_id": "local:posting:05921efd24816256",
+      "upstream_source_version_id": null,
+      "normalized_visible_text_sha256": "9ae38c74fd2f3e903dc8dc26a6a2932c877c60154b98e4110101fc7a1d5fbd06"
+    },
+    {
+      "key": "news",
+      "url": "https://news.skhynix.co.kr/ai-talent-recruit-2026-02/",
+      "attempted_at": "2026-09-08T05:37:37.632868+00:00",
+      "http_status": 200,
+      "final_url": "https://news.skhynix.co.kr/ai-talent-recruit-2026-02/",
+      "content_type": "text/html; charset=UTF-8",
+      "last_modified": null,
+      "status": "CAPTURED",
+      "file": "output/source-verification/2026-09-08/news.html",
+      "byte_length": 154763,
+      "sha256": "ac1dac74656c464df9408d6c7ffa0f2d4466346b63c3f72167e5545835e638ae",
+      "local_capture_id": "local:news:ac1dac74656c464d",
+      "upstream_source_version_id": null,
+      "normalized_visible_text_sha256": "da87574aef66e34f0414d6ba2f84c379cc462a6ebb8c24ef6a61fb7de082176e"
+    },
+    {
+      "key": "jd-ko",
+      "url": "https://www.skcareers.com/Recruit/DownloadFile?p=ZmlsZVBhdGg9L0pvYk5vdGljZS9SMjYwNTIxL0luZm8vNmFkNDA1MjItNzhlNS00YmM3LWI4NGMtNTk4YjQ0Yjc3YTAxLnBkZiZmaWxlTmFtZT0yMDI2KOyDgSkgU0vtlZjsnbTri4nsiqQgVGFsZW50IGh5LXdheSjsi6DsnoUpIEpvYiBEZXNjcmlwdGlvbijsnbTsspwpLnBkZg%3D%3D",
+      "attempted_at": "2026-09-08T05:37:38.319286+00:00",
+      "http_status": 200,
+      "final_url": "https://www.skcareers.com/Recruit/DownloadFile?p=ZmlsZVBhdGg9L0pvYk5vdGljZS9SMjYwNTIxL0luZm8vNmFkNDA1MjItNzhlNS00YmM3LWI4NGMtNTk4YjQ0Yjc3YTAxLnBkZiZmaWxlTmFtZT0yMDI2KOyDgSkgU0vtlZjsnbTri4nsiqQgVGFsZW50IGh5LXdheSjsi6DsnoUpIEpvYiBEZXNjcmlwdGlvbijsnbTsspwpLnBkZg%3D%3D",
+      "content_type": "application/octet-stream",
+      "last_modified": null,
+      "status": "CAPTURED",
+      "file": "output/source-verification/2026-09-08/jd-ko-icheon.pdf",
+      "byte_length": 9633144,
+      "sha256": "a38eb960eeb2df2a885c40dc7cbb55fca4aace5e9e628b015a7997d9f2740e92",
+      "local_capture_id": "local:jd-ko:a38eb960eeb2df2a",
+      "upstream_source_version_id": null,
+      "pdf_page_count": 28,
+      "text_layer": "NO_EXTRACTABLE_TEXT_FOUND",
+      "reading_method": "ASSISTANT_VISUAL_REVIEW_OF_RENDERED_PAGES",
+      "reviewed_pages": [
+        1,
+        10,
+        28
+      ],
+      "complete_cross_language_equivalence_checked": false
+    },
+    {
+      "key": "jd-en",
+      "url": "https://www.skcareers.com/Recruit/DownloadFile?p=ZmlsZVBhdGg9L0pvYk5vdGljZS9SMjYwNTIxL0luZm8vNGJkOTdkMTMtNWY3NC00OTE2LWFmMTMtZjE5NmRhYWVkMWI5LnBkZiZmaWxlTmFtZT0yMDI2IFNLIGh5bml4IFRhbGVudCBoeS13YXkgSm9iIERlc2NyaXB0aW9uKEljaGVvbikucGRm",
+      "attempted_at": "2026-09-08T05:37:41.774496+00:00",
+      "http_status": 200,
+      "final_url": "https://www.skcareers.com/Recruit/DownloadFile?p=ZmlsZVBhdGg9L0pvYk5vdGljZS9SMjYwNTIxL0luZm8vNGJkOTdkMTMtNWY3NC00OTE2LWFmMTMtZjE5NmRhYWVkMWI5LnBkZiZmaWxlTmFtZT0yMDI2IFNLIGh5bml4IFRhbGVudCBoeS13YXkgSm9iIERlc2NyaXB0aW9uKEljaGVvbikucGRm",
+      "content_type": "application/octet-stream",
+      "last_modified": null,
+      "status": "CAPTURED",
+      "file": "output/source-verification/2026-09-08/jd-en-icheon.pdf",
+      "byte_length": 3988932,
+      "sha256": "0f08b600ae265630efce68561cc752c82f8bc7d7943ce9b1e5d0df2e7619a63b",
+      "local_capture_id": "local:jd-en:0f08b600ae265630",
+      "upstream_source_version_id": null,
+      "pdf_page_count": 27,
+      "text_layer": "NO_EXTRACTABLE_TEXT_FOUND",
+      "reading_method": "ASSISTANT_VISUAL_REVIEW_OF_RENDERED_PAGES",
+      "reviewed_pages": [
+        10
+      ],
+      "complete_cross_language_equivalence_checked": false
+    },
+    {
+      "key": "faq",
+      "url": "https://www.skcareers.com/Recruit/DownloadFile?p=ZmlsZVBhdGg9L0pvYk5vdGljZS9SMjYwNTIxL0luZm8vZjJkODU1OWYtNGI2MC00MmNlLWI4ZjEtZjE2MzcyYzhmMDYwLnBkZiZmaWxlTmFtZT0yMDI2KOyDgSkgU0vtlZjsnbTri4nsiqQgVGFsZW50IGh5LXdheSjsi6DsnoUpIEZBUS5wZGY%3D",
+      "attempted_at": "2026-09-08T05:37:43.246277+00:00",
+      "http_status": 200,
+      "final_url": "https://www.skcareers.com/Recruit/DownloadFile?p=ZmlsZVBhdGg9L0pvYk5vdGljZS9SMjYwNTIxL0luZm8vZjJkODU1OWYtNGI2MC00MmNlLWI4ZjEtZjE2MzcyYzhmMDYwLnBkZiZmaWxlTmFtZT0yMDI2KOyDgSkgU0vtlZjsnbTri4nsiqQgVGFsZW50IGh5LXdheSjsi6DsnoUpIEZBUS5wZGY%3D",
+      "content_type": "application/octet-stream",
+      "last_modified": null,
+      "status": "CAPTURED",
+      "file": "output/source-verification/2026-09-08/faq-ko.pdf",
+      "byte_length": 4258818,
+      "sha256": "59e2d9b046d9566281acfdb7dcb54b8754c91bc35a06de65a23d544ea3fe3ba7",
+      "local_capture_id": "local:faq:59e2d9b046d95662",
+      "upstream_source_version_id": null,
+      "pdf_page_count": 6,
+      "text_layer": "NO_EXTRACTABLE_TEXT_FOUND",
+      "reading_method": "ASSISTANT_VISUAL_REVIEW_OF_RENDERED_PAGES",
+      "reviewed_pages": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "complete_cross_language_equivalence_checked": false
+    }
+  ],
+  "evidence": [
+    {
+      "id": "posting-period",
+      "source": "posting",
+      "method": "EXACT_NORMALIZED_TEXT_MATCH",
+      "section": "Application period",
+      "quote": "March 10, 2026(Tue)~March 23, 2026(Mon)",
+      "start": 2687,
+      "end": 2726,
+      "occurrence_count": 1
+    },
+    {
+      "id": "posting-deadline",
+      "source": "posting",
+      "method": "EXACT_NORMALIZED_TEXT_MATCH",
+      "section": "Closing time",
+      "quote": "17:00",
+      "start": 2733,
+      "end": 2738,
+      "occurrence_count": 1
+    },
+    {
+      "id": "posting-it",
+      "source": "posting",
+      "method": "EXACT_NORMALIZED_TEXT_MATCH",
+      "section": "Job",
+      "quote": "IT - IT",
+      "start": 3250,
+      "end": 3257,
+      "occurrence_count": 1
+    },
+    {
+      "id": "posting-attachment",
+      "source": "posting",
+      "method": "EXACT_NORMALIZED_TEXT_MATCH",
+      "section": "주요 수행 업무",
+      "quote": "아래 첨부 파일에서 상세 Job Description을 확인 부탁 드립니다.",
+      "start": 296,
+      "end": 338,
+      "occurrence_count": 1
+    },
+    {
+      "id": "news-interview",
+      "source": "news",
+      "method": "EXACT_NORMALIZED_TEXT_MATCH",
+      "section": "PRESS 본문 / 개편 설명",
+      "quote": "‘Half-day(반나절) 심층면접’의 도입",
+      "start": 1064,
+      "end": 1088,
+      "occurrence_count": 1
+    },
+    {
+      "id": "news-ai",
+      "source": "news",
+      "method": "EXACT_NORMALIZED_TEXT_MATCH",
+      "section": "PRESS 본문 / 평가 방향",
+      "quote": "AI 응용 능력",
+      "start": 1354,
+      "end": 1362,
+      "occurrence_count": 1
+    },
+    {
+      "id": "news-education",
+      "source": "news",
+      "method": "EXACT_NORMALIZED_TEXT_MATCH",
+      "section": "PRESS 본문 / 8월 접수 안내",
+      "quote": "이번 채용 역시 연령과 학력에 상관없이 누구나 지원 가능하다.",
+      "start": 996,
+      "end": 1030,
+      "occurrence_count": 1
+    },
+    {
+      "id": "news-form",
+      "source": "news",
+      "method": "EXACT_NORMALIZED_TEXT_MATCH",
+      "section": "PRESS 본문 / 서류 개편",
+      "quote": "기존의 자기소개서 항목을 없애고",
+      "start": 1451,
+      "end": 1468,
+      "occurrence_count": 1
+    },
+    {
+      "id": "ko-it-background",
+      "source": "jd-ko",
+      "method": "VISUAL_REVIEW",
+      "page": 10,
+      "section": "IT / Who we're Looking for / 배경",
+      "quote": null,
+      "quote_note": null
+    },
+    {
+      "id": "ko-it-duties",
+      "source": "jd-ko",
+      "method": "VISUAL_REVIEW",
+      "page": 10,
+      "section": "IT / What You'll Experience",
+      "quote": null,
+      "quote_note": null
+    },
+    {
+      "id": "ko-it-preference",
+      "source": "jd-ko",
+      "method": "VISUAL_REVIEW",
+      "page": 10,
+      "section": "IT / Who we're Looking for / 우대",
+      "quote": "이런 역량이나 경험이 있다면 더 좋습니다.",
+      "quote_note": "Short manual visual transcription; no automatic OCR verification"
+    },
+    {
+      "id": "ko-it-ai",
+      "source": "jd-ko",
+      "method": "VISUAL_REVIEW",
+      "page": 10,
+      "section": "IT / 우대 3번째 항목",
+      "quote": "AI 기반 애플리케이션 개발/적용 경험이 있는 분",
+      "quote_note": "Short manual visual transcription; no automatic OCR verification"
+    },
+    {
+      "id": "ko-common",
+      "source": "jd-ko",
+      "method": "VISUAL_REVIEW",
+      "page": 28,
+      "section": "지원자격 / 기타사항",
+      "quote": null,
+      "quote_note": null
+    },
+    {
+      "id": "en-it-preference",
+      "source": "jd-en",
+      "method": "VISUAL_REVIEW",
+      "page": 10,
+      "section": "IT / Preferred Qualifications & Experience",
+      "quote": null,
+      "quote_note": null
+    },
+    {
+      "id": "faq-experience",
+      "source": "faq",
+      "method": "VISUAL_REVIEW",
+      "page": 3,
+      "section": "타사 업계 인턴 경험 사용 질문",
+      "quote": null,
+      "quote_note": null
+    },
+    {
+      "id": "faq-military",
+      "source": "faq",
+      "method": "VISUAL_REVIEW",
+      "page": 3,
+      "section": "7월 전역 질문 / 박사 예외 포함",
+      "quote": null,
+      "quote_note": null
+    },
+    {
+      "id": "faq-coding",
+      "source": "faq",
+      "method": "VISUAL_REVIEW",
+      "page": 3,
+      "section": "SKCT 대신 코딩 테스트 질문",
+      "quote": "코딩테스트는 C/C++중 하나의 언어를 택하여 응시 예정인",
+      "quote_note": "Short manual visual transcription; no automatic OCR verification"
+    },
+    {
+      "id": "faq-major",
+      "source": "faq",
+      "method": "VISUAL_REVIEW",
+      "page": 4,
+      "section": "목록에 없는 전공 질문",
+      "quote": null,
+      "quote_note": null
+    },
+    {
+      "id": "faq-language",
+      "source": "faq",
+      "method": "VISUAL_REVIEW",
+      "page": 4,
+      "section": "영어 성적 질문",
+      "quote": null,
+      "quote_note": null
+    },
+    {
+      "id": "faq-research-service",
+      "source": "faq",
+      "method": "VISUAL_REVIEW",
+      "page": 4,
+      "section": "전문 연구 요원 질문",
+      "quote": null,
+      "quote_note": null
+    },
+    {
+      "id": "faq-application",
+      "source": "faq",
+      "method": "VISUAL_REVIEW",
+      "page": 5,
+      "section": "서류 지원 관련 Q&A",
+      "quote": null,
+      "quote_note": null
+    }
+  ],
+  "claim_reviews": [
+    {
+      "input_claim_id": "draft-claim-01",
+      "source_comparison": "SUPPORTED_WITH_SCOPE",
+      "evidence_ids": [
+        "posting-period",
+        "posting-deadline"
+      ],
+      "scope": "R260521 / 2026년 3월 접수",
+      "category": "APPLICATION_SCHEDULE",
+      "automatic_experience_filter": false
+    },
+    {
+      "input_claim_id": "draft-claim-02",
+      "source_comparison": "SUPPORTED_WITH_SCOPE",
+      "evidence_ids": [
+        "posting-it"
+      ],
+      "scope": "R260521 / 공고 직무 목록",
+      "category": "ROLE_LISTING",
+      "automatic_experience_filter": false
+    },
+    {
+      "input_claim_id": "draft-claim-03",
+      "source_comparison": "SUPPORTED_WITH_SCOPE",
+      "evidence_ids": [
+        "posting-attachment"
+      ],
+      "scope": "R260521 / 첨부 안내",
+      "category": "ATTACHMENT_POINTER",
+      "automatic_experience_filter": false
+    },
+    {
+      "input_claim_id": "draft-claim-04",
+      "source_comparison": "SUPPORTED_WITH_SCOPE",
+      "evidence_ids": [
+        "news-interview"
+      ],
+      "scope": "2026-07-30 기사 / 8월 20~26일 접수 채용에 관한 발표",
+      "category": "REPORTED_SCREENING_PLAN",
+      "automatic_experience_filter": false
+    },
+    {
+      "input_claim_id": "draft-claim-05",
+      "source_comparison": "SUPPORTED_WITH_SCOPE",
+      "evidence_ids": [
+        "news-ai"
+      ],
+      "scope": "2026-07-30 기사 / 해당 발표의 평가 방향",
+      "category": "REPORTED_EVALUATION_FOCUS",
+      "automatic_experience_filter": false
+    },
+    {
+      "input_claim_id": "draft-claim-06",
+      "source_comparison": "SUPPORTED_WITH_SCOPE",
+      "evidence_ids": [
+        "news-education"
+      ],
+      "scope": "2026-07-30 기사 / 해당 8월 채용 안내",
+      "category": "REPORTED_ELIGIBILITY_POLICY",
+      "automatic_experience_filter": false
+    }
+  ],
+  "source_supported_claim_count": 6,
+  "scoped_observations": [
+    {
+      "id": "it-location",
+      "category": "ROLE_SCOPE",
+      "value": "이천 IT",
+      "evidence_ids": [
+        "ko-it-background",
+        "en-it-preference"
+      ]
+    },
+    {
+      "id": "it-duties",
+      "category": "DUTIES",
+      "value": [
+        "업무용 소프트웨어",
+        "자동 반송",
+        "플랫폼",
+        "데이터 처리",
+        "기준정보 관리",
+        "전산 인프라"
+      ],
+      "evidence_ids": [
+        "ko-it-duties"
+      ]
+    },
+    {
+      "id": "it-preferences",
+      "category": "PREFERRED_EXPERIENCE",
+      "value": [
+        "소프트웨어 제작",
+        "DBMS·오픈소스 활용",
+        "AI 앱 구현·적용",
+        "자동화 장비 이해",
+        "새 IT 기술 학습·적용"
+      ],
+      "evidence_ids": [
+        "ko-it-preference",
+        "ko-it-ai"
+      ],
+      "mandatory": false,
+      "all_listed_technologies_required": false
+    },
+    {
+      "id": "degree",
+      "category": "ELIGIBILITY_BACKGROUND",
+      "value": "4년제 학사 이상 졸업 또는 예정",
+      "evidence_ids": [
+        "ko-it-background"
+      ],
+      "experience_ranking_criterion": false
+    },
+    {
+      "id": "major-exception",
+      "category": "EXCEPTION",
+      "value": "기재 전공 우선 선발; 역량이 충분하면 다른 전공도 지원 가능",
+      "evidence_ids": [
+        "ko-it-background",
+        "faq-major"
+      ]
+    },
+    {
+      "id": "military-exception",
+      "category": "CONDITIONAL_ELIGIBILITY",
+      "value": "일반 전역 안내는 6월 30일 이전, 박사 예외는 7월 31일 이전. 전문연구요원은 별도 편입일·복무종료 조건 확인",
+      "evidence_ids": [
+        "faq-military",
+        "faq-research-service"
+      ],
+      "automated_date_comparison": null
+    },
+    {
+      "id": "language-exception",
+      "category": "EXCEPTION",
+      "value": "어학 점수 일괄 필수 아님; 외국어 능력이 포함된 직무는 관련 성적·경험 평가 가능",
+      "evidence_ids": [
+        "faq-language"
+      ]
+    },
+    {
+      "id": "coding-test",
+      "category": "SCREENING_NOTICE",
+      "value": "IT 코딩테스트 예정; C 또는 C++ 선택 안내",
+      "evidence_ids": [
+        "faq-coding"
+      ],
+      "required_project_technology": false
+    },
+    {
+      "id": "other-industry",
+      "category": "EXPERIENCE_SCOPE",
+      "value": "다른 업계 인턴 경험도 가치관·직무역량을 보여 주면 활용 가능",
+      "evidence_ids": [
+        "faq-experience"
+      ]
+    },
+    {
+      "id": "translation-difference",
+      "category": "SOURCE_DIFFERENCE",
+      "value": "국문 IT 기술 예시에 Python·JavaScript가 있으며 영문 해당 예시에는 없음",
+      "evidence_ids": [
+        "ko-it-preference",
+        "en-it-preference"
+      ],
+      "automatic_source_merge": false
+    },
+    {
+      "id": "application-form-change",
+      "category": "REPORTED_FORM_CHANGE",
+      "value": "7월 기사에 기존 자기소개서 항목 변경과 AI 활용·직무역량 서식 도입 발표",
+      "evidence_ids": [
+        "news-form"
+      ],
+      "applies_to_R260521": false
+    }
+  ],
+  "date_handling": {
+    "posting_published_at": null,
+    "posting_published_at_reason": "NOT_FOUND_IN_REVIEWED_PAGE_OR_META",
+    "posting_application_start": "2026-03-10",
+    "posting_application_end": "2026-03-23",
+    "posting_deadline_local_time": "17:00",
+    "posting_deadline_timezone": null,
+    "news_published_at": "2026-07-30",
+    "news_html_published_time": "2026-07-30T07:55:01+09:00",
+    "news_html_modified_time": "2026-07-30T07:55:01+09:00",
+    "new_capture_is_original_collection_snapshot": false
+  },
+  "downstream": {
+    "review_artifact_only": true,
+    "operational_W4_bundle_created": false,
+    "experience_filter_created": false,
+    "ranking_weights_created": false,
+    "source_terms_or_production_permissions_adjudicated": false,
+    "target_recruitment_for_next_step": null,
+    "allowed_review_use": "출처·시점·직무·필수/우대/예외를 검토할 수 있는 근거 자료"
+  },
+  "limitations": [
+    "공개 공식 문서에 무엇이 기재되어 있는지 확인했다. 발표된 전형의 실제 시행 여부까지 독립 감사한 결과는 아니다.",
+    "2026-09-08에 새로 확보한 자료다. 9월 7일 원본 수집 시점과 동일한 내용이었는지는 원본 보존본이 없어 확인하지 못했다.",
+    "IT 이외 직무의 세부 요건과 국·영문 전체 번역 일치성은 검증 범위 밖이다.",
+    "현재 제공 자료의 상반기 공고와 후속 채용 개편을 하나의 현재 기준으로 합치지 않는다.",
+    "PDF는 이미지 기반으로 확인했다. 텍스트 추출·분류 자동화나 사람의 정답 승인 결과가 아니다.",
+    "지원자 경험·자소서 실제 문항은 이 검증에 포함되지 않는다."
+  ],
+  "verification_procedure": {
+    "html_normalization": "HTMLParser convert_charrefs=True; exclude script/style; normalize whitespace in each nonempty text node; join with U+0020; offsets are Python Unicode code points",
+    "capture_hash": "SHA-256 of downloaded bytes without normalization",
+    "pdf_locator": "1-based page plus section; page images visually inspected",
+    "decision_method": "Assistant source comparison and scoped interpretation; not an external LLM API run or a reusable validation algorithm"
+  }
+}

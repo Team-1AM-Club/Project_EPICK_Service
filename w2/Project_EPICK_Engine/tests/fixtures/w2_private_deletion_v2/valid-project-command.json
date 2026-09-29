@@ -1,0 +1,10 @@
+{
+  "schema_version": "w2.private-deletion.v2",
+  "deletion_id": "71000000-0000-4000-8000-000000000002",
+  "owner_user_id": "00000000-0000-4000-8000-000000006301",
+  "deletion_epoch": 7,
+  "scope": {
+    "type": "PROJECT",
+    "project_id": "75000000-0000-4000-8000-000000000001"
+  }
+}

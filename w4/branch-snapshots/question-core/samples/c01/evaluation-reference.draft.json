@@ -1,0 +1,24 @@
+{
+  "schema_version": "w4-c01-evaluation-reference/0.2",
+  "review_status": "DRAFT_NOT_HUMAN_REVIEWED",
+  "purpose": "Small C01 regression pilot on three existing fictional experiences; not a fresh holdout or production selection benchmark.",
+  "questions": ["expertise", "job_experience"],
+  "positive_episode": "v4-raw-study",
+  "negative_episodes": ["v4-raw-cooperation", "v4-raw-challenge"],
+  "positive_checks": {
+    "expertise.specific_area": {"required_units": ["u2"], "allowed_units": ["u1", "u2", "u3", "u4"]},
+    "expertise.sustained_learning": {"required_units": ["u2"], "allowed_units": ["u1", "u2", "u3", "u4"]},
+    "expertise.practical_use": {"required_units": ["u3"], "allowed_units": ["u1", "u2", "u3", "u4"]},
+    "job_experience.job_connection": {"required_units": ["u3"], "allowed_units": ["u1", "u2", "u3", "u4"]}
+  },
+  "positive_claim": {"required_units": ["u2"], "allowed_units": ["u1", "u2", "u3", "u4"]},
+  "positive_leaves": {
+    "apply": {"required_units": ["u3"], "allowed_units": ["u1", "u2", "u3", "u4"]},
+    "validation": {"required_units": ["u3"], "allowed_units": ["u1", "u2", "u3", "u4"]},
+    "documentation": null
+  },
+  "negative_expectation": "NOT_SHOWN, no company claim links, and no evidence IDs; nontechnical cooperation or running must not become code application or technical learning.",
+  "revision_note": "Post-capture reference correction applied equally to every model: a SELF ROLE sentence (u1) may accompany required ACTION evidence (u3). ROLE alone still cannot establish the action. Original 0.1 results remain preserved. This correction is not new holdout validation.",
+  "denominator_policy": "All scheduled cases remain in the denominator. Equivalent criteria from the two fictional Sources count once; both Source copies must agree. Missing/invalid responses score zero.",
+  "demo_selection": "Extraction: valid requests and zero unsafe fact admissions, then unit_exact descending. Judgment: all requests structurally valid, zero false positive company support, 100% evidence sufficiency, then leaf status, question status, claim link accuracy descending. Ties: smaller model artifact, then candidate_id. Production selection remains WITHHELD."
+}

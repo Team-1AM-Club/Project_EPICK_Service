@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "IndexKey": {
+      "additionalProperties": false,
+      "properties": {
+        "source_version_id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "title": "Source Version Id",
+          "type": "string"
+        },
+        "extraction_revision_id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "title": "Extraction Revision Id",
+          "type": "string"
+        },
+        "representation": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Representation",
+          "type": "string"
+        },
+        "normalization_version": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Normalization Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_version_id",
+        "extraction_revision_id",
+        "representation",
+        "normalization_version"
+      ],
+      "title": "IndexKey",
+      "type": "object"
+    },
+    "SourceBinding": {
+      "additionalProperties": false,
+      "properties": {
+        "signal": {
+          "additionalProperties": true,
+          "title": "Signal",
+          "type": "object"
+        },
+        "knowledge_generation": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "title": "Knowledge Generation",
+          "type": "integer"
+        },
+        "knowledge": {
+          "additionalProperties": true,
+          "title": "Knowledge",
+          "type": "object"
+        },
+        "metadata": {
+          "$ref": "#/$defs/SourceMetadata"
+        }
+      },
+      "required": [
+        "signal",
+        "knowledge_generation",
+        "knowledge",
+        "metadata"
+      ],
+      "title": "SourceBinding",
+      "type": "object"
+    },
+    "SourceMetadata": {
+      "additionalProperties": false,
+      "description": "Trusted host assertions, bound to the exact extraction; never inferred.",
+      "properties": {
+        "source_id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "index_key": {
+          "$ref": "#/$defs/IndexKey"
+        },
+        "scope_id": {
+          "anyOf": [
+            {
+              "pattern": "^[^\\s{}]{1,200}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Scope Id"
+        },
+        "content_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Content Sha256"
+        },
+        "published_at": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Published At"
+        },
+        "valid_from": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Valid From"
+        },
+        "valid_to": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Valid To"
+        },
+        "parse_status": {
+          "enum": [
+            "PARSED",
+            "PARTIAL",
+            "UNPARSED",
+            "UNKNOWN"
+          ],
+          "title": "Parse Status",
+          "type": "string"
+        },
+        "required_for_scope": {
+          "title": "Required For Scope",
+          "type": "boolean"
+        },
+        "expires_at": {
+          "title": "Expires At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "index_key",
+        "scope_id",
+        "content_sha256",
+        "published_at",
+        "valid_from",
+        "valid_to",
+        "parse_status",
+        "required_for_scope",
+        "expires_at"
+      ],
+      "title": "SourceMetadata",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "w4-c01-knowledge/0.1-proposal",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "profile": {
+      "const": "w3-c01/0.2-candidate/r2",
+      "title": "Profile",
+      "type": "string"
+    },
+    "upstream_commit": {
+      "const": "05f26b4c0a52aecf155a66df0fcaa38e6fbd4cf5",
+      "title": "Upstream Commit",
+      "type": "string"
+    },
+    "knowledge_bundle_id": {
+      "pattern": "^[^\\s{}]{1,200}$",
+      "title": "Knowledge Bundle Id",
+      "type": "string"
+    },
+    "data_kind": {
+      "enum": [
+        "SYNTHETIC",
+        "REAL"
+      ],
+      "title": "Data Kind",
+      "type": "string"
+    },
+    "scope_id": {
+      "pattern": "^[^\\s{}]{1,200}$",
+      "title": "Scope Id",
+      "type": "string"
+    },
+    "as_of": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "title": "As Of",
+      "type": "string"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/SourceBinding"
+      },
+      "maxItems": 20,
+      "minItems": 1,
+      "title": "Sources",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "profile",
+    "upstream_commit",
+    "knowledge_bundle_id",
+    "data_kind",
+    "scope_id",
+    "as_of",
+    "sources"
+  ],
+  "title": "C01Knowledge",
+  "type": "object"
+}

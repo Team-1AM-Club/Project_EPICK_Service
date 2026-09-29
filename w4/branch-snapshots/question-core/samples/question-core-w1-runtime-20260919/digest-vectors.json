@@ -1,0 +1,17 @@
+[
+  {
+    "case_id": "core",
+    "fixture": "valid-core.json",
+    "digest": "sha256:91149e2871f8bc3bf970a76997bff57bae0adf7bed35cff95b103d3993c3092a"
+  },
+  {
+    "case_id": "optional",
+    "fixture": "valid-non-core.json",
+    "digest": "sha256:32d1b9d1ffea22ef23f5a65b55f87f49662d54647d678af315142cc7b00243b9"
+  },
+  {
+    "case_id": "unicode_digest_only_not_wire",
+    "value": { "z": "한글", "a": [2, 1], "null": null },
+    "digest": "sha256:746e4e40443c883508721c924cb14ddb5b81fe066862766f15de000aaaab2ab4"
+  }
+]

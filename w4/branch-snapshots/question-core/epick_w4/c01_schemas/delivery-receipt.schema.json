@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:epick:w3-c01:0.2-candidate:delivery-receipt",
+  "additionalProperties": false,
+  "properties": {
+    "signal_id": {
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "title": "Signal Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "signal_id"
+  ],
+  "title": "DeliveryReceipt",
+  "type": "object"
+}

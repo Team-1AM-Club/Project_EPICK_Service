@@ -1,0 +1,65 @@
+[
+  {
+    "case_id": "core",
+    "value": {
+      "schema_version": "test-only.w4.question-core/0",
+      "message_type": "test-only.w4.w1.question-core",
+      "visibility_scope": "PRIVATE",
+      "producer": "w4",
+      "decision_scope": "QUESTION_MATCHING",
+      "decision_owner": "W4",
+      "company_id": null,
+      "message_id": "40000000-0000-4000-8000-000000000001",
+      "decision_id": "50000000-0000-4000-8000-000000000001",
+      "occurred_at": "2026-09-19T00:00:00Z",
+      "decision_version": 3,
+      "decision_code": "CORE_REQUIRED",
+      "reason_code": "QUESTION_EVIDENCE_REQUIRED",
+      "is_core": true,
+      "job_id": "10000000-0000-4000-8000-000000000001",
+      "question_version_id": "20000000-0000-4000-8000-000000000001",
+      "source_id": "30000000-0000-4000-8000-000000000001",
+      "analysis_input_version": "question-input:v4"
+    },
+    "canonical_utf8": "{\"analysis_input_version\":\"question-input:v4\",\"company_id\":null,\"decision_code\":\"CORE_REQUIRED\",\"decision_id\":\"50000000-0000-4000-8000-000000000001\",\"decision_owner\":\"W4\",\"decision_scope\":\"QUESTION_MATCHING\",\"decision_version\":3,\"is_core\":true,\"job_id\":\"10000000-0000-4000-8000-000000000001\",\"message_id\":\"40000000-0000-4000-8000-000000000001\",\"message_type\":\"test-only.w4.w1.question-core\",\"occurred_at\":\"2026-09-19T00:00:00Z\",\"producer\":\"w4\",\"question_version_id\":\"20000000-0000-4000-8000-000000000001\",\"reason_code\":\"QUESTION_EVIDENCE_REQUIRED\",\"schema_version\":\"test-only.w4.question-core/0\",\"source_id\":\"30000000-0000-4000-8000-000000000001\",\"visibility_scope\":\"PRIVATE\"}",
+    "digest": "sha256:d206ddaa5a88f81778727eaed0439f4616773644c0533dfc78c76222e604b744"
+  },
+  {
+    "case_id": "optional",
+    "value": {
+      "schema_version": "test-only.w4.question-core/0",
+      "message_type": "test-only.w4.w1.question-core",
+      "visibility_scope": "PRIVATE",
+      "producer": "w4",
+      "decision_scope": "QUESTION_MATCHING",
+      "decision_owner": "W4",
+      "company_id": null,
+      "message_id": "40000000-0000-4000-8000-000000000002",
+      "decision_id": "50000000-0000-4000-8000-000000000002",
+      "occurred_at": "2026-09-19T00:00:00Z",
+      "decision_version": 3,
+      "decision_code": "NON_CORE_OPTIONAL",
+      "reason_code": "SUPPLEMENTARY_CONTEXT",
+      "is_core": false,
+      "job_id": "10000000-0000-4000-8000-000000000001",
+      "question_version_id": "20000000-0000-4000-8000-000000000001",
+      "source_id": "30000000-0000-4000-8000-000000000001",
+      "analysis_input_version": "question-input:v4"
+    },
+    "canonical_utf8": "{\"analysis_input_version\":\"question-input:v4\",\"company_id\":null,\"decision_code\":\"NON_CORE_OPTIONAL\",\"decision_id\":\"50000000-0000-4000-8000-000000000002\",\"decision_owner\":\"W4\",\"decision_scope\":\"QUESTION_MATCHING\",\"decision_version\":3,\"is_core\":false,\"job_id\":\"10000000-0000-4000-8000-000000000001\",\"message_id\":\"40000000-0000-4000-8000-000000000002\",\"message_type\":\"test-only.w4.w1.question-core\",\"occurred_at\":\"2026-09-19T00:00:00Z\",\"producer\":\"w4\",\"question_version_id\":\"20000000-0000-4000-8000-000000000001\",\"reason_code\":\"SUPPLEMENTARY_CONTEXT\",\"schema_version\":\"test-only.w4.question-core/0\",\"source_id\":\"30000000-0000-4000-8000-000000000001\",\"visibility_scope\":\"PRIVATE\"}",
+    "digest": "sha256:b367bc5852ea0a0410b09cbeda60cda472bdc1be7385df686b777820448d668b"
+  },
+  {
+    "case_id": "unicode_digest_only_not_wire",
+    "value": {
+      "z": "한글",
+      "a": [
+        2,
+        1
+      ],
+      "null": null
+    },
+    "canonical_utf8": "{\"a\":[2,1],\"null\":null,\"z\":\"한글\"}",
+    "digest": "sha256:746e4e40443c883508721c924cb14ddb5b81fe066862766f15de000aaaab2ab4"
+  }
+]

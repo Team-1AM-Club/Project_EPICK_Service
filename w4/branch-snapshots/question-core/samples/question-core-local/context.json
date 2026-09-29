@@ -1,0 +1,15 @@
+{
+  "context_key": "synthetic-w1-context-1",
+  "job_id": "10000000-0000-4000-8000-000000000001",
+  "question_version_id": "20000000-0000-4000-8000-000000000001",
+  "source_id": "30000000-0000-4000-8000-000000000001",
+  "analysis_input_version": "question-input:v4",
+  "authorization_revision": "synthetic-auth-v1",
+  "current_decision_version": 2,
+  "data_kind": "SYNTHETIC",
+  "processing_allowed": true,
+  "question_current": true,
+  "source_active": true,
+  "revoked": false,
+  "valid_until": "2030-01-01T00:00:00Z"
+}

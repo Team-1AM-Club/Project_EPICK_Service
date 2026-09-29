@@ -1,0 +1,11 @@
+*
+!epick_w4/
+!epick_w4/**
+!samples/
+!samples/question-core-w1-context-20260919/
+!samples/question-core-w1-context-20260919/**
+!deploy/
+!deploy/question-core/
+!deploy/question-core/requirements.lock
+**/__pycache__/
+**/*.pyc

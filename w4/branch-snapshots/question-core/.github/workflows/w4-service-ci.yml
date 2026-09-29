@@ -1,0 +1,142 @@
+name: W4 service verification
+
+on:
+  pull_request:
+    branches: [develop]
+  push:
+    branches: [develop, feat/w4-service-handoff, feat/w4-question-core-runtime]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            python: "3.12"
+          - os: windows-2022
+            python: "3.13"
+    defaults:
+      run:
+        shell: bash
+    env:
+      PYTHONUTF8: "1"
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "0.12.0"
+          python-version: ${{ matrix.python }}
+          enable-cache: false
+      - name: Install locked API and test dependencies
+        run: |
+          mkdir -p output/ci
+          uv --version > output/ci/uv-version.txt
+          uv sync --locked --extra api --extra test 2>&1 | tee output/ci/install.log
+      - name: Run full suite and two synthetic HTTP demos
+        run: |
+          uv run --locked --extra api --extra test python scripts/verify_service_handoff.py --output-dir output/ci/verification
+      - name: Retain verification artifacts, including failures
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: w4-service-${{ matrix.os }}-py${{ matrix.python }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: output/ci/
+          if-no-files-found: error
+          retention-days: 14
+
+  question-core-container:
+    name: Question Core container / synthetic config
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Build pinned container without publishing
+        run: docker build --build-arg W4_SOURCE_SHA="$GITHUB_SHA" -f deploy/question-core/Dockerfile -t w4-ct12-ci .
+      - name: Verify production Compose mounts and two container starts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output/ci/container
+          docker compose version > output/ci/container/compose-version.txt
+          fixture_dir=$(mktemp -d)
+          export W4_IMAGE_REF=$(docker image inspect --format '{{.Id}}' w4-ct12-ci)
+          export W4_RUNTIME_ENV_FILE="$fixture_dir/runtime.env"
+          export W4_CT12_PLAN_DIR="$PWD/samples/question-core-w1-context-20260919"
+          export W4_AWS_SESSION_DIR="$fixture_dir/aws"
+          export W4_CI_NAME="w4-ct12-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir "$W4_AWS_SESSION_DIR"
+          chmod 755 "$fixture_dir" "$W4_AWS_SESSION_DIR"
+          printf '%s\n' 'W1_W4_CONTEXT_BEARER=SYNTHETIC-CI-NOT-A-SECRET' 'W4_SQS_SEND_ENABLED=false' > "$W4_RUNTIME_ENV_FILE"
+          # CI uses the immutable local image ID, not a published ECR reference.
+          # Only registry metadata and resource names differ; tmpfs stays in the production file.
+          cat > "$fixture_dir/override.yaml" <<'YAML'
+          services:
+            w4-question-core:
+              environment:
+                W4_IMAGE_REF: !reset null
+          networks:
+            worker:
+              name: ${W4_CI_NAME}
+          volumes:
+            w4-outbox:
+              name: ${W4_CI_NAME}-outbox
+          YAML
+          compose=(docker compose -p "$W4_CI_NAME" -f deploy/question-core/compose.yaml -f "$fixture_dir/override.yaml")
+          docker network create --internal "$W4_CI_NAME"
+          cleanup() {
+            "${compose[@]}" down --volumes --remove-orphans
+            docker network rm "$W4_CI_NAME"
+          }
+          trap cleanup EXIT
+          "${compose[@]}" config --format json > "$fixture_dir/config.json"
+          python3 - "$fixture_dir/config.json" <<'PY'
+          import json, sys
+          config = json.load(open(sys.argv[1]))
+          service = config['services']['w4-question-core']
+          assert service['tmpfs'] == ['/tmp:rw,noexec,nosuid,nodev,size=16m']
+          assert 'W4_IMAGE_REF' not in service['environment']
+          assert service['read_only'] and service['user'] == '10001:10001'
+          assert not service.get('ports')
+          print('production Compose mount configuration verified')
+          PY
+          # Prove the former unquoted scalar fails with this same Compose harness.
+          python3 - "$fixture_dir/before.yaml" <<'PY'
+          from pathlib import Path
+          import sys
+          fixed = Path('deploy/question-core/compose.yaml').read_text()
+          before = fixed.replace('tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=16m"]',
+                                 'tmpfs: [/tmp:rw,noexec,nosuid,nodev,size=16m]')
+          assert before != fixed
+          Path(sys.argv[1]).write_text(before)
+          PY
+          if docker compose -p "$W4_CI_NAME" -f "$fixture_dir/before.yaml" -f "$fixture_dir/override.yaml" run --rm --no-deps --pull never w4-question-core check > output/ci/container/before-fix.log 2>&1; then
+            echo 'Expected the original tmpfs configuration to fail' >&2
+            exit 1
+          fi
+          grep -Eq "mount path.*absolute|invalid mount" output/ci/container/before-fix.log
+          for attempt in 1 2; do
+            "${compose[@]}" run --rm --no-deps --pull never w4-question-core check \
+              | tee "output/ci/container/check-$attempt.json"
+          done
+          printf '%s\n' "$W4_IMAGE_REF" > output/ci/container/local-image-id.txt
+      - name: Retain container smoke evidence
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        with:
+          name: w4-question-core-container-${{ github.run_id }}-${{ github.run_attempt }}
+          path: output/ci/container/
+          if-no-files-found: warn
+          retention-days: 14

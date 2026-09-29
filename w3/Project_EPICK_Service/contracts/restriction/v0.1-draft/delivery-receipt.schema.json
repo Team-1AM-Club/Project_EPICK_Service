@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:epick:w3-restriction:0.1-draft:delivery-receipt",
+  "additionalProperties": false,
+  "properties": {
+    "signal_id": {
+      "pattern": "^[A-Za-z][A-Za-z0-9._:-]{0,127}$",
+      "title": "Signal Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "signal_id"
+  ],
+  "title": "DeliveryReceipt",
+  "type": "object"
+}

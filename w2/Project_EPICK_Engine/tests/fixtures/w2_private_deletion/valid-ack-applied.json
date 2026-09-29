@@ -1,0 +1,7 @@
+{
+  "schema_version": "w2.private-deletion-ack.v1",
+  "deletion_id": "71000000-0000-4000-8000-000000000001",
+  "owner_user_id": "00000000-0000-4000-8000-000000006301",
+  "deletion_epoch": 7,
+  "outcome": "APPLIED"
+}

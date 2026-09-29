@@ -1,0 +1,80 @@
+{
+  "schema_version": "w4-evidence-input/0.1",
+  "request_id": "c01-domain-evaluation-v1",
+  "data_kind": "SYNTHETIC",
+  "project": {
+    "project_id": "project-demo-sk-hynix",
+    "owner_id": "user-demo"
+  },
+  "snapshot": {
+    "snapshot_id": "synthetic-c01-domain-snapshot-v1",
+    "episode_versions": {
+      "c01-semantic-01": 1,
+      "c01-semantic-02": 1,
+      "c01-semantic-03": 1,
+      "c01-semantic-04": 1,
+      "c01-semantic-05": 1,
+      "c01-semantic-06": 1,
+      "c01-semantic-07": 1
+    }
+  },
+  "episodes": [
+    {
+      "episode_id": "c01-semantic-01",
+      "version": 1,
+      "owner_id": "user-demo",
+      "activity_id": "c01-semantic-01",
+      "title": "새 가상 경험 1",
+      "raw_text": "저는 예약 API의 개발 담당자였습니다.\n저는 다섯 주 동안 매주 Python의 자료형 검사 예제를 읽고 실행하며 배웠습니다.\n저는 배운 자료형 검사 방법을 예약 API 코드에 적용해 날짜 입력값을 검증했습니다.\n잘못된 날짜가 예약 데이터에 저장되는 건수가 네 건에서 영 건으로 줄었습니다."
+    },
+    {
+      "episode_id": "c01-semantic-02",
+      "version": 1,
+      "owner_id": "user-demo",
+      "activity_id": "c01-semantic-02",
+      "title": "새 가상 경험 2",
+      "raw_text": "저는 로그 조회 도구의 개발 담당자였습니다.\n저는 네 주 동안 매주 캐시 원리 자료를 읽고 예제를 풀며 학습했습니다.\n저는 배운 캐시 무효화 방식을 조회 코드에 구현했습니다.\n저는 그 코드의 설정 방법과 실행 순서를 설명하는 문서를 작성했습니다."
+    },
+    {
+      "episode_id": "c01-semantic-03",
+      "version": 1,
+      "owner_id": "user-demo",
+      "activity_id": "c01-semantic-03",
+      "title": "새 가상 경험 3",
+      "raw_text": "저는 동아리 행사 안내 담당자였습니다.\n저는 여섯 주 동안 매일 스페인어 교재로 길 안내 표현을 학습하고 말하기 연습을 했습니다.\n저는 배운 스페인어 표현을 행사 방문객에게 길을 안내할 때 사용했습니다.\n저는 안내 표현과 발음에 관한 학습 문서를 작성했습니다."
+    },
+    {
+      "episode_id": "c01-semantic-04",
+      "version": 1,
+      "owner_id": "user-demo",
+      "activity_id": "c01-semantic-04",
+      "title": "새 가상 경험 4",
+      "raw_text": "저는 프로젝트의 회의실 예약 담당자였습니다.\n동료 지수는 세 주 동안 매주 Python 검증 라이브러리를 학습했습니다.\n동료 지수는 배운 검사 방법을 업로드 코드에 적용해 입력값을 검증했습니다.\n저는 발표 회의를 위한 공간을 예약했습니다."
+    },
+    {
+      "episode_id": "c01-semantic-05",
+      "version": 1,
+      "owner_id": "user-demo",
+      "activity_id": "c01-semantic-05",
+      "title": "새 가상 경험 5",
+      "raw_text": "저는 파일 검사 도구의 개발 담당자였습니다.\n저는 다음 달부터 네 주 동안 매주 Python 자료형 검사 예제를 학습할 계획입니다.\n저는 학습한 내용을 업로드 코드의 입력값 검증에 적용할 계획입니다."
+    },
+    {
+      "episode_id": "c01-semantic-06",
+      "version": 1,
+      "owner_id": "user-demo",
+      "activity_id": "c01-semantic-06",
+      "title": "새 가상 경험 6",
+      "raw_text": "저는 달리기 기록 분석 프로그램의 개발 담당자였습니다.\n저는 여덟 주 동안 매주 CSV 파싱 안내서를 읽고 예제를 수정하며 학습했습니다.\n저는 배운 CSV 형식 검사 방법을 달리기 기록을 불러오는 프로그램 코드에 적용했습니다.\n저는 그 코드에서 거리와 날짜 입력값의 자료형을 검사하도록 구현했습니다."
+    },
+    {
+      "episode_id": "c01-semantic-07",
+      "version": 1,
+      "owner_id": "user-demo",
+      "activity_id": "c01-semantic-07",
+      "title": "새 가상 경험 7",
+      "raw_text": "저는 출석 명단 정리 담당자였습니다.\n저는 기존 Python 프로그램을 실행해 출석 명단 파일을 정렬했습니다.\n정렬된 명단 파일 한 개가 생성되었습니다."
+    }
+  ],
+  "excluded_episode_ids": []
+}

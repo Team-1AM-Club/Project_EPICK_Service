@@ -1,0 +1,11 @@
+*
+!src/
+!src/**
+!migrations/
+!migrations/**
+!alembic.ini
+!requirements.ct15.lock
+**/__pycache__/
+**/*.pyc
+**/.env*
+**/*.log

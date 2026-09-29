@@ -1,0 +1,82 @@
+{
+  "$defs": {
+    "Question": {
+      "additionalProperties": false,
+      "properties": {
+        "scope_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Scope Id",
+          "type": "string"
+        },
+        "question_id": {
+          "enum": [
+            "expertise",
+            "teamwork",
+            "challenge",
+            "self_description",
+            "job_experience"
+          ],
+          "title": "Question Id",
+          "type": "string"
+        },
+        "user_theme": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "User Theme"
+        }
+      },
+      "required": [
+        "scope_id",
+        "question_id"
+      ],
+      "title": "Question",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "w4-service-input/0.1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "request_id": {
+      "pattern": "^[^\\s{}]{1,200}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "project_id": {
+      "pattern": "^[^\\s{}]{1,200}$",
+      "title": "Project Id",
+      "type": "string"
+    },
+    "question": {
+      "$ref": "#/$defs/Question"
+    },
+    "top_k": {
+      "default": 3,
+      "maximum": 20,
+      "minimum": 1,
+      "title": "Top K",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema_version",
+    "request_id",
+    "project_id",
+    "question"
+  ],
+  "title": "ServiceRequest",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

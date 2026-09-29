@@ -1,0 +1,202 @@
+{
+  "schema_version": "w4-extraction-benchmark/0.1",
+  "data_kind": "SYNTHETIC",
+  "input_sha256": "c7e9830cf718f586cb13d4a146dc3c1606c636424b0422a160a6082da1f6840d",
+  "protocol_sha256": "e366bcb084cd064cc11e3086b80045492d1e7576fc4083edbc8d0126a976b421",
+  "reference_origin": "Existing scripted labels, reused only as draft reference answers. These are not measured model outputs.",
+  "review": {
+    "status": "DRAFT"
+  },
+  "answers": {
+    "episode-learning": {
+      "units": [
+        {
+          "unit_id": "u1",
+          "kinds": [
+            "ROLE"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u2",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u3",
+          "kinds": [
+            "RESULT"
+          ],
+          "subject": "UNSPECIFIED",
+          "assertion": "AFFIRMED",
+          "issue": null
+        }
+      ]
+    },
+    "episode-team-api": {
+      "units": [
+        {
+          "unit_id": "u1",
+          "kinds": [
+            "ROLE"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u2",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u3",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u4",
+          "kinds": [
+            "RESULT"
+          ],
+          "subject": "UNSPECIFIED",
+          "assertion": "AFFIRMED",
+          "issue": null
+        }
+      ]
+    },
+    "episode-team-unclear": {
+      "units": [
+        {
+          "unit_id": "u1",
+          "kinds": [
+            "ROLE"
+          ],
+          "subject": "TEAM",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u2",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "TEAM",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u3",
+          "kinds": [
+            "RESULT"
+          ],
+          "subject": "TEAM",
+          "assertion": "AFFIRMED",
+          "issue": null
+        }
+      ]
+    },
+    "episode-library-reservation": {
+      "units": [
+        {
+          "unit_id": "u1",
+          "kinds": [
+            "PERIOD",
+            "CONTEXT"
+          ],
+          "subject": "TEAM",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u2",
+          "kinds": [
+            "ROLE"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u3",
+          "kinds": [
+            "GOAL"
+          ],
+          "subject": "TEAM",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u4",
+          "kinds": [
+            "OBSTACLE"
+          ],
+          "subject": "UNSPECIFIED",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u5",
+          "kinds": [
+            "ACTION",
+            "PERIOD"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u6",
+          "kinds": [
+            "ACTION",
+            "PERIOD"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u7",
+          "kinds": [
+            "RESULT"
+          ],
+          "subject": "UNSPECIFIED",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u8",
+          "kinds": [
+            "REFLECTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u9",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "PLANNED",
+          "issue": null
+        }
+      ]
+    }
+  }
+}

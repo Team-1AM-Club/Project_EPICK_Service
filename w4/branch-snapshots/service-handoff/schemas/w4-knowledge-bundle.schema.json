@@ -1,0 +1,496 @@
+{
+  "$defs": {
+    "Claim": {
+      "additionalProperties": false,
+      "properties": {
+        "statement": {
+          "maxLength": 6000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Statement",
+          "type": "string"
+        },
+        "scope_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Scope Id",
+          "type": "string"
+        },
+        "source_version_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Source Version Id",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[^\\s{}]{1,200}$",
+            "type": "string"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "verification_status": {
+          "enum": [
+            "VERIFIED",
+            "PENDING",
+            "REJECTED"
+          ],
+          "title": "Verification Status",
+          "type": "string"
+        },
+        "usage_status": {
+          "enum": [
+            "USABLE",
+            "RESTRICTED",
+            "WITHDRAWN"
+          ],
+          "title": "Usage Status",
+          "type": "string"
+        },
+        "published_at": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Published At"
+        },
+        "valid_from": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Valid From"
+        },
+        "valid_to": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Valid To"
+        },
+        "claim_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Claim Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "statement",
+        "scope_id",
+        "source_version_id",
+        "evidence_ids",
+        "verification_status",
+        "usage_status",
+        "published_at",
+        "valid_from",
+        "valid_to",
+        "claim_id"
+      ],
+      "title": "Claim",
+      "type": "object"
+    },
+    "CompanyEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "source_version_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Source Version Id",
+          "type": "string"
+        },
+        "exact_quote": {
+          "maxLength": 6000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Exact Quote",
+          "type": "string"
+        },
+        "locator": {
+          "maxLength": 6000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Locator",
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "source_version_id",
+        "exact_quote",
+        "locator"
+      ],
+      "title": "CompanyEvidence",
+      "type": "object"
+    },
+    "CompanyVersions": {
+      "additionalProperties": false,
+      "properties": {
+        "source_version_ids": {
+          "items": {
+            "pattern": "^[^\\s{}]{1,200}$",
+            "type": "string"
+          },
+          "maxItems": 50,
+          "title": "Source Version Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "source_version_ids"
+      ],
+      "title": "CompanyVersions",
+      "type": "object"
+    },
+    "Requirement": {
+      "additionalProperties": false,
+      "properties": {
+        "statement": {
+          "maxLength": 6000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Statement",
+          "type": "string"
+        },
+        "scope_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Scope Id",
+          "type": "string"
+        },
+        "source_version_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Source Version Id",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[^\\s{}]{1,200}$",
+            "type": "string"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "verification_status": {
+          "enum": [
+            "VERIFIED",
+            "PENDING",
+            "REJECTED"
+          ],
+          "title": "Verification Status",
+          "type": "string"
+        },
+        "usage_status": {
+          "enum": [
+            "USABLE",
+            "RESTRICTED",
+            "WITHDRAWN"
+          ],
+          "title": "Usage Status",
+          "type": "string"
+        },
+        "published_at": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Published At"
+        },
+        "valid_from": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Valid From"
+        },
+        "valid_to": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Valid To"
+        },
+        "requirement_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Requirement Id",
+          "type": "string"
+        },
+        "requirement_type": {
+          "enum": [
+            "REQUIRED",
+            "PREFERRED"
+          ],
+          "title": "Requirement Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "statement",
+        "scope_id",
+        "source_version_id",
+        "evidence_ids",
+        "verification_status",
+        "usage_status",
+        "published_at",
+        "valid_from",
+        "valid_to",
+        "requirement_id",
+        "requirement_type"
+      ],
+      "title": "Requirement",
+      "type": "object"
+    },
+    "SourceReview": {
+      "additionalProperties": false,
+      "properties": {
+        "review_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Review Id",
+          "type": "string"
+        },
+        "source_version_id": {
+          "anyOf": [
+            {
+              "pattern": "^[^\\s{}]{1,200}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source Version Id"
+        },
+        "required": {
+          "title": "Required",
+          "type": "boolean"
+        },
+        "status": {
+          "enum": [
+            "USABLE",
+            "LIMITED",
+            "UNAVAILABLE"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "codes": {
+          "items": {
+            "pattern": "^[^\\s{}]{1,200}$",
+            "type": "string"
+          },
+          "maxItems": 30,
+          "title": "Codes",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "maxLength": 6000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          "maxItems": 30,
+          "title": "Limitations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "review_id",
+        "source_version_id",
+        "required",
+        "status",
+        "codes",
+        "limitations"
+      ],
+      "title": "SourceReview",
+      "type": "object"
+    },
+    "SourceVersion": {
+      "additionalProperties": false,
+      "properties": {
+        "source_version_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Source Version Id",
+          "type": "string"
+        },
+        "source_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "scope_id": {
+          "pattern": "^[^\\s{}]{1,200}$",
+          "title": "Scope Id",
+          "type": "string"
+        },
+        "content_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Content Sha256",
+          "type": "string"
+        },
+        "published_at": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Published At"
+        },
+        "parse_status": {
+          "enum": [
+            "PARSED",
+            "UNPARSED",
+            "PARTIAL"
+          ],
+          "title": "Parse Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_version_id",
+        "source_id",
+        "scope_id",
+        "content_sha256",
+        "published_at",
+        "parse_status"
+      ],
+      "title": "SourceVersion",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "w4-knowledge-bundle/0.1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "knowledge_bundle_id": {
+      "pattern": "^[^\\s{}]{1,200}$",
+      "title": "Knowledge Bundle Id",
+      "type": "string"
+    },
+    "contract_version": {
+      "const": "w3-w4-projection/0.1-draft",
+      "title": "Contract Version",
+      "type": "string"
+    },
+    "scope_id": {
+      "pattern": "^[^\\s{}]{1,200}$",
+      "title": "Scope Id",
+      "type": "string"
+    },
+    "data_kind": {
+      "enum": [
+        "SYNTHETIC",
+        "REAL"
+      ],
+      "title": "Data Kind",
+      "type": "string"
+    },
+    "as_of": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "title": "As Of",
+      "type": "string"
+    },
+    "input_version_refs": {
+      "$ref": "#/$defs/CompanyVersions"
+    },
+    "source_versions": {
+      "items": {
+        "$ref": "#/$defs/SourceVersion"
+      },
+      "maxItems": 50,
+      "title": "Source Versions",
+      "type": "array"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/CompanyEvidence"
+      },
+      "maxItems": 100,
+      "title": "Evidence",
+      "type": "array"
+    },
+    "claims": {
+      "items": {
+        "$ref": "#/$defs/Claim"
+      },
+      "maxItems": 20,
+      "title": "Claims",
+      "type": "array"
+    },
+    "explicit_requirements": {
+      "items": {
+        "$ref": "#/$defs/Requirement"
+      },
+      "maxItems": 20,
+      "title": "Explicit Requirements",
+      "type": "array"
+    },
+    "source_reviews": {
+      "items": {
+        "$ref": "#/$defs/SourceReview"
+      },
+      "maxItems": 50,
+      "title": "Source Reviews",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "knowledge_bundle_id",
+    "contract_version",
+    "scope_id",
+    "data_kind",
+    "as_of",
+    "input_version_refs",
+    "source_versions",
+    "evidence",
+    "claims",
+    "explicit_requirements",
+    "source_reviews"
+  ],
+  "title": "KnowledgeBundle",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

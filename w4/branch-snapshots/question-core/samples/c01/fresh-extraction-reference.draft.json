@@ -1,0 +1,240 @@
+{
+  "schema_version": "w4-extraction-benchmark/0.1",
+  "data_kind": "SYNTHETIC",
+  "review": {
+    "status": "DRAFT",
+    "author": "assistant",
+    "human_reviewed": false
+  },
+  "answers": {
+    "c01-fresh-01": {
+      "units": [
+        {
+          "unit_id": "u1",
+          "kinds": [
+            "ROLE"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u2",
+          "kinds": [
+            "ACTION",
+            "PERIOD"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u3",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        }
+      ]
+    },
+    "c01-fresh-02": {
+      "units": [
+        {
+          "unit_id": "u1",
+          "kinds": [
+            "ROLE"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u2",
+          "kinds": [
+            "ACTION",
+            "PERIOD"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u3",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u4",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        }
+      ]
+    },
+    "c01-fresh-03": {
+      "units": [
+        {
+          "unit_id": "u1",
+          "kinds": [
+            "ROLE"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u2",
+          "kinds": [
+            "ACTION",
+            "PERIOD"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u3",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u4",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        }
+      ]
+    },
+    "c01-fresh-04": {
+      "units": [
+        {
+          "unit_id": "u1",
+          "kinds": [
+            "ROLE"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u2",
+          "kinds": [
+            "ACTION",
+            "PERIOD"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u3",
+          "kinds": [
+            "RESULT"
+          ],
+          "subject": "UNSPECIFIED",
+          "assertion": "AFFIRMED",
+          "issue": null
+        }
+      ]
+    },
+    "c01-fresh-05": {
+      "units": [
+        {
+          "unit_id": "u1",
+          "kinds": [
+            "ROLE"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u2",
+          "kinds": [
+            "ACTION",
+            "PERIOD"
+          ],
+          "subject": "SELF",
+          "assertion": "PLANNED",
+          "issue": null
+        },
+        {
+          "unit_id": "u3",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "PLANNED",
+          "issue": null
+        }
+      ]
+    },
+    "c01-fresh-06": {
+      "units": [
+        {
+          "unit_id": "u1",
+          "kinds": [
+            "ROLE"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u2",
+          "kinds": [
+            "ACTION",
+            "PERIOD"
+          ],
+          "subject": "OTHER",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u3",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "OTHER",
+          "assertion": "AFFIRMED",
+          "issue": null
+        },
+        {
+          "unit_id": "u4",
+          "kinds": [
+            "ACTION"
+          ],
+          "subject": "SELF",
+          "assertion": "AFFIRMED",
+          "issue": null
+        }
+      ]
+    }
+  },
+  "input_sha256": "2495fb76b66b2f327f3b5327740269dc2b390702ef8b42debba6445295729905",
+  "protocol_sha256": "28c3339eeee41883f1cf7a4f3727b41db068e4765694aa5857e36a0bb0bc3bbb",
+  "case_splits": {
+    "c01-fresh-01": "fresh_staged_v1",
+    "c01-fresh-02": "fresh_staged_v1",
+    "c01-fresh-03": "fresh_staged_v1",
+    "c01-fresh-04": "fresh_staged_v1",
+    "c01-fresh-05": "fresh_staged_v1",
+    "c01-fresh-06": "fresh_staged_v1"
+  }
+}

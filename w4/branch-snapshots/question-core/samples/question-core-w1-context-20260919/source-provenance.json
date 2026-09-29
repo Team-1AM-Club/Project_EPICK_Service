@@ -1,0 +1,50 @@
+{
+  "w1_full_sha": "deda25c62a762e3f7f6ea5273c93a7e6a18c6412",
+  "status": "CT12_SYNTHETIC_CONTEXT_CONTRACT_PINNED",
+  "files": {
+    "question-core-decision.event.schema.json": {
+      "upstream_path": "backend/contracts/w4/v1/question-core-decision.event.schema.json",
+      "sha256": "1d004ea5ea4bbd346926c6be878de759f25b43011b7117ff8700c4d48e8b71af"
+    },
+    "w4_question_core_context.py": {
+      "upstream_path": "backend/app/runtime/w4_question_core_context.py",
+      "sha256": "28a5ec93081716127be636b6699431bcfd293e9a99efea93c2c2297eae6e688f"
+    },
+    "w4_question_core_context_adapter.py": {
+      "upstream_path": "backend/app/runtime/w4_question_core_context_adapter.py",
+      "sha256": "c6f6c4f1eaf2c2658031d6566a9bd369caae01f5ecfad83576f7cf46bcc99ca9"
+    },
+    "test_w4_question_core_context.py": {
+      "upstream_path": "backend/tests/integration/db/test_w4_question_core_context.py",
+      "sha256": "35dbd5a5a7e6795698dc46d20b85aa92e441fc5c9cda3b2535188302d761cad8"
+    },
+    "W1-CONTRACT-README.md": {
+      "upstream_path": "backend/contracts/w4/v1/README.md",
+      "sha256": "b276f655d5b63ea053ef03e54fc20f3ee7dd73a9fbd24fd1fd07fa3a6d571b35"
+    },
+    "valid-core.json": {
+      "upstream_path": "backend/contracts/fixtures/v1/w4/valid-core.json",
+      "sha256": "6d6037ad7463f0ddb5b4aa8f769620be920f1d952a9647b506a3ace5bd8efd2f"
+    },
+    "valid-non-core.json": {
+      "upstream_path": "backend/contracts/fixtures/v1/w4/valid-non-core.json",
+      "sha256": "4ce3b904cd543ec31b56b04c3959d27856e38a6bc038c4484db96b077368d173"
+    },
+    "negative-events.json": {
+      "upstream_path": "backend/contracts/fixtures/v1/w4/negative-events.json",
+      "sha256": "9bf55808eac4eb448158b0e830e3cd71593edf47586f5200019462533ce7601a"
+    },
+    "digest-vectors.json": {
+      "upstream_path": "backend/contracts/fixtures/v1/w4/digest-vectors.json",
+      "sha256": "f8e504ae0c7ae802bdab1f6bcaa3de6bb0ea7649396633bbafeb6bf2deca12f6"
+    }
+  },
+  "input_documents": {
+    "docs/inputs/W1_W4_CT12_Environment_and_Context_Contract_2026-09-19.md": "f4e3c3855903130cc5b610b66a04726216a4dcfb2dc917624ec9152ea29be6dc",
+    "docs/inputs/W1_W4_Actual_Runtime_Handoff_Request_2026-09-19-r2.md": "a6a5a083308ce9440e26a7e5c113320089b16b8daea4a204fdd107c929f2cfde"
+  },
+  "w1_postgresql_tests": "TEAM_REPORTED_NOT_RERUN",
+  "actual_sqs_requests": 0,
+  "real_data_enabled": false,
+  "joint_ct12": "NOT_RUN"
+}

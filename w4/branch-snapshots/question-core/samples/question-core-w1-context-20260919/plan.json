@@ -1,0 +1,18 @@
+{
+  "schema_version": "w4.ct12.synthetic-plan.v1",
+  "purpose": "CT12_SYNTHETIC_ONLY",
+  "operator_review_reference": "SYNTHETIC-TEMPLATE-NOT-APPROVED",
+  "entries": [
+    {
+      "submission_key": "ct12-template-1",
+      "context_key": "00000000-0000-4000-8000-000000000001",
+      "policy": {
+        "decision_version": 1,
+        "decision_code": "CORE_REQUIRED",
+        "reason_code": "QUESTION_EVIDENCE_REQUIRED",
+        "policy_revision": "ct12-synthetic-v1",
+        "approved": false
+      }
+    }
+  ]
+}

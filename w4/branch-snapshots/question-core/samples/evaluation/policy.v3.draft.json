@@ -1,0 +1,19 @@
+{
+  "schema_version": "w4-stage-policy/0.2",
+  "scorer_version": "w4-separated-grounding/0.2",
+  "benchmark_sha256": "01e2e545c36d3d5213a1e074438604f87cccb084d49f9a3043965fa78ee35f07",
+  "protocol_sha256": "1152320f1c1cc68c2daf33ce05cb08bc26b751ea7dbd3f52191d3c0a81c2a9c3",
+  "repetitions": 1,
+  "weights": {
+    "question": 50,
+    "matching": 50
+  },
+  "gates": {
+    "contract_valid_percent": 100,
+    "unsafe_fact_admissions": 0,
+    "question_quote_valid_percent": 100
+  },
+  "review": {
+    "status": "DRAFT"
+  }
+}

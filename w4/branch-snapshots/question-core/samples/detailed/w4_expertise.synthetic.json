@@ -1,0 +1,85 @@
+{
+  "schema_version": "w4-detailed-input/0.1",
+  "request_id": "staged-v4-synthetic-demo",
+  "data_kind": "SYNTHETIC",
+  "project": {
+    "project_id": "project-demo-sk-hynix",
+    "owner_id": "user-demo"
+  },
+  "snapshot": {
+    "snapshot_id": "snapshot-extraction-demo-v1",
+    "episode_versions": {
+      "episode-learning": 1,
+      "episode-team-api": 1,
+      "episode-team-unclear": 1,
+      "episode-library-reservation": 1,
+      "v4-raw-cooperation": 1,
+      "v4-raw-study": 1,
+      "v4-raw-challenge": 1
+    }
+  },
+  "episodes": [
+    {
+      "episode_id": "episode-learning",
+      "version": 1,
+      "owner_id": "user-demo",
+      "activity_id": "activity-episode-learning",
+      "title": "새 기술을 학습해 반복 작업 자동화",
+      "raw_text": "저는 개인 학습 프로젝트의 데이터 정리를 맡았습니다.\n저는 처음 사용하는 Python을 학습하고 공식 문서를 읽어 데이터 정리 코드에 적용했습니다.\n3개 데이터 파일의 정리 작업을 자동화했습니다."
+    },
+    {
+      "episode_id": "episode-team-api",
+      "version": 1,
+      "owner_id": "user-demo",
+      "activity_id": "activity-episode-team-api",
+      "title": "팀 프로젝트의 API 협업과 오류 개선",
+      "raw_text": "저는 4인 팀의 백엔드 개발을 맡았습니다.\n저는 회의를 진행해 서로 다른 API 요구사항을 조율하고 담당 역할을 나눴습니다.\n저는 오류 로그를 분석해 중복 요청의 원인을 찾아 수정했습니다.\n재시도 오류가 12건에서 2건으로 줄었습니다."
+    },
+    {
+      "episode_id": "episode-team-unclear",
+      "version": 1,
+      "owner_id": "user-demo",
+      "activity_id": "activity-episode-team-unclear",
+      "title": "팀의 성과만 기록한 협업 경험",
+      "raw_text": "팀은 서비스 개발을 맡았습니다.\n팀은 요구사항을 조율하고 오류 원인을 분석해 수정했습니다.\n팀의 기능 테스트가 통과했습니다."
+    },
+    {
+      "episode_id": "episode-library-reservation",
+      "version": 1,
+      "owner_id": "user-demo",
+      "activity_id": "activity-library-demo",
+      "title": "도서관 예약 도구 개선",
+      "raw_text": "2025년 4월부터 6월까지 3인 팀에서 도서관 예약 도구를 개발했습니다.\n저는 예약 화면과 API 연동을 맡았습니다.\n팀은 중복 예약을 줄이는 것을 공동 목표로 정했습니다.\n같은 시간대에 요청이 몰리면 예약이 중복되는 문제가 있었습니다.\n저는 매주 테스트 결과를 공유하고 팀원들과 처리 순서를 조율했습니다.\n저는 4월에 트랜잭션 처리를 학습한 뒤 5월과 6월에 테스트를 반복하며 코드를 수정했습니다.\n마지막 테스트에서는 중복 예약이 6건에서 1건으로 줄었습니다.\n저는 각자의 가정을 먼저 확인해야 협의가 빨라진다는 점을 배웠습니다.\n다음 학기에는 알림 기능을 추가할 계획입니다."
+    },
+    {
+      "episode_id": "v4-raw-cooperation",
+      "version": 1,
+      "owner_id": "user-demo",
+      "activity_id": "v4-raw-cooperation",
+      "title": "가상 원문 v4-raw-cooperation",
+      "raw_text": "저는 과학관 체험 부스의 접수 담당자였습니다.\n팀은 대기 시간을 10분 이내로 줄이는 목표를 정했습니다.\n저는 진행자와 의견을 나누고 접수와 체험 시작 시간을 함께 합의했습니다.\n동료 서현이 안내 표지의 문구를 바꿨습니다.\n평균 대기 시간이 18분에서 9분으로 줄었습니다."
+    },
+    {
+      "episode_id": "v4-raw-study",
+      "version": 1,
+      "owner_id": "user-demo",
+      "activity_id": "v4-raw-study",
+      "title": "가상 원문 v4-raw-study",
+      "raw_text": "저는 파일 검증 도구의 개발 담당자였습니다.\n저는 6주 동안 매주 JSON Schema 안내서를 읽고 검증 예제를 실습했습니다.\n저는 학습한 검증 규칙을 파일 업로드 기능에 적용했습니다.\n잘못된 형식의 파일이 저장되는 건수가 8건에서 0건으로 줄었습니다.\n저는 예제를 직접 바꾸며 검증하는 일이 중요하다는 점을 배웠습니다."
+    },
+    {
+      "episode_id": "v4-raw-challenge",
+      "version": 1,
+      "owner_id": "user-demo",
+      "activity_id": "v4-raw-challenge",
+      "title": "가상 원문 v4-raw-challenge",
+      "raw_text": "저는 개인 달리기 훈련의 참여자였습니다.\n저는 이전에 완주하지 못한 10km를 완주하겠다는 목표를 정했습니다.\n첫 시도에서 체력 부족으로 6km 지점에 멈췄습니다.\n저는 두 달 동안 매주 훈련 기록을 비교하고 속도를 조정하며 반복해서 연습했습니다.\n마지막 시도에서는 8km를 달렸습니다."
+    }
+  ],
+  "excluded_episode_ids": [],
+  "question": {
+    "scope_id": "skhynix-2026-march-R260521-IT",
+    "question_id": "expertise"
+  },
+  "top_k": 3
+}

@@ -1,0 +1,289 @@
+{
+  "schema_version": "1.0",
+  "synthetic": true,
+  "description": "Deterministic W1-only failure-state inputs. These cases model selection and delivery behavior for tests; they are not worker, queue, or database fixtures.",
+  "cases": [
+    {
+      "name": "success",
+      "job_id": "00000000-0000-4000-8000-000000000601",
+      "command_id": "00000000-0000-4000-8000-000000000611",
+      "input_version": 1,
+      "job_revision": 1,
+      "result_revision": 1,
+      "recorded_at": "2026-09-11T00:00:00Z",
+      "sources": [
+        {
+          "name": "A",
+          "source_id": "00000000-0000-4000-8000-000000000621",
+          "is_core": true,
+          "result_version": 1,
+          "core_decision_revision": 101
+        }
+      ],
+      "events": [
+        { "op": "record_source_result", "source": "A", "outcome": "success" }
+      ],
+      "expected": {
+        "status": "SUCCEEDED",
+        "completion_kind": "complete",
+        "result_revision": 2,
+        "dispatch_count": 0,
+        "active_slots": 0
+      }
+    },
+    {
+      "name": "non_core_failure",
+      "job_id": "00000000-0000-4000-8000-000000000602",
+      "command_id": "00000000-0000-4000-8000-000000000612",
+      "input_version": 1,
+      "job_revision": 1,
+      "result_revision": 1,
+      "recorded_at": "2026-09-11T00:01:00Z",
+      "sources": [
+        {
+          "name": "A",
+          "source_id": "00000000-0000-4000-8000-000000000622",
+          "is_core": false,
+          "result_version": 1,
+          "core_decision_revision": 102
+        }
+      ],
+      "events": [
+        {
+          "op": "record_source_result",
+          "source": "A",
+          "outcome": "failure",
+          "failure": {
+            "stage": "parse",
+            "code": "MISSING_REQUIRED_SECTION",
+            "missing_sections": ["required_qualifications"],
+            "impact": "Non-core source did not contain a required section."
+          }
+        }
+      ],
+      "expected": {
+        "status": "FAILED_RETRYABLE",
+        "completion_kind": "none",
+        "result_revision": 2,
+        "dispatch_count": 0,
+        "active_slots": 0
+      }
+    },
+    {
+      "name": "core_plus_429",
+      "job_id": "00000000-0000-4000-8000-000000000603",
+      "command_id": "00000000-0000-4000-8000-000000000613",
+      "input_version": 1,
+      "job_revision": 1,
+      "result_revision": 1,
+      "recorded_at": "2026-09-11T00:02:00Z",
+      "sources": [
+        {
+          "name": "A",
+          "source_id": "00000000-0000-4000-8000-000000000623",
+          "is_core": true,
+          "result_version": 3,
+          "core_decision_revision": 103
+        },
+        {
+          "name": "B",
+          "source_id": "00000000-0000-4000-8000-000000000624",
+          "is_core": true,
+          "result_version": 7,
+          "core_decision_revision": 104
+        }
+      ],
+      "events": [
+        {
+          "op": "record_source_result",
+          "source": "A",
+          "outcome": "failure",
+          "failure": {
+            "stage": "parse",
+            "code": "MISSING_REQUIRED_SECTION",
+            "missing_sections": ["preferred_qualifications"],
+            "impact": "Core source A needs a user decision."
+          }
+        },
+        {
+          "op": "record_source_result",
+          "source": "B",
+          "outcome": "rate_limited",
+          "failure": {
+            "stage": "fetch",
+            "code": "RATE_LIMITED",
+            "missing_sections": ["employment_type"],
+            "impact": "Core source B is rate limited and needs a user decision."
+          }
+        }
+      ],
+      "expected": {
+        "status": "PAUSED_RATE_LIMIT",
+        "completion_kind": "none",
+        "result_revision": 3,
+        "failure_codes": ["MISSING_REQUIRED_SECTION", "RATE_LIMITED"],
+        "dispatch_count": 0,
+        "active_slots": 0
+      }
+    },
+    {
+      "name": "timeout",
+      "job_id": "00000000-0000-4000-8000-000000000604",
+      "command_id": "00000000-0000-4000-8000-000000000614",
+      "input_version": 1,
+      "job_revision": 1,
+      "result_revision": 1,
+      "recorded_at": "2026-09-11T00:03:00Z",
+      "sources": [
+        {
+          "name": "A",
+          "source_id": "00000000-0000-4000-8000-000000000625",
+          "is_core": false,
+          "result_version": 2,
+          "core_decision_revision": 105
+        }
+      ],
+      "events": [
+        {
+          "op": "record_source_result",
+          "source": "A",
+          "outcome": "timeout",
+          "failure": {
+            "stage": "fetch",
+            "code": "FETCH_TIMEOUT",
+            "missing_sections": ["job_description"],
+            "impact": "No automatic retry is permitted."
+          }
+        }
+      ],
+      "expected": {
+        "status": "FAILED_RETRYABLE",
+        "completion_kind": "none",
+        "result_revision": 2,
+        "dispatch_count": 0,
+        "active_slots": 0
+      }
+    },
+    {
+      "name": "policy_denied",
+      "job_id": "00000000-0000-4000-8000-000000000605",
+      "command_id": "00000000-0000-4000-8000-000000000615",
+      "input_version": 1,
+      "job_revision": 1,
+      "result_revision": 1,
+      "recorded_at": "2026-09-11T00:04:00Z",
+      "sources": [
+        {
+          "name": "A",
+          "source_id": "00000000-0000-4000-8000-000000000626",
+          "is_core": true,
+          "result_version": 1,
+          "core_decision_revision": 106
+        }
+      ],
+      "events": [
+        {
+          "op": "record_source_result",
+          "source": "A",
+          "outcome": "policy_denied",
+          "failure": {
+            "stage": "policy",
+            "code": "SOURCE_POLICY_BLOCKED",
+            "missing_sections": ["collection_permission"],
+            "impact": "Policy denied collection; the job is final."
+          }
+        }
+      ],
+      "expected": {
+        "status": "FAILED_FINAL",
+        "completion_kind": "none",
+        "result_revision": 2,
+        "dispatch_count": 0,
+        "active_slots": 0
+      }
+    },
+    {
+      "name": "input_changed",
+      "job_id": "00000000-0000-4000-8000-000000000606",
+      "command_id": "00000000-0000-4000-8000-000000000616",
+      "input_version": 1,
+      "job_revision": 1,
+      "result_revision": 1,
+      "recorded_at": "2026-09-11T00:05:00Z",
+      "sources": [
+        {
+          "name": "A",
+          "source_id": "00000000-0000-4000-8000-000000000627",
+          "is_core": true,
+          "result_version": 4,
+          "core_decision_revision": 107
+        }
+      ],
+      "events": [
+        {
+          "op": "record_source_result",
+          "source": "A",
+          "outcome": "failure",
+          "failure": {
+            "stage": "parse",
+            "code": "MISSING_REQUIRED_SECTION",
+            "missing_sections": ["location"],
+            "impact": "The stale input decision must be rejected."
+          }
+        },
+        { "op": "advance_to", "status": "WAITING_USER", "input_version": 2 }
+      ],
+      "expected": {
+        "status": "WAITING_USER",
+        "input_version": 2,
+        "job_revision": 2,
+        "result_revision": 2,
+        "dispatch_count": 0,
+        "active_slots": 0
+      }
+    },
+    {
+      "name": "duplicate_delivery",
+      "job_id": "00000000-0000-4000-8000-000000000607",
+      "command_id": "00000000-0000-4000-8000-000000000617",
+      "input_version": 1,
+      "job_revision": 1,
+      "result_revision": 1,
+      "recorded_at": "2026-09-11T00:06:00Z",
+      "sources": [
+        {
+          "name": "A",
+          "source_id": "00000000-0000-4000-8000-000000000628",
+          "is_core": true,
+          "result_version": 1,
+          "core_decision_revision": 108
+        }
+      ],
+      "events": [
+        { "op": "redeliver" },
+        {
+          "op": "record_source_result",
+          "source": "A",
+          "outcome": "success",
+          "command_id": "00000000-0000-4000-8000-000000000617"
+        },
+        {
+          "op": "record_source_result",
+          "source": "A",
+          "outcome": "success",
+          "command_id": "00000000-0000-4000-8000-000000000617"
+        }
+      ],
+      "expected": {
+        "status": "SUCCEEDED",
+        "completion_kind": "complete",
+        "result_revision": 2,
+        "command_deliveries": 3,
+        "logical_commands": 1,
+        "logical_source_results": 1,
+        "dispatch_count": 0,
+        "active_slots": 0
+      }
+    }
+  ]
+}
