@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta, timezone
 from uuid import UUID
 
 import pytest
@@ -77,6 +77,22 @@ def test_v2_envelope_binds_current_w1_scope_to_inner_command(project: bool) -> N
         project=project_row,
         issued_at=ISSUED_AT,
     )
+
+
+def test_v2_envelope_is_identical_after_database_session_timezone_change() -> None:
+    owner, request, target, project_row = _context()
+    utc_body = serialize_authorized_w2_deletion_envelope_v2(
+        owner=owner, request=request, target=target, project=project_row, issued_at=ISSUED_AT
+    )
+    seoul_body = serialize_authorized_w2_deletion_envelope_v2(
+        owner=owner,
+        request=request,
+        target=target,
+        project=project_row,
+        issued_at=ISSUED_AT.astimezone(timezone(timedelta(hours=9))),
+    )
+    assert seoul_body == utc_body
+    assert json.loads(seoul_body)["occurred_at"] == "2026-09-25T00:00:00Z"
 
 
 @pytest.mark.parametrize("invalid", ["owner", "epoch", "project_owner", "target", "status"])

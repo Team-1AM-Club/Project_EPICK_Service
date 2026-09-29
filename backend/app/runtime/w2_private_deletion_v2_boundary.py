@@ -8,7 +8,7 @@ retry; production routing remains disabled until the complete seam is wired.
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from app.models.application_workspace import ApplicationProject
@@ -197,7 +197,7 @@ def serialize_authorized_w2_deletion_envelope_v2(
         "message_id": str(target.id),
         "producer": "w1",
         "visibility_scope": "PRIVATE",
-        "occurred_at": issued_at.isoformat().replace("+00:00", "Z"),
+        "occurred_at": issued_at.astimezone(UTC).isoformat().replace("+00:00", "Z"),
         "deletion_request_id": str(request.id),
         "deletion_target_id": str(target.id),
         "owner_user_id": str(owner.id),

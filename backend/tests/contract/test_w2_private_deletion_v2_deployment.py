@@ -168,7 +168,10 @@ def test_v2_deletion_runtime_inputs_define_private_injection_and_inspection() ->
         Path(__file__).parents[2] / "app" / "runtime" / "w2_deletion_callback.py"
     ).read_text(encoding="utf-8")
     emitted_409_codes = set(
-        re.findall(r'_error\("(W2_DELETION_V2_[A-Z_]+)", 409\)', callback_source)
+        re.findall(
+            r'ack_error\("(W2_DELETION_V2_[A-Z_]+)", 409, deletion_id\)',
+            callback_source,
+        )
     )
     assert set(inputs["ack_responses"]["409_codes"]) == emitted_409_codes
     assert set(inputs["ack_responses"]["409_codes"].values()) == {"DLQ_MANUAL_INVESTIGATION"}
