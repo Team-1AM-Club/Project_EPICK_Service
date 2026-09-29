@@ -903,7 +903,8 @@ def test_w1_direct_registration_onboards_the_same_source_into_w2_postgres(
                             "collection_permission": "allowed",
                             "excerpt_storage_permission": "allowed",
                             "body_storage_permission": "denied",
-                            "redistribution_permission": "denied",
+                            # Synthetic-only source: W3 public evidence is explicitly allowed.
+                            "redistribution_permission": "allowed",
                             "evidence_refs": ["test:explicit-w2-approval"],
                             "checked_at": datetime.now(UTC).isoformat(),
                             "policy_version": "test-v1",
@@ -1075,6 +1076,94 @@ def test_w1_direct_registration_onboards_the_same_source_into_w2_postgres(
             attempt = session.get(CollectionRuntimeAttempt, command.command_id)
             assert attempt is not None and attempt.state == "PERSISTED"
 
+        if endpoint:
+            from epick_engine.source_collection.commit_gate_runtime import relay_once
+            from epick_engine.source_collection.source_runtime import consume_source_runtime_once
+            from epick_engine.source_collection.source_runtime_operator import (
+                SqsSourceRuntimeRelayQueue,
+            )
+
+            from app.runtime.w2_commit_gate_worker import W2CommitGateInboundWorker
+
+            class OwnerScopedSession(Session):
+                pass
+
+            @event.listens_for(OwnerScopedSession, "after_begin")
+            def apply_owner_scope(
+                session: Session, transaction: object, connection: object
+            ) -> None:
+                del session, transaction
+                connection.execute(
+                    text("SELECT set_config('app.current_user_id', :owner_id, true)"),
+                    {"owner_id": str(command.authenticated_owner_ref)},
+                )
+
+            w1_gate_factory = sessionmaker(
+                bind=migrated_engine, class_=OwnerScopedSession,
+                autoflush=False, expire_on_commit=False,
+            )
+            relay_queue = SqsSourceRuntimeRelayQueue(client, settings)
+            inbound = W2CommitGateInboundWorker(
+                session_factory=w1_gate_factory,
+                sqs=Boto3SqsPort(client=client),
+                queue_url=execution_url,
+                expected_sender_id="127.0.0.1",
+                wait_time_seconds=0,
+            )
+            gate_queues = QueueUrlRegistry(
+                w1_execution_queue_url=execution_url,
+                w2_collection_command_queue_url=command_url,
+                w2_commit_gate_command_queue_url=command_url,
+            )
+
+            def w1_send_gate() -> None:
+                assert OutboxRelay(
+                    session_factory=w1_gate_factory,
+                    sqs=Boto3SqsPort(client=client),
+                    queues=gate_queues,
+                    relay_id=f"same-run-gate-{uuid4().hex[:8]}",
+                ).drain_once(limit=10).published == 1
+
+            def w2_apply_gate() -> None:
+                result = consume_source_runtime_once(
+                    w2_factory,
+                    SqsSourceRuntimeQueue(client, settings, claim_lease_seconds=30),
+                    "127.0.0.1",
+                    mode="gate",
+                    collection_handler=lambda *_args, **_kwargs: pytest.fail(
+                        "gate queue must not route to collection"
+                    ),
+                    private_authority_client=authority_client,
+                    clock=lambda: datetime.now(UTC),
+                )
+                assert result.status == "APPLIED", result
+
+            assert relay_once(
+                w2_factory, relay_queue, command_id=command.command_id,
+                authority_client=authority_client,
+            ).status == "SENT"
+            assert inbound.drain_once().acknowledged == 1
+            w1_send_gate()  # PREPARE
+            w2_apply_gate()
+            assert relay_once(
+                w2_factory, relay_queue, command_id=command.command_id,
+                authority_client=authority_client,
+            ).status == "SENT"
+            assert inbound.drain_once().acknowledged == 1
+            w1_send_gate()  # FINALIZE
+            w2_apply_gate()
+            assert relay_once(
+                w2_factory, relay_queue, command_id=command.command_id,
+                authority_client=authority_client,
+            ).status == "SENT"
+            assert inbound.drain_once().acknowledged == 1
+            with w2_factory() as session:
+                attempt = session.get(CollectionRuntimeAttempt, command.command_id)
+                finalized_source = session.get(W2Source, command.source_id)
+                assert attempt is not None and attempt.state == "FINALIZED"
+                assert finalized_source is not None
+                assert finalized_source.current_source_version_id is not None
+
         # The public event created by that same PERSIST transition must reach
         # W3 over HTTP. This is separate from W1's later private gate ACK.
         from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -1094,6 +1183,7 @@ def test_w1_direct_registration_onboards_the_same_source_into_w2_postgres(
         with w2_factory() as session:
             public_events = session.scalars(select(W2OutboxEvent)).all()
             assert len(public_events) == 1
+            assert public_events[0].event_type == "source.version.available"
             public_event_id = public_events[0].event_id
 
         class SourceAuthorityHandler(BaseHTTPRequestHandler):
@@ -1184,14 +1274,49 @@ def test_w1_direct_registration_onboards_the_same_source_into_w2_postgres(
             try:
                 assert delivery_worker.deliver_pending(limit=10) == 1
                 assert w3_status()["event_cursor"] == 1
+                assert w3_status()["reason"] == "INDEX_PENDING"
+                evidence = public_events[0].payload["evidence_spans"][0]
+                pending = w3_status()
+                index_request = Request(
+                    f"{w3_base}/c01/v1/index",
+                    data=json.dumps(
+                        {
+                            "schema_version": pending["schema_version"],
+                            "source_id": str(command.source_id),
+                            "event_cursor": pending["event_cursor"],
+                            "restriction_revision": pending["restriction_revision"],
+                            "index_key": pending["index_key"],
+                            "retention_scope": "excerpts_only",
+                            "expires_at": (
+                                datetime.now(UTC) + timedelta(minutes=30)
+                            ).isoformat(timespec="seconds").replace("+00:00", "Z"),
+                            "documents": [
+                                {
+                                    "document_id": str(uuid4()),
+                                    "evidence_id": evidence["evidence_id"],
+                                    "text": evidence["text_excerpt"],
+                                }
+                            ],
+                        }
+                    ).encode(),
+                    headers={
+                        "Authorization": "Bearer local-operator-token",
+                        "Content-Type": "application/json",
+                    },
+                )
+                with urlopen(index_request, timeout=3) as response:
+                    indexed = json.load(response)
+                assert indexed["reason"] == "READY" and indexed["index_ack"] is True
                 delivery_worker.replay(event_id=public_event_id)
                 assert w3_status()["event_cursor"] == 1
+                assert w3_status()["reason"] == "READY"
             finally:
                 process.terminate()
                 process.wait(timeout=5)
             process = start_w3()
             try:
                 assert w3_status()["event_cursor"] == 1
+                assert w3_status()["reason"] == "READY"
             finally:
                 process.terminate()
                 process.wait(timeout=5)
